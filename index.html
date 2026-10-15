@@ -617,6 +617,7 @@
     // Load from LocalStorage (Supports both standalone and legacy keys)
     try {
       const savedCfg = localStorage.getItem('nextdns-single-cfg') || localStorage.getItem('nextdns-sentinel-cfg');
+      console.log('NextDNS Sentinel - Loaded raw config from localStorage:', savedCfg);
       if (savedCfg) {
         const parsed = JSON.parse(savedCfg);
         STATE.config.profile = parsed.profile || parsed.profileId || '';
@@ -631,10 +632,13 @@
       }
       const savedDeny = localStorage.getItem('nextdns-single-deny') || localStorage.getItem('nextdns-sentinel-denylist');
       if (savedDeny) STATE.denylist = JSON.parse(savedDeny);
-    } catch(e) {}
+    } catch(e) {
+      console.error('NextDNS Sentinel - LocalStorage load error:', e);
+    }
 
     function loadConfigToUI() {
       try {
+        console.log('NextDNS Sentinel - Populating UI with config:', STATE.config);
         if (document.getElementById('cfg-profile')) document.getElementById('cfg-profile').value = STATE.config.profile || '';
         if (document.getElementById('cfg-apikey')) document.getElementById('cfg-apikey').value = STATE.config.apiKey || '';
         if (document.getElementById('cfg-proxy')) document.getElementById('cfg-proxy').value = STATE.config.proxy || '';
@@ -644,12 +648,19 @@
         if (document.getElementById('cfg-cooldown')) document.getElementById('cfg-cooldown').value = STATE.config.cooldown || 60;
         if (document.getElementById('cfg-autoblock')) document.getElementById('cfg-autoblock').checked = !!STATE.config.autoBlock;
         if (document.getElementById('cfg-protect')) document.getElementById('cfg-protect').checked = !!STATE.config.protectSystem;
-      } catch(e) {}
+      } catch(e) {
+        console.error('NextDNS Sentinel - loadConfigToUI error:', e);
+      }
     }
 
     function saveState() {
-      localStorage.setItem('nextdns-single-cfg', JSON.stringify(STATE.config));
-      localStorage.setItem('nextdns-single-deny', JSON.stringify(STATE.denylist));
+      try {
+        localStorage.setItem('nextdns-single-cfg', JSON.stringify(STATE.config));
+        localStorage.setItem('nextdns-single-deny', JSON.stringify(STATE.denylist));
+        console.log('NextDNS Sentinel - Successfully saved config to localStorage:', STATE.config);
+      } catch(e) {
+        console.error('NextDNS Sentinel - LocalStorage save error:', e);
+      }
     }
 
     // ─── Toast Notifications ───────────────────────────────────────────
