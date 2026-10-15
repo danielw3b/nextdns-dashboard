@@ -663,6 +663,109 @@
       }
     }
 
+    // ─── IndexedDB Log Persistence Engine ─────────────────────────────
+    let db = null;
+    const DB_NAME = 'nextdns_sentinel_db';
+    const STORE_NAME = 'logs_store';
+
+    function initDB() {
+      return new Promise((resolve, reject) => {
+        try {
+          const request = indexedDB.open(DB_NAME, 1);
+          request.onerror = () => reject(request.error);
+          request.onsuccess = () => {
+            db = request.result;
+            loadLogsFromDB().then(resolve).catch(resolve);
+          };
+          request.onupgradeneeded = (event) => {
+            const database = event.target.result;
+            if (!database.objectStoreNames.contains(STORE_NAME)) {
+              database.createObjectStore(STORE_NAME, { keyPath: 'id' });
+            }
+          };
+        } catch(e) {
+          resolve();
+        }
+      });
+    }
+
+    function saveLogToDB(log) {
+      if (!db) return;
+      try {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        store.put({
+          id: log.id,
+          time: log.time instanceof Date ? log.time.getTime() : log.time,
+          domain: log.domain,
+          device: log.device,
+          status: log.status,
+          reasons: log.reasons,
+          proto: log.proto,
+          type: log.type,
+          latency: log.latency
+        });
+      } catch (e) {
+        console.warn('Failed to save log to IndexedDB:', e);
+      }
+    }
+
+    function loadLogsFromDB() {
+      return new Promise((resolve) => {
+        if (!db) return resolve();
+        try {
+          const tx = db.transaction(STORE_NAME, 'readonly');
+          const store = tx.objectStore(STORE_NAME);
+          const request = store.getAll();
+          request.onsuccess = () => {
+            const results = request.result || [];
+            if (results.length > 0) {
+              results.sort((a, b) => b.time - a.time);
+              for (const item of results.slice(0, 300)) {
+                if (!STATE.logs.some(l => l.id === item.id)) {
+                  STATE.logs.push({
+                    ...item,
+                    time: new Date(item.time)
+                  });
+                }
+                if (item.device) registerDevice(item.device);
+              }
+              renderFilteredLiveLogs();
+              updateAnalyticsKPIs();
+            }
+            pruneOldLogsFromDB();
+            resolve();
+          };
+          request.onerror = () => resolve();
+        } catch (e) {
+          resolve();
+        }
+      });
+    }
+
+    function pruneOldLogsFromDB() {
+      if (!db) return;
+      try {
+        const days = Number(STATE.config.retentionDays) || 7;
+        const threshold = Date.now() - (days * 24 * 3600 * 1000);
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        const request = store.openCursor();
+        request.onsuccess = (event) => {
+          const cursor = event.target.result;
+          if (cursor) {
+            const record = cursor.value;
+            if (record.time < threshold) {
+              cursor.delete();
+            }
+            cursor.continue();
+          }
+        };
+      } catch (e) {
+        console.warn('Pruning logs failed:', e);
+      }
+    }
+
     // ─── Toast Notifications ───────────────────────────────────────────
     function showToast(title, msg, type = 'warn') {
       const container = document.getElementById('toast-container');
@@ -695,6 +798,7 @@
     }
 
     function handleIncomingLog(log) {
+      saveLogToDB(log);
       STATE.logs.unshift(log);
       if (STATE.logs.length > 500) STATE.logs.pop();
       if (log.device) registerDevice(log.device);
@@ -1082,6 +1186,7 @@
 
     // Init (No service worker required - live network stream app)
     loadConfigToUI();
+    initDB();
     //startSimulation();
     renderDenylist();
   </script>
