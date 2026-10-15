@@ -285,7 +285,7 @@
       line-height: 1.4;
     }
   </style>
-<script src="/_aistudio-iframe.js?v=6634132a"></script></head>
+</head>
 <body>
 
   <!-- Header -->
@@ -621,6 +621,20 @@
       const savedDeny = localStorage.getItem('nextdns-single-deny');
       if (savedDeny) STATE.denylist = JSON.parse(savedDeny);
     } catch(e) {}
+
+    function loadConfigToUI() {
+      try {
+        if (document.getElementById('cfg-profile')) document.getElementById('cfg-profile').value = STATE.config.profile || '';
+        if (document.getElementById('cfg-apikey')) document.getElementById('cfg-apikey').value = STATE.config.apiKey || '';
+        if (document.getElementById('cfg-proxy')) document.getElementById('cfg-proxy').value = STATE.config.proxy || '';
+        if (document.getElementById('cfg-tg-token')) document.getElementById('cfg-tg-token').value = STATE.config.tgToken || '';
+        if (document.getElementById('cfg-tg-chat')) document.getElementById('cfg-tg-chat').value = STATE.config.tgChat || '';
+        if (document.getElementById('cfg-threshold')) document.getElementById('cfg-threshold').value = STATE.config.threshold || 20;
+        if (document.getElementById('cfg-cooldown')) document.getElementById('cfg-cooldown').value = STATE.config.cooldown || 60;
+        if (document.getElementById('cfg-autoblock')) document.getElementById('cfg-autoblock').checked = !!STATE.config.autoBlock;
+        if (document.getElementById('cfg-protect')) document.getElementById('cfg-protect').checked = !!STATE.config.protectSystem;
+      } catch(e) {}
+    }
 
     function saveState() {
       localStorage.setItem('nextdns-single-cfg', JSON.stringify(STATE.config));
@@ -977,6 +991,7 @@
     };
 
     // Init (No service worker required - live network stream app)
+    loadConfigToUI();
     startSimulation();
     renderDenylist();
   </script>
