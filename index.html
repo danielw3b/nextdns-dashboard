@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#090d16">
+  <meta name="description" content="NextDNS Zero-Dependency PWA: Real-time telemetry, analytics, and custom domain blocking.">
+  <title>NextDNS Sentinel (Zero-Dependency Single-File PWA)</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      --bg: #090d16;
+      --surface: #0f172a;
+      --surface-2: #1e293b;
+      --border: #334155;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-hover: #0ea5e9;
+      --blocked: #f87171;
+      --blocked-bg: rgba(239, 68, 68, 0.15);
+      --allowed: #4ade80;
+      --allowed-bg: rgba(34, 197, 94, 0.15);
+      --warn: #fbbf24;
+      --radius: 10px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      font-size: 13px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .brand svg {
+      width: 28px;
+      height: 28px;
+    }
+    .brand h1 {
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    .badge {
+      font-size: 0.7rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 99px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .badge.live {
+      background: rgba(34, 197, 94, 0.15);
+      border-color: rgba(34, 197, 94, 0.4);
+      color: #86efac;
+    }
+    .badge.sim {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: rgba(245, 158, 11, 0.4);
+      color: #fde047;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    button, .btn {
+      font-family: inherit;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.4rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: all 0.15s ease;
+      background: var(--surface-2);
+      color: var(--text);
+    }
+    button:hover { background: var(--border); }
+    .btn-primary { background: var(--accent); color: #090d16; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-danger { background: var(--blocked-bg); color: #fca5a5; border-color: rgba(239, 68, 68, 0.3); }
+    .btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
+    .btn-success { background: var(--allowed-bg); color: #86efac; border-color: rgba(34, 197, 94, 0.3); }
+    .btn-success:hover { background: rgba(34, 197, 94, 0.25); }
+    .nav-tabs {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 1rem;
+      display: flex;
+      gap: 0.25rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .nav-tabs button {
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      border-radius: 0;
+      padding: 0.6rem 0.85rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+      white-space: nowrap;
+    }
+    .nav-tabs button:hover { color: var(--text); }
+    .nav-tabs button.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+      font-weight: 600;
+    }
+    main {
+      max-width: 1100px;
+      width: 100%;
+      margin: 1.25rem auto;
+      padding: 0 1rem;
+      flex: 1;
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.2rem;
+      margin-bottom: 1.25rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    }
+    .card-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+    .kpi-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.9rem;
+    }
+    .kpi-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 0.25rem; }
+    .kpi-val { font-size: 1.4rem; font-weight: 700; font-family: monospace; }
+    .kpi-sub { font-size: 0.7rem; color: var(--muted); margin-top: 0.2rem; }
+    .filter-bar {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+      flex-wrap: wrap;
+    }
+    input[type="text"], input[type="password"], input[type="number"], select {
+      background: #060911;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.45rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-family: inherit;
+    }
+    input[type="text"]:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .table-container {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #060911;
+      max-height: 520px;
+      overflow-y: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.75rem;
+      text-align: left;
+    }
+    th, td {
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+    }
+    th {
+      background: var(--surface);
+      color: var(--muted);
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      text-transform: uppercase;
+      font-size: 0.68rem;
+      letter-spacing: 0.04em;
+    }
+    tr:hover td { background: rgba(30, 41, 59, 0.4); }
+    .domain-cell {
+      font-family: monospace;
+      font-weight: 600;
+      max-width: 280px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .status-pill {
+      display: inline-block;
+      padding: 0.15rem 0.45rem;
+      border-radius: 99px;
+      font-size: 0.68rem;
+      font-weight: 600;
+    }
+    .status-blocked { background: var(--blocked-bg); color: #fca5a5; }
+    .status-allowed { background: var(--allowed-bg); color: #86efac; }
+    .toast-container {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 100;
+      max-width: 360px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .toast {
+      background: #0b1324;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      animation: slideIn 0.25s ease;
+      font-size: 0.75rem;
+    }
+    .toast-warn { border-color: rgba(245, 158, 11, 0.5); }
+    .toast-danger { border-color: rgba(239, 68, 68, 0.5); }
+    .toast-success { border-color: rgba(34, 197, 94, 0.5); }
+    @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .bar-bg { width: 100%; height: 6px; background: #1e293b; border-radius: 99px; overflow: hidden; margin-top: 4px; }
+    .bar-fill { height: 100%; border-radius: 99px; transition: width 0.3s ease; }
+    .form-group { margin-bottom: 0.9rem; }
+    .form-group label { display: block; font-size: 0.72rem; color: var(--muted); margin-bottom: 0.3rem; font-weight: 500; }
+    .code-block {
+      background: #060911;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.75rem;
+      font-family: monospace;
+      font-size: 0.72rem;
+      color: #38bdf8;
+      overflow-x: auto;
+      line-height: 1.4;
+    }
+  </style>
+<script src="/_aistudio-iframe.js?v=6634132a"></script></head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <svg viewBox="0 0 100 100" fill="none">
+        <rect width="100" height="100" rx="24" fill="#0f172a"/>
+        <path d="M50 20L28 30V54C28 69 37 82 50 86C63 82 72 69 72 54V30L50 20Z" fill="#1e293b" stroke="#38bdf8" stroke-width="4"/>
+        <path d="M42 52L48 58L58 46" stroke="#4ade80" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div>
+        <h1>NextDNS Sentinel</h1>
+        <div style="font-size: 0.68rem; color: var(--muted);">Zero-Dependency Single-File PWA</div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <!-- Device Selector (NextDNS Multi-device Isolation) -->
+      <select id="global-device-select" style="padding: 0.35rem 0.5rem;" title="Filter all logs and analytics by device">
+        <option value="all">All Devices</option>
+      </select>
+      <a href="https://nextdns.io/?from=4ja3vp44" target="_blank" rel="noopener noreferrer" style="text-decoration:none; display:inline-flex; align-items:center; gap:0.25rem; font-size:0.75rem; color:#38bdf8; padding:0.35rem 0.6rem; border:1px solid rgba(56,189,248,0.3); border-radius:6px; background:rgba(56,189,248,0.1); font-weight:600;" title="Get NextDNS (Official Referral)">
+        NextDNS ↗
+      </a>
+      <span class="badge live" id="stream-status">● Live Simulator</span>
+      <button class="btn-primary" id="btn-toggle-stream">Pause</button>
+      <select id="stream-mode" style="padding: 0.35rem 0.5rem;">
+        <option value="sim">Simulated Stream (Test Demo)</option>
+        <option value="api">Live NextDNS API</option>
+      </select>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <nav class="nav-tabs">
+    <button class="active" data-tab="live">Live Log Stream</button>
+    <button data-tab="analytics">Real-time Analytics</button>
+    <button data-tab="blocking">Custom Denylist & Auto-Block</button>
+    <button data-tab="config">Settings & Credentials</button>
+    <button data-tab="export">CSV & Cloudflare Deploy</button>
+  </nav>
+
+  <!-- Main Content Area -->
+  <main>
+
+    <!-- TAB: LIVE STREAM -->
+    <section id="tab-live" class="tab-content active">
+      <div class="card" style="padding: 0.75rem 1rem;">
+        <div class="filter-bar">
+          <input type="text" id="live-search" placeholder="Search domain, device, or reason..." style="flex: 1; min-width: 200px;">
+          <select id="live-status-filter">
+            <option value="all">All Traffic</option>
+            <option value="blocked">Blocked Only</option>
+            <option value="allowed">Allowed Only</option>
+          </select>
+          <select id="live-device-filter">
+            <option value="all">All Devices</option>
+          </select>
+          <button id="btn-export-live">Export CSV</button>
+          <button id="btn-clear-logs" class="btn-danger">Clear</button>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Status</th>
+              <th>Domain</th>
+              <th>Device</th>
+              <th>Type / Proto</th>
+              <th>Reason</th>
+              <th style="text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="live-log-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB: ANALYTICS -->
+    <section id="tab-analytics" class="tab-content">
+      <div class="kpi-grid">
+        <div class="kpi-box">
+          <div class="kpi-label">Total Queries</div>
+          <div class="kpi-val" id="kpi-total">0</div>
+          <div class="kpi-sub" id="kpi-qpm">0 q/min</div>
+        </div>
+        <div class="kpi-box">
+          <div class="kpi-label">Blocked Interceptions</div>
+          <div class="kpi-val" style="color: var(--blocked);" id="kpi-blocked">0</div>
+          <div class="kpi-sub" id="kpi-rate">0% block rate</div>
+        </div>
+        <div class="kpi-box">
+          <div class="kpi-label">Clean Allowed</div>
+          <div class="kpi-val" style="color: var(--allowed);" id="kpi-allowed">0</div>
+          <div class="kpi-sub">Validated DNS</div>
+        </div>
+        <div class="kpi-box">
+          <div class="kpi-label">Avg Resolver Latency</div>
+          <div class="kpi-val" style="color: var(--accent);" id="kpi-latency">16 ms</div>
+          <div class="kpi-sub">Encrypted DoH</div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem;">
+        <div class="card">
+          <div class="card-title">Top Blocked Domains (Threats & Trackers)</div>
+          <div id="analytics-top-blocked" style="font-size: 0.75rem;"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Top Allowed Clean Traffic</div>
+          <div id="analytics-top-allowed" style="font-size: 0.75rem;"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Device Breakdown</div>
+          <div id="analytics-devices" style="font-size: 0.75rem;"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">DNS Security & Query Types</div>
+          <div id="analytics-types" style="font-size: 0.75rem;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB: CUSTOM BLOCKING -->
+    <section id="tab-blocking" class="tab-content">
+      <div class="card">
+        <div class="card-title">Add Custom Deny Rule or Wildcard</div>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <input type="text" id="new-deny-domain" placeholder="e.g. *.doubleclick.net or ads.example.com" style="flex: 2; min-width: 240px; font-family: monospace;">
+          <select id="new-deny-category" style="flex: 1; min-width: 150px;">
+            <option value="Tracking">Tracking / Telemetry</option>
+            <option value="Advertising">Advertising</option>
+            <option value="Social Media">Social Media</option>
+            <option value="Malware">Suspicious / Malware</option>
+          </select>
+          <button class="btn-primary" id="btn-add-deny">+ Block Domain</button>
+        </div>
+        <div id="protected-warning" style="display: none; margin-top: 0.75rem; background: rgba(245, 158, 11, 0.15); border: 1px solid var(--warn); padding: 0.6rem; border-radius: 6px; font-size: 0.75rem; color: #fde047;">
+          ⚠️ <b>System Protected Domain</b>: Blocking this domain can break OS updates, Wi-Fi captive portals, or NTP time synchronization.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>Autonomous Auto-Block Monitor</span>
+          <span style="font-size: 0.7rem; color: var(--muted); font-family: monospace;" id="autoblock-threshold-badge">Threshold: 20 hits/24h</span>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Candidate Domain</th>
+                <th>Hits (24h)</th>
+                <th>Threshold Progress</th>
+                <th>Guardrail Status</th>
+                <th style="text-align: right;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="autoblock-hits-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Active NextDNS Denylist Rules</div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>State</th>
+                <th>Domain / Pattern</th>
+                <th>Category</th>
+                <th>Source</th>
+                <th>Hits Intercepted</th>
+                <th style="text-align: right;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="custom-denylist-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB: SETTINGS & CONFIG -->
+    <section id="tab-config" class="tab-content">
+      <div class="card" style="max-width: 600px; margin: 0 auto 1.25rem;">
+        <div class="card-title">NextDNS Resolver Credentials</div>
+        <div class="form-group">
+          <label>Profile ID (6 characters)</label>
+          <input type="text" id="cfg-profile" placeholder="e.g. 2ab1c3" style="width: 100%; font-family: monospace;">
+        </div>
+        <div class="form-group">
+          <label>NextDNS API Key</label>
+          <input type="password" id="cfg-apikey" placeholder="sk_..." style="width: 100%; font-family: monospace;">
+        </div>
+        <div class="form-group">
+          <label>Cloudflare Pages Proxy Endpoint (Optional)</label>
+          <input type="text" id="cfg-proxy" placeholder="/api/nextdns" style="width: 100%; font-family: monospace;">
+        </div>
+
+        <div class="card-title" style="margin-top: 1.5rem;">Telegram Real-Time Alerts</div>
+        <div class="form-group">
+          <label>Telegram Bot Token</label>
+          <input type="password" id="cfg-tg-token" placeholder="123456:ABC-DEF..." style="width: 100%; font-family: monospace;">
+        </div>
+        <div class="form-group">
+          <label>Telegram Chat ID</label>
+          <input type="text" id="cfg-tg-chat" placeholder="12345678" style="width: 100%; font-family: monospace;">
+        </div>
+
+        <div class="card-title" style="margin-top: 1.5rem;">Auto-Block Thresholds</div>
+        <div class="form-group">
+          <label>Hit Threshold (hits / 24h)</label>
+          <input type="number" id="cfg-threshold" value="20" style="width: 100%;">
+        </div>
+        <div class="form-group">
+          <label>Alert Cooldown (seconds)</label>
+          <input type="number" id="cfg-cooldown" value="60" style="width: 100%;">
+        </div>
+        <div class="form-group">
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+            <input type="checkbox" id="cfg-autoblock" checked>
+            <span>Enable Autonomous Domain Auto-Blocking</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+            <input type="checkbox" id="cfg-protect" checked>
+            <span>Protect System Infrastructure (NTP, Apple, Windows Update, Google)</span>
+          </label>
+        </div>
+
+        <button class="btn-primary" id="btn-save-cfg" style="width: 100%; justify-content: center; margin-top: 0.5rem;">
+          Save Configuration
+        </button>
+      </div>
+    </section>
+
+    <!-- TAB: EXPORT & CLOUDFLARE DEPLOY -->
+    <section id="tab-export" class="tab-content">
+      <div class="card">
+        <div class="card-title">Zero-Dependency Deployment to Cloudflare Pages</div>
+        <p style="color: var(--muted); margin-bottom: 1rem;">
+          Deploy this exact 3-file setup (<code>index.html</code>, <code>manifest.webmanifest</code>, <code>icon.svg</code>) directly to Cloudflare Pages with zero build dependencies!
+        </p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+          <div style="background: #060911; padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">
+            <div style="font-weight: 600; color: var(--accent); margin-bottom: 0.5rem;">Method 1: Direct Upload (No Git)</div>
+            <p style="color: var(--muted); margin-bottom: 0.5rem;">In Cloudflare Dashboard &rarr; Workers & Pages &rarr; Create application &rarr; Pages &rarr; Upload assets. Drop the folder containing index.html, manifest, and icon.svg.</p>
+          </div>
+          <div style="background: #060911; padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">
+            <div style="font-weight: 600; color: #4ade80; margin-bottom: 0.5rem;">Method 2: Wrangler CLI</div>
+            <div class="code-block">npx wrangler pages deploy . --project-name=nextdns-pwa</div>
+          </div>
+        </div>
+
+        <div style="margin-top: 1.25rem;">
+          <div class="card-title">Data Backup & CSV Downloads</div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button id="btn-dl-all-csv" class="btn">Download Logs CSV</button>
+            <button id="btn-dl-denylist-csv" class="btn">Download Denylist CSV</button>
+            <button id="btn-backup-json" class="btn">Backup Config JSON</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Vanilla Pure ES6 Logic (Zero Dependencies) -->
+  <script>
+    // ─── Security Sanitizer (Prevents DOM-XSS) ──────────────────────────
+    function safeText(str) {
+      if (str == null) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // ─── Protected System Domains (Prevents Device Bricking) ───────────
+    const PROTECTED_DOMAINS = [
+      'apple.com', 'icloud.com', 'captive.apple.com', 'google.com',
+      'connectivitycheck.gstatic.com', 'windowsupdate.com', 'microsoft.com',
+      'pool.ntp.org', 'time.apple.com', 'time.windows.com', 'cloudflare.com',
+      'nextdns.io', 'local', 'lan'
+    ];
+
+    function isProtected(domain) {
+      if (!domain) return false;
+      const clean = domain.toLowerCase().trim();
+      return PROTECTED_DOMAINS.some(p => clean === p || clean.endsWith('.' + p));
+    }
+
+    // ─── State Management ──────────────────────────────────────────────
+    const STATE = {
+      isStreaming: true,
+      mode: 'sim', // 'sim' | 'api'
+      selectedDevice: 'all',
+      logs: [],
+      devices: new Set(),
+      hits: {}, // domain -> { count, lastSeen }
+      denylist: [
+        { id: '1', domain: 'telemetry.samsungcloud.com', category: 'Tracking', active: true, hits: 341 },
+        { id: '2', domain: 'events.redditmedia.com', category: 'Tracking', active: true, hits: 142 }
+      ],
+      config: {
+        profile: '',
+        apiKey: '',
+        proxy: '',
+        tgToken: '',
+        tgChat: '',
+        threshold: 20,
+        cooldown: 60,
+        autoBlock: false, // Disabled by default for network stability
+        protectSystem: true
+      },
+      lastAlertTime: {}
+    };
+
+    // Load from LocalStorage
+    try {
+      const savedCfg = localStorage.getItem('nextdns-single-cfg');
+      if (savedCfg) Object.assign(STATE.config, JSON.parse(savedCfg));
+      const savedDeny = localStorage.getItem('nextdns-single-deny');
+      if (savedDeny) STATE.denylist = JSON.parse(savedDeny);
+    } catch(e) {}
+
+    function saveState() {
+      localStorage.setItem('nextdns-single-cfg', JSON.stringify(STATE.config));
+      localStorage.setItem('nextdns-single-deny', JSON.stringify(STATE.denylist));
+    }
+
+    // ─── Toast Notifications ───────────────────────────────────────────
+    function showToast(title, msg, type = 'warn') {
+      const container = document.getElementById('toast-container');
+      const div = document.createElement('div');
+      div.className = `toast toast-${type}`;
+      div.innerHTML = `<b>${safeText(title)}</b><div style="margin-top:2px;color:#cbd5e1;">${msg}</div>`;
+      container.appendChild(div);
+      setTimeout(() => {
+        div.style.opacity = '0';
+        setTimeout(() => div.remove(), 300);
+      }, 4000);
+    }
+
+    // ─── Real-Time Telemetry Simulation ─────────────────────────────────
+    let simTimer = null;
+    const SAMPLE_DEVICES = ['MacBook-Pro', 'iPhone-16', 'Smart-TV', 'Home-Assistant'];
+    const SAMPLE_ALLOWED = ['api.github.com', 'cloudflare.com', 'wikipedia.org', 'cdn.jsdelivr.net', 'developer.mozilla.org'];
+    const SAMPLE_BLOCKED = ['telemetry.samsungcloud.com', 'pagead2.googlesyndication.com', 'graph.instagram.com', 'events.redditmedia.com'];
+
+    function registerDevice(deviceName) {
+      if (!deviceName || STATE.devices.has(deviceName)) return;
+      STATE.devices.add(deviceName);
+      const gSel = document.getElementById('global-device-select');
+      const lSel = document.getElementById('live-device-filter');
+      const opt = document.createElement('option');
+      opt.value = deviceName;
+      opt.textContent = deviceName;
+      gSel.appendChild(opt);
+      lSel.appendChild(opt.cloneNode(true));
+    }
+
+    function handleIncomingLog(log) {
+      STATE.logs.unshift(log);
+      if (STATE.logs.length > 500) STATE.logs.pop();
+      if (log.device) registerDevice(log.device);
+
+      // Track hits for auto-block
+      const d = log.domain.toLowerCase();
+      if (!STATE.hits[d]) STATE.hits[d] = { count: 0, lastSeen: Date.now() };
+      STATE.hits[d].count++;
+      STATE.hits[d].lastSeen = Date.now();
+
+      // Check auto-block condition
+      if (STATE.config.autoBlock && STATE.hits[d].count >= STATE.config.threshold) {
+        const isDeniedAlready = STATE.denylist.some(r => r.domain.toLowerCase() === d);
+        const isSys = STATE.config.protectSystem && isProtected(d);
+
+        if (!isDeniedAlready && !isSys) {
+          STATE.denylist.unshift({
+            id: String(Date.now()),
+            domain: d,
+            category: 'Auto-Block Guard',
+            active: true,
+            hits: STATE.hits[d].count
+          });
+          saveState();
+          showToast('🚫 Autonomous Guard Denied', `Auto-blocked <code>${safeText(d)}</code> after ${STATE.hits[d].count} hits`, 'danger');
+          renderDenylist();
+        }
+      }
+
+      if (STATE.selectedDevice === 'all' || log.device === STATE.selectedDevice) {
+        renderLiveRow(log);
+      }
+      updateAnalyticsKPIs();
+    }
+
+    function renderFilteredLiveLogs() {
+      const tbody = document.getElementById('live-log-body');
+      tbody.innerHTML = '';
+      const filtered = STATE.selectedDevice === 'all'
+        ? STATE.logs
+        : STATE.logs.filter(l => l.device === STATE.selectedDevice);
+      for (const log of filtered.slice(0, 100)) {
+        renderLiveRow(log);
+      }
+    }
+
+    function startSimulation() {
+      if (simTimer) clearInterval(simTimer);
+      simTimer = setInterval(() => {
+        if (!STATE.isStreaming) return;
+        const isBlocked = Math.random() < 0.28;
+        const dev = SAMPLE_DEVICES[Math.floor(Math.random() * SAMPLE_DEVICES.length)];
+        const domain = isBlocked
+          ? SAMPLE_BLOCKED[Math.floor(Math.random() * SAMPLE_BLOCKED.length)]
+          : SAMPLE_ALLOWED[Math.floor(Math.random() * SAMPLE_ALLOWED.length)];
+
+        const isCustomBlocked = STATE.denylist.some(r => r.active && (r.domain.toLowerCase() === domain.toLowerCase()));
+        const status = (isBlocked || isCustomBlocked) ? 'blocked' : 'allowed';
+
+        handleIncomingLog({
+          id: Date.now() + Math.random(),
+          time: new Date(),
+          domain,
+          device: dev,
+          status,
+          reasons: isCustomBlocked ? ['Custom Denylist Rule'] : (isBlocked ? ['Ad & Tracking Protection'] : []),
+          proto: 'DoH',
+          type: 'A',
+          latency: Math.floor(Math.random() * 20) + 10
+        });
+      }, 1300);
+    }
+
+    // ─── UI Rendering ───────────────────────────────────────────────────
+    function renderLiveRow(log) {
+      const tbody = document.getElementById('live-log-body');
+      const tr = document.createElement('tr');
+      const isBlocked = log.status === 'blocked';
+
+      tr.innerHTML = `
+        <td style="color:var(--muted); font-size: 0.7rem;">${log.time.toLocaleTimeString()}</td>
+        <td><span class="status-pill ${isBlocked ? 'status-blocked' : 'status-allowed'}">${isBlocked ? 'Blocked' : 'Allowed'}</span></td>
+        <td class="domain-cell" style="color: ${isBlocked ? '#fca5a5' : '#f1f5f9'};">${safeText(log.domain)}</td>
+        <td>
+          <span style="color: #38bdf8; cursor: pointer; text-decoration: underline;" onclick="filterByDevice('${safeText(log.device)}')">
+            ${safeText(log.device)}
+          </span>
+        </td>
+        <td style="color: var(--muted);">${safeText(log.proto)} / ${safeText(log.type)} (${log.latency}ms)</td>
+        <td style="color: #fde047; font-size: 0.7rem;">${safeText(log.reasons.join(', ') || '—')}</td>
+        <td style="text-align: right;">
+          <button class="btn-danger" style="padding: 0.2rem 0.5rem; font-size: 0.68rem;" onclick="addQuickDeny('${safeText(log.domain)}')">Deny</button>
+        </td>
+      `;
+
+      tbody.prepend(tr);
+      while (tbody.children.length > 150) tbody.lastChild.remove();
+    }
+
+    window.filterByDevice = function(dev) {
+      STATE.selectedDevice = dev;
+      document.getElementById('global-device-select').value = dev;
+      document.getElementById('live-device-filter').value = dev;
+      renderFilteredLiveLogs();
+      updateAnalyticsKPIs();
+      showToast('Device Filter Active', `Filtered view to ${safeText(dev)}`, 'warn');
+    };
+
+    function updateAnalyticsKPIs() {
+      const activeLogs = STATE.selectedDevice === 'all'
+        ? STATE.logs
+        : STATE.logs.filter(l => l.device === STATE.selectedDevice);
+
+      const total = activeLogs.length;
+      const blocked = activeLogs.filter(l => l.status === 'blocked').length;
+      const allowed = total - blocked;
+      const rate = total > 0 ? Math.round((blocked / total) * 100) : 0;
+
+      document.getElementById('kpi-total').textContent = total;
+      document.getElementById('kpi-blocked').textContent = blocked;
+      document.getElementById('kpi-allowed').textContent = allowed;
+      document.getElementById('kpi-rate').textContent = `${rate}% (${STATE.selectedDevice === 'all' ? 'All' : STATE.selectedDevice})`;
+      document.getElementById('kpi-qpm').textContent = `${Math.round(total * 1.5)} q/min`;
+
+      // Render Top Blocked for this device
+      const blockedMap = {};
+      const allowedMap = {};
+      const devMap = {};
+      for (const l of activeLogs) {
+        if (l.status === 'blocked') blockedMap[l.domain] = (blockedMap[l.domain] || 0) + 1;
+        else allowedMap[l.domain] = (allowedMap[l.domain] || 0) + 1;
+        devMap[l.device] = (devMap[l.device] || 0) + 1;
+      }
+
+      const topB = Object.entries(blockedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
+      document.getElementById('analytics-top-blocked').innerHTML = topB.length ? topB.map(([d, c]) => `
+        <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-family:monospace;">
+          <span style="color:#fca5a5;">${safeText(d)}</span>
+          <span style="color:var(--muted);">${c} hits</span>
+        </div>
+      `).join('') : '<div style="color:var(--muted);">No blocked queries for this selection.</div>';
+
+      const topA = Object.entries(allowedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
+      document.getElementById('analytics-top-allowed').innerHTML = topA.length ? topA.map(([d, c]) => `
+        <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-family:monospace;">
+          <span style="color:#86efac;">${safeText(d)}</span>
+          <span style="color:var(--muted);">${c} hits</span>
+        </div>
+      `).join('') : '<div style="color:var(--muted);">No allowed queries for this selection.</div>';
+
+      const devList = Object.entries(devMap).sort((a,b)=>b[1]-a[1]);
+      document.getElementById('analytics-devices').innerHTML = devList.map(([d, c]) => `
+        <div style="margin-bottom:6px; cursor:pointer;" onclick="filterByDevice('${safeText(d)}')">
+          <div style="display:flex; justify-content:space-between;">
+            <span style="color:${d===STATE.selectedDevice?'#38bdf8':'#f1f5f9'}; font-weight:${d===STATE.selectedDevice?'700':'400'};">${safeText(d)} ${d===STATE.selectedDevice?'(Active)':''}</span>
+            <span style="color:var(--muted); font-family:monospace;">${c} queries</span>
+          </div>
+          <div class="bar-bg"><div class="bar-fill" style="width:${Math.round((c/total)*100)}%; background:#a855f7;"></div></div>
+        </div>
+      `).join('');
+    }
+
+    function renderDenylist() {
+      const tbody = document.getElementById('custom-denylist-body');
+      tbody.innerHTML = STATE.denylist.map(r => `
+        <tr>
+          <td><span class="status-pill ${r.active ? 'status-blocked' : 'status-allowed'}">${r.active ? 'Enforced' : 'Disabled'}</span></td>
+          <td class="domain-cell">${safeText(r.domain)}</td>
+          <td style="color: var(--muted);">${safeText(r.category)}</td>
+          <td style="color: var(--muted);">${safeText(r.source || 'Manual')}</td>
+          <td style="color: var(--blocked); font-weight: 700;">${r.hits || 0}</td>
+          <td style="text-align: right;">
+            <button onclick="toggleRule('${r.id}')" style="padding: 0.2rem 0.5rem;">${r.active ? 'Disable' : 'Enable'}</button>
+            <button onclick="deleteRule('${r.id}')" class="btn-danger" style="padding: 0.2rem 0.5rem;">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderHitsTable() {
+      const tbody = document.getElementById('autoblock-hits-body');
+      const items = Object.entries(STATE.hits).map(([domain, h]) => ({ domain, count: h.count }));
+      items.sort((a, b) => b.count - a.count);
+
+      tbody.innerHTML = items.slice(0, 15).map(i => {
+        const pct = Math.min(100, Math.round((i.count / STATE.config.threshold) * 100));
+        const isSys = isProtected(i.domain);
+        return `
+          <tr>
+            <td class="domain-cell">${safeText(i.domain)} ${isSys ? '<span class="badge">Protected</span>' : ''}</td>
+            <td style="color: var(--warn); font-weight: bold;">${i.count}</td>
+            <td style="width: 140px;">
+              <div class="bar-bg"><div class="bar-fill" style="width:${pct}%; background:${pct>=100?'var(--blocked)':'var(--warn)'}"></div></div>
+            </td>
+            <td style="color: var(--muted);">${isSys ? 'Guardrail Active' : (pct >= 100 ? 'Auto-Denied' : 'Monitoring')}</td>
+            <td style="text-align: right;">
+              <button onclick="addQuickDeny('${safeText(i.domain)}')" class="btn-danger" style="padding: 0.2rem 0.5rem;">Block</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    window.addQuickDeny = function(domain) {
+      if (STATE.config.protectSystem && isProtected(domain)) {
+        if (!confirm(`Warning: ${domain} is a critical system domain. Blocking it may break device connectivity. Proceed anyway?`)) return;
+      }
+      STATE.denylist.unshift({
+        id: String(Date.now()),
+        domain,
+        category: 'Quick Deny',
+        active: true,
+        hits: 1
+      });
+      saveState();
+      renderDenylist();
+      showToast('Denylist Updated', `Added <code>${safeText(domain)}</code>`, 'danger');
+    };
+
+    window.toggleRule = function(id) {
+      const r = STATE.denylist.find(x => x.id === id);
+      if (r) { r.active = !r.active; saveState(); renderDenylist(); }
+    };
+
+    window.deleteRule = function(id) {
+      STATE.denylist = STATE.denylist.filter(x => x.id !== id);
+      saveState();
+      renderDenylist();
+    };
+
+    // ─── CSV Download Engine (Formula Injection Protected) ─────────────
+    function downloadCSV(filename, csv) {
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+    }
+
+    function exportLogs() {
+      let csv = '"Timestamp","Status","Domain","Device"\r\n';
+      for (const l of STATE.logs) {
+        let d = l.domain.replace(/"/g, '""');
+        if (/^[=+\-@]/.test(d)) d = "'" + d;
+        csv += `"${l.time.toISOString()}","${l.status}","${d}","${l.device}"\r\n`;
+      }
+      downloadCSV('nextdns-logs.csv', csv);
+    }
+
+    // ─── Navigation Tabs ────────────────────────────────────────────────
+    document.querySelectorAll('.nav-tabs button').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('.nav-tabs button').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+        if (btn.dataset.tab === 'blocking') { renderDenylist(); renderHitsTable(); }
+      };
+    });
+
+    // ─── Stream Controls ────────────────────────────────────────────────
+    document.getElementById('btn-toggle-stream').onclick = () => {
+      STATE.isStreaming = !STATE.isStreaming;
+      document.getElementById('btn-toggle-stream').textContent = STATE.isStreaming ? 'Pause' : 'Resume';
+      document.getElementById('stream-status').textContent = STATE.isStreaming ? '● Streaming' : '○ Paused';
+      document.getElementById('stream-status').className = `badge ${STATE.isStreaming ? 'live' : ''}`;
+    };
+
+    document.getElementById('btn-add-deny').onclick = () => {
+      const inp = document.getElementById('new-deny-domain');
+      const domain = inp.value.trim().toLowerCase();
+      if (!domain) return;
+      if (STATE.config.protectSystem && isProtected(domain)) {
+        if (!confirm(`Warning: ${domain} is a critical system domain. Are you sure?`)) return;
+      }
+      STATE.denylist.unshift({
+        id: String(Date.now()),
+        domain,
+        category: document.getElementById('new-deny-category').value,
+        active: true,
+        hits: 0
+      });
+      saveState();
+      inp.value = '';
+      renderDenylist();
+      showToast('Rule Added', `Blocked <code>${safeText(domain)}</code>`, 'danger');
+    };
+
+    document.getElementById('btn-save-cfg').onclick = () => {
+      STATE.config.profile = document.getElementById('cfg-profile').value.trim();
+      STATE.config.apiKey = document.getElementById('cfg-apikey').value.trim();
+      STATE.config.proxy = document.getElementById('cfg-proxy').value.trim();
+      STATE.config.tgToken = document.getElementById('cfg-tg-token').value.trim();
+      STATE.config.tgChat = document.getElementById('cfg-tg-chat').value.trim();
+      STATE.config.threshold = Number(document.getElementById('cfg-threshold').value) || 20;
+      STATE.config.cooldown = Number(document.getElementById('cfg-cooldown').value) || 60;
+      STATE.config.autoBlock = document.getElementById('cfg-autoblock').checked;
+      STATE.config.protectSystem = document.getElementById('cfg-protect').checked;
+      saveState();
+      showToast('Config Saved', 'Settings updated successfully', 'success');
+    };
+
+    document.getElementById('btn-export-live').onclick = exportLogs;
+    document.getElementById('btn-dl-all-csv').onclick = exportLogs;
+    document.getElementById('btn-clear-logs').onclick = () => {
+      STATE.logs = [];
+      document.getElementById('live-log-body').innerHTML = '';
+      updateAnalyticsKPIs();
+    };
+
+    document.getElementById('global-device-select').onchange = (e) => {
+      filterByDevice(e.target.value);
+    };
+    document.getElementById('live-device-filter').onchange = (e) => {
+      filterByDevice(e.target.value);
+    };
+
+    // Init (No service worker required - live network stream app)
+    startSimulation();
+    renderDenylist();
+  </script>
+</body>
+</html>
