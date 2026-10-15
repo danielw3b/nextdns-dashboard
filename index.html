@@ -1013,6 +1013,73 @@
       filterByDevice(e.target.value);
     };
 
+    let apiPollTimer = null;
+
+    async function fetchNextDNSLogs() {
+      if (STATE.mode !== 'api') return;
+      const profile = STATE.config.profile;
+      const apiKey = STATE.config.apiKey;
+      const proxy = STATE.config.proxy || 'https://api.nextdns.io';
+
+      if (!profile || !apiKey) {
+        showToast('API Credentials Missing', 'Please enter your Profile ID and API Key in Settings & Credentials.', 'danger');
+        return;
+      }
+
+      try {
+        const url = `${proxy.replace(/\/$/, '')}/profiles/${profile}/logs?limit=50`;
+        const res = await fetch(url, {
+          headers: {
+            'X-Api-Key': apiKey,
+            'Accept': 'application/json'
+          }
+        });
+
+        if (!res.ok) {
+          throw new Error(`NextDNS API error status ${res.status} ${res.statusText}`);
+        }
+
+        const data = await res.json();
+        const logsArray = data.data || data.logs || (Array.isArray(data) ? data : []);
+
+        for (const item of logsArray.reverse()) {
+          const logObj = {
+            id: item.id || `log-${Math.random()}`,
+            time: item.timestamp ? new Date(item.timestamp) : new Date(),
+            domain: item.domain || 'unknown',
+            device: item.device?.name || item.deviceName || 'NextDNS Device',
+            status: item.status || 'allowed',
+            reasons: (item.reasons || []).map(r => typeof r === 'string' ? r : r.name || r.id),
+            proto: item.protocol || 'DoH',
+            type: item.root?.queryType || item.type || 'A',
+            latency: item.latency || 15
+          };
+          if (!STATE.logs.some(l => l.id === logObj.id)) {
+            handleIncomingLog(logObj);
+          }
+        }
+        document.getElementById('stream-status').textContent = '● Live NextDNS API Connected';
+        document.getElementById('stream-status').className = 'badge live';
+      } catch (err) {
+        console.warn('NextDNS API fetch failed:', err);
+        showToast('NextDNS API Connection Error', err.message + '. (Check CORS / Proxy / API Key)', 'danger');
+      }
+    }
+
+    document.getElementById('stream-mode').onchange = (e) => {
+      STATE.mode = e.target.value;
+      if (STATE.mode === 'api') {
+        document.getElementById('stream-status').textContent = '● Connecting to NextDNS API...';
+        fetchNextDNSLogs();
+        if (apiPollTimer) clearInterval(apiPollTimer);
+        apiPollTimer = setInterval(fetchNextDNSLogs, 10000);
+      } else {
+        if (apiPollTimer) clearInterval(apiPollTimer);
+        document.getElementById('stream-status').textContent = '● Live Simulator';
+        document.getElementById('stream-status').className = 'badge sim';
+      }
+    };
+
     // Init (No service worker required - live network stream app)
     loadConfigToUI();
     //startSimulation();
