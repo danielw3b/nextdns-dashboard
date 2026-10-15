@@ -614,11 +614,22 @@
       lastAlertTime: {}
     };
 
-    // Load from LocalStorage
+    // Load from LocalStorage (Supports both standalone and legacy keys)
     try {
-      const savedCfg = localStorage.getItem('nextdns-single-cfg');
-      if (savedCfg) Object.assign(STATE.config, JSON.parse(savedCfg));
-      const savedDeny = localStorage.getItem('nextdns-single-deny');
+      const savedCfg = localStorage.getItem('nextdns-single-cfg') || localStorage.getItem('nextdns-sentinel-cfg');
+      if (savedCfg) {
+        const parsed = JSON.parse(savedCfg);
+        STATE.config.profile = parsed.profile || parsed.profileId || '';
+        STATE.config.apiKey = parsed.apiKey || '';
+        STATE.config.proxy = parsed.proxy || parsed.proxyUrl || '';
+        STATE.config.tgToken = parsed.tgToken || parsed.telegramToken || '';
+        STATE.config.tgChat = parsed.tgChat || parsed.telegramChatId || '';
+        STATE.config.threshold = parsed.threshold || parsed.autoBlockThreshold || 20;
+        STATE.config.cooldown = parsed.cooldown || parsed.cooldownSeconds || 60;
+        STATE.config.autoBlock = parsed.autoBlock ?? parsed.autoBlockEnabled ?? false;
+        STATE.config.protectSystem = parsed.protectSystem ?? true;
+      }
+      const savedDeny = localStorage.getItem('nextdns-single-deny') || localStorage.getItem('nextdns-sentinel-denylist');
       if (savedDeny) STATE.denylist = JSON.parse(savedDeny);
     } catch(e) {}
 
