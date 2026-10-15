@@ -284,6 +284,22 @@
       overflow-x: auto;
       line-height: 1.4;
     }
+    @media (max-width: 640px) {
+      th:nth-child(4), td:nth-child(4),
+      th:nth-child(5), td:nth-child(5),
+      th:nth-child(6), td:nth-child(6) {
+        display: none;
+      }
+      .domain-cell {
+        max-width: 150px;
+        word-break: break-all;
+        white-space: normal;
+      }
+      th, td {
+        padding: 0.35rem 0.45rem;
+        font-size: 0.7rem;
+      }
+    }
   </style>
 </head>
 <body>
@@ -312,10 +328,6 @@
       </a>
       <span class="badge live" id="stream-status">● Live Simulator</span>
       <button class="btn-primary" id="btn-toggle-stream">Pause</button>
-      <select id="stream-mode" style="padding: 0.35rem 0.5rem;">
-        <option value="sim">Simulated Stream (Test Demo)</option>
-        <option value="api">Live NextDNS API</option>
-      </select>
     </div>
   </header>
 
@@ -1170,25 +1182,24 @@
       }
     }
 
-    document.getElementById('stream-mode').onchange = (e) => {
-      STATE.mode = e.target.value;
-      if (STATE.mode === 'api') {
-        document.getElementById('stream-status').textContent = '● Connecting to NextDNS API...';
-        fetchNextDNSLogs();
-        if (apiPollTimer) clearInterval(apiPollTimer);
-        apiPollTimer = setInterval(fetchNextDNSLogs, 10000);
-      } else {
-        if (apiPollTimer) clearInterval(apiPollTimer);
-        document.getElementById('stream-status').textContent = '● Live Simulator';
-        document.getElementById('stream-status').className = 'badge sim';
-      }
-    };
-
     // Init (No service worker required - live network stream app)
     loadConfigToUI();
     initDB();
-    //startSimulation();
     renderDenylist();
+
+    if (STATE.config.profile && STATE.config.apiKey) {
+      STATE.mode = 'api';
+      document.getElementById('stream-status').textContent = '● Live NextDNS API';
+      document.getElementById('stream-status').className = 'badge live';
+      fetchNextDNSLogs();
+      if (apiPollTimer) clearInterval(apiPollTimer);
+      apiPollTimer = setInterval(fetchNextDNSLogs, 10000);
+    } else {
+      STATE.mode = 'sim';
+      document.getElementById('stream-status').textContent = '● Live Simulator';
+      document.getElementById('stream-status').className = 'badge sim';
+      startSimulation();
+    }
   </script>
 </body>
 </html>
