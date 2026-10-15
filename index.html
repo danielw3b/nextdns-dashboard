@@ -285,7 +285,7 @@
       line-height: 1.4;
     }
   </style>
-<script src="/_aistudio-iframe.js?v=6634132a"></script></head>
+</head>
 <body>
 
   <!-- Header -->
@@ -952,6 +952,7 @@
         btn.classList.add('active');
         document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
         if (btn.dataset.tab === 'blocking') { renderDenylist(); renderHitsTable(); }
+        if (btn.dataset.tab === 'config') { loadConfigToUI(); }
       };
     });
 
@@ -1014,7 +1015,7 @@
 
     // Init (No service worker required - live network stream app)
     loadConfigToUI();
-    startSimulation();
+    //startSimulation();
     renderDenylist();
   </script>
 </body>
