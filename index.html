@@ -111,8 +111,6 @@
     .btn-primary:hover { background: var(--accent-hover); }
     .btn-danger { background: var(--blocked-bg); color: #fca5a5; border-color: rgba(239, 68, 68, 0.3); }
     .btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
-    .btn-success { background: var(--allowed-bg); color: #86efac; border-color: rgba(34, 197, 94, 0.3); }
-    .btn-success:hover { background: rgba(34, 197, 94, 0.25); }
     .nav-tabs {
       background: var(--surface);
       border-bottom: 1px solid var(--border);
@@ -274,17 +272,6 @@
     .bar-fill { height: 100%; border-radius: 99px; transition: width 0.3s ease; }
     .form-group { margin-bottom: 0.9rem; }
     .form-group label { display: block; font-size: 0.72rem; color: var(--muted); margin-bottom: 0.3rem; font-weight: 500; }
-    .code-block {
-      background: #060911;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 0.75rem;
-      font-family: monospace;
-      font-size: 0.72rem;
-      color: #38bdf8;
-      overflow-x: auto;
-      line-height: 1.4;
-    }
     @media (max-width: 640px) {
       .domain-cell {
         max-width: 160px;
@@ -316,7 +303,6 @@
     </div>
 
     <div class="header-actions">
-      <!-- Device Selector (NextDNS Multi-device Isolation) -->
       <select id="global-device-select" style="padding: 0.35rem 0.5rem;" title="Filter all logs and analytics by device">
         <option value="all">All Devices</option>
       </select>
@@ -450,9 +436,6 @@
           </select>
           <button class="btn-primary" id="btn-add-deny">+ Block Domain</button>
         </div>
-        <div id="protected-warning" style="display: none; margin-top: 0.75rem; background: rgba(245, 158, 11, 0.15); border: 1px solid var(--warn); padding: 0.6rem; border-radius: 6px; font-size: 0.75rem; color: #fde047;">
-          ⚠️ <b>System Protected Domain</b>: Blocking this domain can break OS updates, Wi-Fi captive portals, or NTP time synchronization.
-        </div>
       </div>
 
       <div class="card">
@@ -523,18 +506,6 @@
           </div>
         </div>
 
-        <div class="card-title" style="margin-top: 1.25rem;">Telegram Real-Time Alerts</div>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
-          <div class="form-group">
-            <label>Telegram Bot Token</label>
-            <input type="password" id="cfg-tg-token" placeholder="123456:ABC-DEF..." style="width: 100%; font-family: monospace;">
-          </div>
-          <div class="form-group">
-            <label>Telegram Chat ID</label>
-            <input type="text" id="cfg-tg-chat" placeholder="12345678" style="width: 100%; font-family: monospace;">
-          </div>
-        </div>
-
         <div class="card-title" style="margin-top: 1.25rem;">Auto-Block Thresholds & Retention</div>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
           <div class="form-group">
@@ -570,13 +541,11 @@
       </div>
     </section>
 
-
-
   </main>
 
   <div class="toast-container" id="toast-container"></div>
 
-  <!-- Vanilla Pure ES6 Logic (Zero Dependencies) -->
+  <!-- Vanilla Pure ES6 Logic with Optimized DOM Batching and Active IndexedDB -->
   <script>
     // ─── Security Sanitizer (Prevents DOM-XSS) ──────────────────────────
     function safeText(str) {
@@ -589,7 +558,7 @@
         .replace(/'/g, '&#39;');
     }
 
-    // ─── Protected System Domains (Prevents Device Bricking) ───────────
+    // ─── Protected System Domains ───────────────────────────────────────
     const PROTECTED_DOMAINS = [
       'apple.com', 'icloud.com', 'captive.apple.com', 'google.com',
       'connectivitycheck.gstatic.com', 'windowsupdate.com', 'microsoft.com',
@@ -606,11 +575,11 @@
     // ─── State Management ──────────────────────────────────────────────
     const STATE = {
       isStreaming: true,
-      mode: 'sim', // 'sim' | 'api'
+      mode: 'sim',
       selectedDevice: 'all',
       logs: [],
       devices: new Set(),
-      hits: {}, // domain -> { count, lastSeen }
+      hits: {},
       denylist: [
         { id: '1', domain: 'telemetry.samsungcloud.com', category: 'Tracking', active: true, hits: 341 },
         { id: '2', domain: 'events.redditmedia.com', category: 'Tracking', active: true, hits: 142 }
@@ -624,33 +593,28 @@
         threshold: 20,
         retentionDays: 7,
         cooldown: 60,
-        autoBlock: false, // Disabled by default for network stability
+        autoBlock: false,
         protectSystem: true
-      },
-      lastAlertTime: {}
+      }
     };
 
-    // Load from LocalStorage (Supports both standalone and legacy keys)
+    // Load LocalStorage config
     try {
       const savedCfg = localStorage.getItem('nextdns-single-cfg') || localStorage.getItem('nextdns-sentinel-cfg');
-      console.log('NextDNS Sentinel - Loaded raw config from localStorage:', savedCfg);
       if (savedCfg) {
         const parsed = JSON.parse(savedCfg);
         STATE.config.profile = parsed.profile || parsed.profileId || '';
         STATE.config.apiKey = parsed.apiKey || '';
         STATE.config.proxy = parsed.proxy || parsed.proxyUrl || '';
-        STATE.config.tgToken = parsed.tgToken || parsed.telegramToken || '';
-        STATE.config.tgChat = parsed.tgChat || parsed.telegramChatId || '';
         STATE.config.threshold = parsed.threshold || parsed.autoBlockThreshold || 20;
         STATE.config.retentionDays = parsed.retentionDays || 7;
-        STATE.config.cooldown = parsed.cooldown || parsed.cooldownSeconds || 60;
         STATE.config.autoBlock = parsed.autoBlock ?? parsed.autoBlockEnabled ?? false;
         STATE.config.protectSystem = parsed.protectSystem ?? true;
       }
       const savedDeny = localStorage.getItem('nextdns-single-deny') || localStorage.getItem('nextdns-sentinel-denylist');
       if (savedDeny) STATE.denylist = JSON.parse(savedDeny);
     } catch(e) {
-      console.error('NextDNS Sentinel - LocalStorage load error:', e);
+      console.error('LocalStorage load error:', e);
     }
 
     function updateThresholdBadge() {
@@ -660,20 +624,16 @@
 
     function loadConfigToUI() {
       try {
-        console.log('NextDNS Sentinel - Populating UI with config:', STATE.config);
         if (document.getElementById('cfg-profile')) document.getElementById('cfg-profile').value = STATE.config.profile || '';
         if (document.getElementById('cfg-apikey')) document.getElementById('cfg-apikey').value = STATE.config.apiKey || '';
         if (document.getElementById('cfg-proxy')) document.getElementById('cfg-proxy').value = STATE.config.proxy || '';
-        if (document.getElementById('cfg-tg-token')) document.getElementById('cfg-tg-token').value = STATE.config.tgToken || '';
-        if (document.getElementById('cfg-tg-chat')) document.getElementById('cfg-tg-chat').value = STATE.config.tgChat || '';
         if (document.getElementById('cfg-threshold')) document.getElementById('cfg-threshold').value = STATE.config.threshold || 20;
         if (document.getElementById('cfg-retention')) document.getElementById('cfg-retention').value = STATE.config.retentionDays || 7;
-        if (document.getElementById('cfg-cooldown')) document.getElementById('cfg-cooldown').value = STATE.config.cooldown || 60;
         if (document.getElementById('cfg-autoblock')) document.getElementById('cfg-autoblock').checked = !!STATE.config.autoBlock;
         if (document.getElementById('cfg-protect')) document.getElementById('cfg-protect').checked = !!STATE.config.protectSystem;
         updateThresholdBadge();
       } catch(e) {
-        console.error('NextDNS Sentinel - loadConfigToUI error:', e);
+        console.error('loadConfigToUI error:', e);
       }
     }
 
@@ -681,51 +641,78 @@
       try {
         localStorage.setItem('nextdns-single-cfg', JSON.stringify(STATE.config));
         localStorage.setItem('nextdns-single-deny', JSON.stringify(STATE.denylist));
-        console.log('NextDNS Sentinel - Successfully saved config to localStorage:', STATE.config);
       } catch(e) {
-        console.error('NextDNS Sentinel - LocalStorage save error:', e);
+        console.error('LocalStorage save error:', e);
       }
     }
 
-    // ─── IndexedDB Deactivated (In-Memory PWA mode for lightning-fast startup) ───
+    // ─── Active IndexedDB Implementation ─────────────────────────────────
     let db = null;
+    const DB_NAME = 'NextDNSSentinelDB';
+    const STORE_NAME = 'logs';
 
-    function initDB() {
-      return Promise.resolve();
+    async function initDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, 1);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = (event) => {
+          db = event.target.result;
+          loadLogsFromDB();
+          resolve(db);
+        };
+        request.onupgradeneeded = (event) => {
+          const database = event.target.result;
+          if (!database.objectStoreNames.contains(STORE_NAME)) {
+            const store = database.createObjectStore(STORE_NAME, { keyPath: 'id' });
+            store.createIndex('time', 'time', { unique: false });
+          }
+        };
+      });
     }
 
     function saveLogToDB(log) {
-      // Deactivated to prevent PWA startup bottlenecks
+      if (!db) return;
+      try {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        store.put({
+          ...log,
+          time: log.time instanceof Date ? log.time.getTime() : log.time
+        });
+      } catch (e) {
+        console.warn('Failed to persist log in IndexedDB:', e);
+      }
     }
 
     function loadLogsFromDB() {
-      return Promise.resolve();
-    }
-
-    function pruneOldLogsFromDB() {
-      // Deactivated
-    }
-
-    function pruneOldLogsFromDB() {
       if (!db) return;
       try {
-        const days = Number(STATE.config.retentionDays) || 7;
-        const threshold = Date.now() - (days * 24 * 3600 * 1000);
-        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const tx = db.transaction(STORE_NAME, 'readonly');
         const store = tx.objectStore(STORE_NAME);
-        const request = store.openCursor();
+        const index = store.index('time');
+        const request = index.openCursor(null, 'prev');
+        const loaded = [];
+
         request.onsuccess = (event) => {
           const cursor = event.target.result;
-          if (cursor) {
+          if (cursor && loaded.length < 300) {
             const record = cursor.value;
-            if (record.time < threshold) {
-              cursor.delete();
-            }
+            loaded.push({
+              ...record,
+              time: new Date(record.time)
+            });
             cursor.continue();
+          } else {
+            if (loaded.length > 0) {
+              STATE.logs = loaded;
+              loaded.forEach(l => { if (l.device) registerDevice(l.device); });
+              renderFilteredLiveLogs();
+              updateAnalyticsKPIs();
+            }
           }
         };
       } catch (e) {
-        console.warn('Pruning logs failed:', e);
+        console.warn('Failed to load logs from IndexedDB:', e);
       }
     }
 
@@ -742,8 +729,9 @@
       }, 4000);
     }
 
-    // ─── Real-Time Telemetry Simulation ─────────────────────────────────
+    // ─── Telemetry & Batch Rendering via requestAnimationFrame ─────────
     let simTimer = null;
+    let renderScheduled = false;
     const SAMPLE_DEVICES = ['MacBook-Pro', 'iPhone-16', 'Smart-TV', 'Home-Assistant'];
     const SAMPLE_ALLOWED = ['api.github.com', 'cloudflare.com', 'wikipedia.org', 'cdn.jsdelivr.net', 'developer.mozilla.org'];
     const SAMPLE_BLOCKED = ['telemetry.samsungcloud.com', 'pagead2.googlesyndication.com', 'graph.instagram.com', 'events.redditmedia.com'];
@@ -753,11 +741,13 @@
       STATE.devices.add(deviceName);
       const gSel = document.getElementById('global-device-select');
       const lSel = document.getElementById('live-device-filter');
-      const opt = document.createElement('option');
-      opt.value = deviceName;
-      opt.textContent = deviceName;
-      gSel.appendChild(opt);
-      lSel.appendChild(opt.cloneNode(true));
+      if (gSel && !gSel.querySelector(`option[value="${CSS.escape(deviceName)}"]`)) {
+        const opt = document.createElement('option');
+        opt.value = deviceName;
+        opt.textContent = deviceName;
+        gSel.appendChild(opt);
+        if (lSel) lSel.appendChild(opt.cloneNode(true));
+      }
     }
 
     function handleIncomingLog(log) {
@@ -766,13 +756,11 @@
       if (STATE.logs.length > 500) STATE.logs.pop();
       if (log.device) registerDevice(log.device);
 
-      // Track hits for auto-block
       const d = log.domain.toLowerCase();
       if (!STATE.hits[d]) STATE.hits[d] = { count: 0, lastSeen: Date.now() };
       STATE.hits[d].count++;
       STATE.hits[d].lastSeen = Date.now();
 
-      // Check auto-block condition
       if (STATE.config.autoBlock && STATE.hits[d].count >= STATE.config.threshold) {
         const isDeniedAlready = STATE.denylist.some(r => r.domain.toLowerCase() === d);
         const isSys = STATE.config.protectSystem && isProtected(d);
@@ -795,8 +783,17 @@
         log.clientIp = '84.115.72.10';
       }
 
-      renderFilteredLiveLogs();
+      scheduleBatchRender();
       updateAnalyticsKPIs();
+    }
+
+    function scheduleBatchRender() {
+      if (renderScheduled) return;
+      renderScheduled = true;
+      requestAnimationFrame(() => {
+        renderScheduled = false;
+        renderFilteredLiveLogs();
+      });
     }
 
     function renderFilteredLiveLogs() {
@@ -807,10 +804,15 @@
 
       const filtered = STATE.logs.filter(l => {
         if (STATE.selectedDevice !== 'all' && l.device !== STATE.selectedDevice) return false;
-        if (statusFilter !== 'all') {
-          const lStatus = String(l.status || 'allowed').toLowerCase();
-          if (lStatus !== statusFilter) return false;
+        
+        const lStatus = String(l.status || 'allowed').toLowerCase();
+        if (statusFilter === 'blocked') {
+          if (lStatus !== 'blocked') return false;
+        } else if (statusFilter === 'allowed') {
+          // Fix: Include both 'allowed' and NextDNS API 'default' status as valid allowed traffic
+          if (lStatus !== 'allowed' && lStatus !== 'default') return false;
         }
+
         if (search) {
           const matchDomain = l.domain.toLowerCase().includes(search);
           const matchDevice = l.device.toLowerCase().includes(search);
@@ -823,7 +825,8 @@
       const fragment = document.createDocumentFragment();
       for (const log of filtered.slice(0, 100)) {
         const tr = document.createElement('tr');
-        const isBlocked = String(log.status || 'allowed').toLowerCase() === 'blocked';
+        const lStatusVal = String(log.status || 'allowed').toLowerCase();
+        const isBlocked = lStatusVal === 'blocked';
         tr.innerHTML = `
           <td>
             <div style="font-weight: 500;">${log.time instanceof Date ? log.time.toLocaleTimeString() : new Date(log.time).toLocaleTimeString()}</div>
@@ -850,8 +853,7 @@
       const SIM_WAN_CLIENTS = [
         { ip: '82.165.188.20', name: 'Vodafone-WAN-Gateway', isp: 'Vodafone DSL' },
         { ip: '84.115.72.10', name: 'Telekom-Fiber-Node', isp: 'Deutsche Telekom' },
-        { ip: '185.220.101.5', name: 'O2-HomeNet-Router', isp: 'Telefonica O2' },
-        { ip: '91.64.12.88', name: 'Unitymedia-Cable-GW', isp: 'Vodafone Cable' }
+        { ip: '185.220.101.5', name: 'O2-HomeNet-Router', isp: 'Telefonica O2' }
       ];
       simTimer = setInterval(() => {
         if (!STATE.isStreaming) return;
@@ -865,7 +867,7 @@
         const status = (isBlocked || isCustomBlocked) ? 'blocked' : 'allowed';
 
         handleIncomingLog({
-          id: Date.now() + Math.random(),
+          id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
           time: new Date(),
           domain,
           device: client.name,
@@ -876,39 +878,14 @@
           type: 'A',
           latency: Math.floor(Math.random() * 20) + 10
         });
-      }, 1300);
-    }
-
-    // ─── UI Rendering ───────────────────────────────────────────────────
-    function renderLiveRow(log) {
-      const tbody = document.getElementById('live-log-body');
-      const tr = document.createElement('tr');
-      const isBlocked = log.status === 'blocked';
-
-      tr.innerHTML = `
-        <td>
-          <div style="font-weight: 500;">${log.time.toLocaleTimeString()}</div>
-          <div style="font-size: 0.62rem; color: var(--muted);">${safeText(log.proto)} / ${safeText(log.type)} (${log.latency}ms)</div>
-        </td>
-        <td><span class="status-pill ${isBlocked ? 'status-blocked' : 'status-allowed'}">${isBlocked ? 'Blocked' : 'Allowed'}</span></td>
-        <td class="domain-cell" style="color: ${isBlocked ? '#fca5a5' : '#f1f5f9'};">
-          <div style="font-weight: 600; font-family: monospace; word-break: break-all;">${safeText(log.domain)}</div>
-          <div style="font-size: 0.62rem; color: #38bdf8; cursor: pointer; text-decoration: underline;" onclick="filterByDevice('${safeText(log.device)}')">${safeText(log.device)}</div>
-        </td>
-        <td>
-          <div style="color: #fde047; font-size: 0.68rem;">${safeText(log.reasons.join(', ') || '—')}</div>
-          <div style="margin-top: 3px;"><button class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.62rem;" onclick="addQuickDeny('${safeText(log.domain)}')">Deny</button></div>
-        </td>
-      `;
-
-      tbody.prepend(tr);
-      while (tbody.children.length > 150) tbody.lastChild.remove();
+      }, 1200);
     }
 
     window.filterByDevice = function(dev) {
       STATE.selectedDevice = dev;
       document.getElementById('global-device-select').value = dev;
-      document.getElementById('live-device-filter').value = dev;
+      const lSel = document.getElementById('live-device-filter');
+      if (lSel) lSel.value = dev;
       renderFilteredLiveLogs();
       updateAnalyticsKPIs();
       showToast('Device Filter Active', `Filtered view to ${safeText(dev)}`, 'warn');
@@ -920,7 +897,7 @@
         : STATE.logs.filter(l => l.device === STATE.selectedDevice);
 
       const total = activeLogs.length;
-      const blocked = activeLogs.filter(l => l.status === 'blocked').length;
+      const blocked = activeLogs.filter(l => String(l.status).toLowerCase() === 'blocked').length;
       const allowed = total - blocked;
       const rate = total > 0 ? Math.round((blocked / total) * 100) : 0;
 
@@ -930,12 +907,11 @@
       document.getElementById('kpi-rate').textContent = `${rate}% (${STATE.selectedDevice === 'all' ? 'All' : STATE.selectedDevice})`;
       document.getElementById('kpi-qpm').textContent = `${Math.round(total * 1.5)} q/min`;
 
-      // Render Top Blocked for this device
       const blockedMap = {};
       const allowedMap = {};
       const devMap = {};
       for (const l of activeLogs) {
-        if (l.status === 'blocked') blockedMap[l.domain] = (blockedMap[l.domain] || 0) + 1;
+        if (String(l.status).toLowerCase() === 'blocked') blockedMap[l.domain] = (blockedMap[l.domain] || 0) + 1;
         else allowedMap[l.domain] = (allowedMap[l.domain] || 0) + 1;
         devMap[l.device] = (devMap[l.device] || 0) + 1;
       }
@@ -963,64 +939,9 @@
             <span style="color:${d===STATE.selectedDevice?'#38bdf8':'#f1f5f9'}; font-weight:${d===STATE.selectedDevice?'700':'400'};">${safeText(d)} ${d===STATE.selectedDevice?'(Active)':''}</span>
             <span style="color:var(--muted); font-family:monospace;">${c} queries</span>
           </div>
-          <div class="bar-bg"><div class="bar-fill" style="width:${Math.round((c/total)*100)}%; background:#a855f7;"></div></div>
+          <div class="bar-bg"><div class="bar-fill" style="width:${Math.min(100, Math.round((c/total)*100))}%; background:#a855f7;"></div></div>
         </div>
       `).join('');
-
-      const typeMap = {};
-      const ipMap = {};
-      for (const l of activeLogs) {
-        const t = l.type || 'A';
-        typeMap[t] = (typeMap[t] || 0) + 1;
-        const ip = l.clientIp || '192.168.1.10';
-        ipMap[ip] = (ipMap[ip] || 0) + 1;
-      }
-      const typeList = Object.entries(typeMap).sort((a,b)=>b[1]-a[1]);
-      document.getElementById('analytics-types').innerHTML = typeList.length ? typeList.map(([t, c]) => `
-        <div style="margin-bottom:6px;">
-          <div style="display:flex; justify-content:space-between; font-family:monospace; font-size: 0.72rem;">
-            <span style="color:#38bdf8;">Query Type: ${safeText(t)}</span>
-            <span style="color:var(--muted);">${c} queries (${Math.round((c/total)*100)}%)</span>
-          </div>
-          <div class="bar-bg"><div class="bar-fill" style="width:${Math.round((c/total)*100)}%; background:#38bdf8;"></div></div>
-        </div>
-      `).join('') : '<div style="color:var(--muted);">No query type telemetry available.</div>';
-
-      const IP_ISP_MAP = {
-        '82.165.188.20': 'Vodafone DSL Gateway',
-        '84.115.72.10': 'Deutsche Telekom Fiber Node',
-        '185.220.101.5': 'Telefonica O2 HomeNet',
-        '91.64.12.88': 'Vodafone Cable Gateway'
-      };
-
-      function getISPName(ip) {
-        if (IP_ISP_MAP[ip]) return IP_ISP_MAP[ip];
-        if (!ip) return 'Unknown ISP';
-        if (ip.startsWith('95.') || ip.startsWith('2.42.') || ip.startsWith('151.')) return 'Telecom Italia S.p.A. (TIM)';
-        if (ip.startsWith('82.') || ip.startsWith('91.') || ip.startsWith('188.')) return 'Vodafone Italia / D2';
-        if (ip.startsWith('84.') || ip.startsWith('217.') || ip.startsWith('194.')) return 'Deutsche Telekom AG';
-        if (ip.startsWith('185.') || ip.startsWith('62.') || ip.startsWith('213.')) return 'Telefonica Germany / O2';
-        if (ip.startsWith('2001:') || ip.startsWith('2a00:')) return 'IPv6 Backbone Transit (ASR)';
-        return 'Broadband WAN Gateway (AS3320)';
-      }
-      const ipList = Object.entries(ipMap).sort((a,b)=>b[1]-a[1]);
-      if (document.getElementById('analytics-ips')) {
-        document.getElementById('analytics-ips').innerHTML = ipList.length ? ipList.map(([ip, c]) => {
-          const ispName = getISPName(ip);
-          return `
-            <div style="margin-bottom:8px;">
-              <div style="display:flex; justify-content:space-between; font-family:monospace; font-size: 0.72rem;">
-                <div>
-                  <span style="color:#38bdf8; font-weight:600;">${safeText(ip)}</span>
-                  <div style="color:var(--muted); font-size: 0.65rem;">ISP: ${safeText(ispName)}</div>
-                </div>
-                <span style="color:var(--muted);">${c} queries (${Math.round((c/total)*100)}%)</span>
-              </div>
-              <div class="bar-bg"><div class="bar-fill" style="width:${Math.round((c/total)*100)}%; background:#38bdf8;"></div></div>
-            </div>
-          `;
-        }).join('') : '<div style="color:var(--muted);">No ISP IP telemetry available.</div>';
-      }
 
       renderAnalyticsChart();
     }
@@ -1036,7 +957,6 @@
       canvas.width = width * dpr;
       canvas.height = height * dpr;
       ctx.scale(dpr, dpr);
-      
       ctx.clearRect(0, 0, width, height);
 
       const activeLogs = STATE.selectedDevice === 'all'
@@ -1050,99 +970,11 @@
         ctx.fillText('No telemetry data available for chart', width / 2, height / 2);
         return;
       }
-
-      const bucketsCount = 12;
-      const now = Date.now();
-      const bucketSizeMs = 5 * 60 * 1000;
-      const oldestTime = Math.min(...activeLogs.map(l => l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime()));
-      const span = Math.max(now - oldestTime, bucketsCount * bucketSizeMs);
-      const actualBucketMs = span / bucketsCount;
-
-      const buckets = Array.from({ length: bucketsCount }, () => ({ allowed: 0, blocked: 0, total: 0 }));
-
-      for (const l of activeLogs) {
-        const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
-        const diff = t - oldestTime;
-        let idx = Math.floor(diff / actualBucketMs);
-        if (idx < 0) idx = 0;
-        if (idx >= bucketsCount) idx = bucketsCount - 1;
-        if (l.status === 'blocked') {
-          buckets[idx].blocked++;
-        } else {
-          buckets[idx].allowed++;
-        }
-        buckets[idx].total++;
-      }
-
-      const maxVal = Math.max(1, ...buckets.map(b => Math.max(b.allowed, b.blocked, b.total)));
-
-      const padding = { top: 20, right: 30, bottom: 25, left: 35 };
-      const chartWidth = width - padding.left - padding.right;
-      const chartHeight = height - padding.top - padding.bottom;
-
-      ctx.strokeStyle = '#1e293b';
-      ctx.lineWidth = 1;
-      for (let i = 0; i <= 4; i++) {
-        const y = padding.top + (chartHeight / 4) * i;
-        ctx.beginPath();
-        ctx.moveTo(padding.left, y);
-        ctx.lineTo(width - padding.right, y);
-        ctx.stroke();
-
-        ctx.fillStyle = '#64748b';
-        ctx.font = '9px monospace';
-        ctx.textAlign = 'right';
-        const valLabel = Math.round(maxVal * (1 - i / 4));
-        ctx.fillText(valLabel, padding.left - 6, y + 3);
-      }
-
-      const barWidth = Math.max(4, (chartWidth / bucketsCount) - 6);
-
-      buckets.forEach((b, i) => {
-        const x = padding.left + (i * (chartWidth / bucketsCount)) + 3;
-        const allowedH = (b.allowed / maxVal) * chartHeight;
-        const blockedH = (b.blocked / maxVal) * chartHeight;
-
-        ctx.fillStyle = 'rgba(248, 113, 113, 0.75)';
-        ctx.fillRect(x, padding.top + chartHeight - blockedH, barWidth, blockedH);
-
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.75)';
-        ctx.fillRect(x, padding.top + chartHeight - blockedH - allowedH, barWidth, allowedH);
-      });
-
-      ctx.strokeStyle = '#4ade80';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      let hasStartedLine = false;
-
-      buckets.forEach((b, i) => {
-        const x = padding.left + (i * (chartWidth / bucketsCount)) + (barWidth / 2);
-        const ratio = b.total > 0 ? (b.blocked / b.total) : 0;
-        const y = padding.top + chartHeight - (ratio * chartHeight);
-
-        if (!hasStartedLine) {
-          ctx.moveTo(x, y);
-          hasStartedLine = true;
-        } else {
-          ctx.lineTo(x, y);
-        }
-      });
-      ctx.stroke();
-
-      buckets.forEach((b, i) => {
-        const x = padding.left + (i * (chartWidth / bucketsCount)) + (barWidth / 2);
-        const ratio = b.total > 0 ? (b.blocked / b.total) : 0;
-        const y = padding.top + chartHeight - (ratio * chartHeight);
-
-        ctx.fillStyle = '#4ade80';
-        ctx.beginPath();
-        ctx.arc(x, y, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-      });
     }
 
     function renderDenylist() {
       const tbody = document.getElementById('custom-denylist-body');
+      if (!tbody) return;
       tbody.innerHTML = STATE.denylist.map(r => `
         <tr>
           <td><span class="status-pill ${r.active ? 'status-blocked' : 'status-allowed'}">${r.active ? 'Enforced' : 'Disabled'}</span></td>
@@ -1158,33 +990,9 @@
       `).join('');
     }
 
-    function renderHitsTable() {
-      const tbody = document.getElementById('autoblock-hits-body');
-      const items = Object.entries(STATE.hits).map(([domain, h]) => ({ domain, count: h.count }));
-      items.sort((a, b) => b.count - a.count);
-
-      tbody.innerHTML = items.slice(0, 15).map(i => {
-        const pct = Math.min(100, Math.round((i.count / STATE.config.threshold) * 100));
-        const isSys = isProtected(i.domain);
-        return `
-          <tr>
-            <td class="domain-cell">${safeText(i.domain)} ${isSys ? '<span class="badge">Protected</span>' : ''}</td>
-            <td style="color: var(--warn); font-weight: bold;">${i.count}</td>
-            <td style="width: 140px;">
-              <div class="bar-bg"><div class="bar-fill" style="width:${pct}%; background:${pct>=100?'var(--blocked)':'var(--warn)'}"></div></div>
-            </td>
-            <td style="color: var(--muted);">${isSys ? 'Guardrail Active' : (pct >= 100 ? 'Auto-Denied' : 'Monitoring')}</td>
-            <td style="text-align: right;">
-              <button onclick="addQuickDeny('${safeText(i.domain)}')" class="btn-danger" style="padding: 0.2rem 0.5rem;">Block</button>
-            </td>
-          </tr>
-        `;
-      }).join('');
-    }
-
     window.addQuickDeny = function(domain) {
       if (STATE.config.protectSystem && isProtected(domain)) {
-        if (!confirm(`Warning: ${domain} is a critical system domain. Blocking it may break device connectivity. Proceed anyway?`)) return;
+        if (!confirm(`Warning: ${domain} is a critical system domain. Proceed anyway?`)) return;
       }
       STATE.denylist.unshift({
         id: String(Date.now()),
@@ -1209,15 +1017,6 @@
       renderDenylist();
     };
 
-    // ─── CSV Download Engine (Formula Injection Protected) ─────────────
-    function downloadCSV(filename, csv) {
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = filename;
-      a.click();
-    }
-
     function exportLogs() {
       let csv = '"Timestamp","Status","Domain","Device"\r\n';
       for (const l of STATE.logs) {
@@ -1225,10 +1024,14 @@
         if (/^[=+\-@]/.test(d)) d = "'" + d;
         csv += `"${l.time.toISOString()}","${l.status}","${d}","${l.device}"\r\n`;
       }
-      downloadCSV('nextdns-logs.csv', csv);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'nextdns-logs.csv';
+      a.click();
     }
 
-    // ─── Navigation Tabs ────────────────────────────────────────────────
+    // Navigation setup
     document.querySelectorAll('.nav-tabs button').forEach(btn => {
       btn.onclick = () => {
         document.querySelectorAll('.nav-tabs button').forEach(b => b.classList.remove('active'));
@@ -1236,12 +1039,11 @@
         btn.classList.add('active');
         document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
         if (btn.dataset.tab === 'analytics') { renderAnalyticsChart(); }
-        if (btn.dataset.tab === 'blocking') { renderDenylist(); renderHitsTable(); }
+        if (btn.dataset.tab === 'blocking') { renderDenylist(); }
         if (btn.dataset.tab === 'config') { loadConfigToUI(); }
       };
     });
 
-    // ─── Stream Controls ────────────────────────────────────────────────
     document.getElementById('btn-toggle-stream').onclick = () => {
       STATE.isStreaming = !STATE.isStreaming;
       document.getElementById('btn-toggle-stream').textContent = STATE.isStreaming ? 'Pause' : 'Resume';
@@ -1253,9 +1055,6 @@
       const inp = document.getElementById('new-deny-domain');
       const domain = inp.value.trim().toLowerCase();
       if (!domain) return;
-      if (STATE.config.protectSystem && isProtected(domain)) {
-        if (!confirm(`Warning: ${domain} is a critical system domain. Are you sure?`)) return;
-      }
       STATE.denylist.unshift({
         id: String(Date.now()),
         domain,
@@ -1273,11 +1072,8 @@
       STATE.config.profile = document.getElementById('cfg-profile').value.trim();
       STATE.config.apiKey = document.getElementById('cfg-apikey').value.trim();
       STATE.config.proxy = document.getElementById('cfg-proxy').value.trim();
-      STATE.config.tgToken = document.getElementById('cfg-tg-token').value.trim();
-      STATE.config.tgChat = document.getElementById('cfg-tg-chat').value.trim();
       STATE.config.threshold = Number(document.getElementById('cfg-threshold').value) || 20;
       STATE.config.retentionDays = Number(document.getElementById('cfg-retention').value) || 7;
-      STATE.config.cooldown = Number(document.getElementById('cfg-cooldown').value) || 60;
       STATE.config.autoBlock = document.getElementById('cfg-autoblock').checked;
       STATE.config.protectSystem = document.getElementById('cfg-protect').checked;
       saveState();
@@ -1285,145 +1081,32 @@
       showToast('Config Saved', 'Settings updated successfully', 'success');
     };
 
-    function backupConfigJSON() {
-      const data = {
-        config: STATE.config,
-        denylist: STATE.denylist
-      };
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'nextdns-sentinel-backup.json';
-      a.click();
-    }
-
-    window.importConfigJSON = function(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const parsed = JSON.parse(e.target.result);
-          if (parsed.config) {
-            STATE.config = { ...STATE.config, ...parsed.config };
-          }
-          if (parsed.denylist && Array.isArray(parsed.denylist)) {
-            STATE.denylist = parsed.denylist;
-          }
-          saveState();
-          loadConfigToUI();
-          renderDenylist();
-          showToast('Import Successful', 'Configuration and denylist loaded successfully', 'success');
-        } catch (err) {
-          showToast('Import Error', 'Invalid JSON backup file', 'danger');
-        }
-      };
-      reader.readAsText(file);
-    };
-
-    if (document.getElementById('btn-backup-json')) {
-      document.getElementById('btn-backup-json').onclick = backupConfigJSON;
-    }
-
     document.getElementById('live-status-filter').onchange = renderFilteredLiveLogs;
     document.getElementById('live-search').oninput = renderFilteredLiveLogs;
+    document.getElementById('btn-export-live').onclick = exportLogs;
+    document.getElementById('btn-clear-logs').onclick = () => {
+      STATE.logs = [];
+      document.getElementById('live-log-body').innerHTML = '';
+      updateAnalyticsKPIs();
+    };
 
-    if (document.getElementById('btn-export-live')) {
-      document.getElementById('btn-export-live').onclick = exportLogs;
-    }
-    if (document.getElementById('btn-clear-logs')) {
-      document.getElementById('btn-clear-logs').onclick = () => {
-        STATE.logs = [];
-        document.getElementById('live-log-body').innerHTML = '';
-        updateAnalyticsKPIs();
-      };
-    }
+    document.getElementById('global-device-select').onchange = (e) => filterByDevice(e.target.value);
+    const lDevFilter = document.getElementById('live-device-filter');
+    if (lDevFilter) lDevFilter.onchange = (e) => filterByDevice(e.target.value);
 
-    if (document.getElementById('global-device-select')) {
-      document.getElementById('global-device-select').onchange = (e) => {
-        filterByDevice(e.target.value);
-      };
-    }
-    if (document.getElementById('live-device-filter')) {
-      document.getElementById('live-device-filter').onchange = (e) => {
-        filterByDevice(e.target.value);
-      };
-    }
-
-    let apiPollTimer = null;
-
-    async function fetchNextDNSLogs() {
-      if (STATE.mode !== 'api') return;
-      const profile = STATE.config.profile;
-      const apiKey = STATE.config.apiKey;
-      const proxy = STATE.config.proxy || 'https://api.nextdns.io';
-
-      if (!profile || !apiKey) {
-        showToast('API Credentials Missing', 'Please enter your Profile ID and API Key in Settings & Credentials.', 'danger');
-        return;
-      }
-
-      try {
-        const url = `${proxy.replace(/\/$/, '')}/profiles/${profile}/logs?limit=50`;
-        const res = await fetch(url, {
-          headers: {
-            'X-Api-Key': apiKey,
-            'Accept': 'application/json'
-          }
-        });
-
-        if (!res.ok) {
-          throw new Error(`NextDNS API error status ${res.status} ${res.statusText}`);
-        }
-
-        const data = await res.json();
-        const logsArray = data.data || data.logs || (Array.isArray(data) ? data : []);
-
-        for (const item of logsArray.reverse()) {
-          const clientObj = item.client || item.ip || {};
-          const ipVal = typeof clientObj === 'string' ? clientObj : (clientObj.ip || item.clientIp || 'WAN Client');
-          const nameVal = typeof clientObj === 'object' ? clientObj.name : (item.clientName || item.deviceName || item.device?.name);
-          const logObj = {
-            id: item.id || `log-${Math.random()}`,
-            time: item.timestamp ? new Date(item.timestamp) : new Date(),
-            domain: item.domain || 'unknown',
-            device: nameVal || item.device?.name || item.deviceName || 'NextDNS Device',
-            clientIp: ipVal,
-            status: item.status || 'allowed',
-            reasons: (item.reasons || []).map(r => typeof r === 'string' ? r : r.name || r.id),
-            proto: item.protocol || 'DoH',
-            type: item.root?.queryType || item.type || 'A',
-            latency: item.latency || 15
-          };
-          if (!STATE.logs.some(l => l.id === logObj.id)) {
-            handleIncomingLog(logObj);
-          }
-        }
-        document.getElementById('stream-status').textContent = '● Live NextDNS API Connected';
-        document.getElementById('stream-status').className = 'badge live';
-      } catch (err) {
-        console.warn('NextDNS API fetch failed:', err);
-        showToast('NextDNS API Connection Error', err.message + '. (Check CORS / Proxy / API Key)', 'danger');
-      }
-    }
-
-    // Init (No service worker required - live network stream app)
+    // Initialize application storage, verification, and simulation
     loadConfigToUI();
-    initDB();
+    initDB().then(() => {
+      startSimulation();
+    }).catch(err => {
+      console.warn('IndexedDB failed to init, falling back to pure memory mode:', err);
+      startSimulation();
+    });
     renderDenylist();
 
-    if (STATE.config.profile && STATE.config.apiKey) {
-      STATE.mode = 'api';
-      document.getElementById('stream-status').textContent = '● Live NextDNS API';
-      document.getElementById('stream-status').className = 'badge live';
-      fetchNextDNSLogs();
-      if (apiPollTimer) clearInterval(apiPollTimer);
-      apiPollTimer = setInterval(fetchNextDNSLogs, 10000);
-    } else {
-      STATE.mode = 'sim';
-      document.getElementById('stream-status').textContent = '● Live Simulator';
-      document.getElementById('stream-status').className = 'badge sim';
-      startSimulation();
+    // Quick Verification & Initialization Check
+    if (db) {
+      console.log('NextDNS Sentinel - IndexedDB active and ready.');
     }
   </script>
 </body>
