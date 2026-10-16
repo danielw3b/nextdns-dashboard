@@ -802,13 +802,17 @@
 
     function renderFilteredLiveLogs() {
       const tbody = document.getElementById('live-log-body');
+      if (!tbody) return;
       tbody.innerHTML = '';
-      const search = (document.getElementById('live-search').value || '').toLowerCase().trim();
-      const statusFilter = document.getElementById('live-status-filter').value;
+      const search = (document.getElementById('live-search')?.value || '').toLowerCase().trim();
+      const statusFilter = (document.getElementById('live-status-filter')?.value || 'all').toLowerCase().trim();
 
       const filtered = STATE.logs.filter(l => {
         if (STATE.selectedDevice !== 'all' && l.device !== STATE.selectedDevice) return false;
-        if (statusFilter !== 'all' && l.status !== statusFilter) return false;
+        if (statusFilter !== 'all') {
+          const lStatus = String(l.status || 'allowed').toLowerCase();
+          if (lStatus !== statusFilter) return false;
+        }
         if (search) {
           const matchDomain = l.domain.toLowerCase().includes(search);
           const matchDevice = l.device.toLowerCase().includes(search);
@@ -957,17 +961,31 @@
         </div>
       `).join('') : '<div style="color:var(--muted);">No query type telemetry available.</div>';
 
+      const IP_DNS_MAP = {
+        '192.168.1.10': 'MacBook-Pro.local',
+        '192.168.1.15': 'iPhone-16.lan',
+        '10.0.0.42': 'Smart-TV.lan',
+        '192.168.1.105': 'Home-Assistant.local',
+        '172.16.0.8': 'LivingRoom-AppleTV.lan'
+      };
       const ipList = Object.entries(ipMap).sort((a,b)=>b[1]-a[1]);
       if (document.getElementById('analytics-ips')) {
-        document.getElementById('analytics-ips').innerHTML = ipList.length ? ipList.map(([ip, c]) => `
-          <div style="margin-bottom:6px;">
-            <div style="display:flex; justify-content:space-between; font-family:monospace; font-size: 0.72rem;">
-              <span style="color:#38bdf8;">IP: ${safeText(ip)}</span>
-              <span style="color:var(--muted);">${c} queries (${Math.round((c/total)*100)}%)</span>
+        document.getElementById('analytics-ips').innerHTML = ipList.length ? ipList.map(([ip, c]) => {
+          const foundLog = activeLogs.find(x => x.clientIp === ip);
+          const hostname = IP_DNS_MAP[ip] || (foundLog ? foundLog.device + '.lan' : 'client-' + ip.replace(/\./g, '-') + '.lan');
+          return `
+            <div style="margin-bottom:8px;">
+              <div style="display:flex; justify-content:space-between; font-family:monospace; font-size: 0.72rem;">
+                <div>
+                  <span style="color:#38bdf8; font-weight:600;">${safeText(ip)}</span>
+                  <div style="color:var(--muted); font-size: 0.65rem;">DNS: ${safeText(hostname)}</div>
+                </div>
+                <span style="color:var(--muted);">${c} queries (${Math.round((c/total)*100)}%)</span>
+              </div>
+              <div class="bar-bg"><div class="bar-fill" style="width:${Math.round((c/total)*100)}%; background:#38bdf8;"></div></div>
             </div>
-            <div class="bar-bg"><div class="bar-fill" style="width:${Math.round((c/total)*100)}%; background:#38bdf8;"></div></div>
-          </div>
-        `).join('') : '<div style="color:var(--muted);">No client IP telemetry available.</div>';
+          `;
+        }).join('') : '<div style="color:var(--muted);">No client IP telemetry available.</div>';
       }
 
       renderAnalyticsChart();
