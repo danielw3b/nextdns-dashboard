@@ -1253,20 +1253,27 @@
     document.getElementById('live-status-filter').onchange = renderFilteredLiveLogs;
     document.getElementById('live-search').oninput = renderFilteredLiveLogs;
 
-    document.getElementById('btn-export-live').onclick = exportLogs;
-    document.getElementById('btn-dl-all-csv').onclick = exportLogs;
-    document.getElementById('btn-clear-logs').onclick = () => {
-      STATE.logs = [];
-      document.getElementById('live-log-body').innerHTML = '';
-      updateAnalyticsKPIs();
-    };
+    if (document.getElementById('btn-export-live')) {
+      document.getElementById('btn-export-live').onclick = exportLogs;
+    }
+    if (document.getElementById('btn-clear-logs')) {
+      document.getElementById('btn-clear-logs').onclick = () => {
+        STATE.logs = [];
+        document.getElementById('live-log-body').innerHTML = '';
+        updateAnalyticsKPIs();
+      };
+    }
 
-    document.getElementById('global-device-select').onchange = (e) => {
-      filterByDevice(e.target.value);
-    };
-    document.getElementById('live-device-filter').onchange = (e) => {
-      filterByDevice(e.target.value);
-    };
+    if (document.getElementById('global-device-select')) {
+      document.getElementById('global-device-select').onchange = (e) => {
+        filterByDevice(e.target.value);
+      };
+    }
+    if (document.getElementById('live-device-filter')) {
+      document.getElementById('live-device-filter').onchange = (e) => {
+        filterByDevice(e.target.value);
+      };
+    }
 
     let apiPollTimer = null;
 
