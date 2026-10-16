@@ -285,19 +285,15 @@
       line-height: 1.4;
     }
     @media (max-width: 640px) {
-      th:nth-child(4), td:nth-child(4),
-      th:nth-child(5), td:nth-child(5),
-      th:nth-child(6), td:nth-child(6) {
-        display: none;
-      }
       .domain-cell {
-        max-width: 150px;
+        max-width: 160px;
         word-break: break-all;
         white-space: normal;
       }
       th, td {
-        padding: 0.35rem 0.45rem;
-        font-size: 0.7rem;
+        padding: 0.4rem 0.5rem;
+        font-size: 0.71rem;
+        vertical-align: top;
       }
     }
   </style>
@@ -365,13 +361,10 @@
         <table>
           <thead>
             <tr>
-              <th>Time</th>
+              <th>Time / Proto</th>
               <th>Status</th>
-              <th>Domain</th>
-              <th>Device</th>
-              <th>Type / Proto</th>
-              <th>Reason</th>
-              <th style="text-align: right;">Action</th>
+              <th>Domain / Device</th>
+              <th>Reason / Action</th>
             </tr>
           </thead>
           <tbody id="live-log-body"></tbody>
@@ -703,96 +696,23 @@
       }
     }
 
-    // ─── IndexedDB Log Persistence Engine ─────────────────────────────
+    // ─── IndexedDB Deactivated (In-Memory PWA mode for lightning-fast startup) ───
     let db = null;
-    const DB_NAME = 'nextdns_sentinel_db';
-    const STORE_NAME = 'logs_store';
 
     function initDB() {
-      return new Promise((resolve, reject) => {
-        try {
-          const request = indexedDB.open(DB_NAME, 1);
-          request.onerror = () => reject(request.error);
-          request.onsuccess = () => {
-            db = request.result;
-            loadLogsFromDB().then(resolve).catch(resolve);
-          };
-          request.onupgradeneeded = (event) => {
-            const database = event.target.result;
-            if (!database.objectStoreNames.contains(STORE_NAME)) {
-              database.createObjectStore(STORE_NAME, { keyPath: 'id' });
-            }
-          };
-        } catch(e) {
-          resolve();
-        }
-      });
+      return Promise.resolve();
     }
 
     function saveLogToDB(log) {
-      if (!db) return;
-      try {
-        const tx = db.transaction(STORE_NAME, 'readwrite');
-        const store = tx.objectStore(STORE_NAME);
-        store.put({
-          id: log.id,
-          time: log.time instanceof Date ? log.time.getTime() : log.time,
-          domain: log.domain,
-          device: log.device,
-          status: log.status,
-          reasons: log.reasons,
-          proto: log.proto,
-          type: log.type,
-          latency: log.latency
-        });
-      } catch (e) {
-        console.warn('Failed to save log to IndexedDB:', e);
-      }
+      // Deactivated to prevent PWA startup bottlenecks
     }
 
     function loadLogsFromDB() {
-      return new Promise((resolve) => {
-        if (!db) return resolve();
-        try {
-          const tx = db.transaction(STORE_NAME, 'readonly');
-          const store = tx.objectStore(STORE_NAME);
-          const request = store.getAll();
-          request.onsuccess = () => {
-            const results = request.result || [];
-            if (results.length > 0) {
-              results.sort((a, b) => b.time - a.time);
-              for (const item of results) {
-                const logTime = new Date(item.time);
-                if (!STATE.logs.some(l => l.id === item.id)) {
-                  STATE.logs.push({
-                    ...item,
-                    time: logTime
-                  });
-                }
-                if (item.device) registerDevice(item.device);
+      return Promise.resolve();
+    }
 
-                const d = (item.domain || '').toLowerCase();
-                if (d) {
-                  if (!STATE.hits[d]) STATE.hits[d] = { count: 0, lastSeen: logTime.getTime() };
-                  STATE.hits[d].count++;
-                  if (logTime.getTime() > STATE.hits[d].lastSeen) {
-                    STATE.hits[d].lastSeen = logTime.getTime();
-                  }
-                }
-              }
-              STATE.logs.sort((a, b) => b.time - a.time);
-              renderFilteredLiveLogs();
-              updateAnalyticsKPIs();
-              renderHitsTable();
-            }
-            pruneOldLogsFromDB();
-            resolve();
-          };
-          request.onerror = () => resolve();
-        } catch (e) {
-          resolve();
-        }
-      });
+    function pruneOldLogsFromDB() {
+      // Deactivated
     }
 
     function pruneOldLogsFromDB() {
@@ -931,18 +851,18 @@
       const isBlocked = log.status === 'blocked';
 
       tr.innerHTML = `
-        <td style="color:var(--muted); font-size: 0.7rem;">${log.time.toLocaleTimeString()}</td>
-        <td><span class="status-pill ${isBlocked ? 'status-blocked' : 'status-allowed'}">${isBlocked ? 'Blocked' : 'Allowed'}</span></td>
-        <td class="domain-cell" style="color: ${isBlocked ? '#fca5a5' : '#f1f5f9'};">${safeText(log.domain)}</td>
         <td>
-          <span style="color: #38bdf8; cursor: pointer; text-decoration: underline;" onclick="filterByDevice('${safeText(log.device)}')">
-            ${safeText(log.device)}
-          </span>
+          <div style="font-weight: 500;">${log.time.toLocaleTimeString()}</div>
+          <div style="font-size: 0.62rem; color: var(--muted);">${safeText(log.proto)} / ${safeText(log.type)} (${log.latency}ms)</div>
         </td>
-        <td style="color: var(--muted);">${safeText(log.proto)} / ${safeText(log.type)} (${log.latency}ms)</td>
-        <td style="color: #fde047; font-size: 0.7rem;">${safeText(log.reasons.join(', ') || '—')}</td>
-        <td style="text-align: right;">
-          <button class="btn-danger" style="padding: 0.2rem 0.5rem; font-size: 0.68rem;" onclick="addQuickDeny('${safeText(log.domain)}')">Deny</button>
+        <td><span class="status-pill ${isBlocked ? 'status-blocked' : 'status-allowed'}">${isBlocked ? 'Blocked' : 'Allowed'}</span></td>
+        <td class="domain-cell" style="color: ${isBlocked ? '#fca5a5' : '#f1f5f9'};">
+          <div style="font-weight: 600; font-family: monospace; word-break: break-all;">${safeText(log.domain)}</div>
+          <div style="font-size: 0.62rem; color: #38bdf8; cursor: pointer; text-decoration: underline;" onclick="filterByDevice('${safeText(log.device)}')">${safeText(log.device)}</div>
+        </td>
+        <td>
+          <div style="color: #fde047; font-size: 0.68rem;">${safeText(log.reasons.join(', ') || '—')}</div>
+          <div style="margin-top: 3px;"><button class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.62rem;" onclick="addQuickDeny('${safeText(log.domain)}')">Deny</button></div>
         </td>
       `;
 
