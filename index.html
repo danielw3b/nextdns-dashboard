@@ -967,16 +967,20 @@
         </div>
       `).join('') : '<div style="color:var(--muted);">No query type telemetry available.</div>';
 
-      const IP_ISP_MAP = {
-        '82.165.188.20': 'Vodafone DSL Gateway',
-        '84.115.72.10': 'Deutsche Telekom Fiber Node',
-        '185.220.101.5': 'Telefonica O2 HomeNet',
-        '91.64.12.88': 'Vodafone Cable Gateway'
-      };
+      function getISPName(ip) {
+        if (IP_ISP_MAP[ip]) return IP_ISP_MAP[ip];
+        if (!ip) return 'Unknown ISP';
+        if (ip.startsWith('95.') || ip.startsWith('2.42.') || ip.startsWith('151.')) return 'Telecom Italia S.p.A. (TIM)';
+        if (ip.startsWith('82.') || ip.startsWith('91.') || ip.startsWith('188.')) return 'Vodafone Italia / D2';
+        if (ip.startsWith('84.') || ip.startsWith('217.') || ip.startsWith('194.')) return 'Deutsche Telekom AG';
+        if (ip.startsWith('185.') || ip.startsWith('62.') || ip.startsWith('213.')) return 'Telefonica Germany / O2';
+        if (ip.startsWith('2001:') || ip.startsWith('2a00:')) return 'IPv6 Backbone Transit (ASR)';
+        return 'Broadband WAN Gateway (AS3320)';
+      }
       const ipList = Object.entries(ipMap).sort((a,b)=>b[1]-a[1]);
       if (document.getElementById('analytics-ips')) {
         document.getElementById('analytics-ips').innerHTML = ipList.length ? ipList.map(([ip, c]) => {
-          const ispName = IP_ISP_MAP[ip] || 'ISP WAN Uplink';
+          const ispName = getISPName(ip);
           return `
             <div style="margin-bottom:8px;">
               <div style="display:flex; justify-content:space-between; font-family:monospace; font-size: 0.72rem;">
