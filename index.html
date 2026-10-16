@@ -545,7 +545,7 @@
 
   <div class="toast-container" id="toast-container"></div>
 
-  <!-- Vanilla Pure ES6 Logic with Optimized DOM Batching and Active IndexedDB -->
+  <!-- Vanilla Pure ES6 Logic with Optimized DOM Batching, Active IndexedDB & Slimmer Analytics Bars -->
   <script>
     // ─── Security Sanitizer (Prevents DOM-XSS) ──────────────────────────
     function safeText(str) {
@@ -731,6 +731,7 @@
 
     // ─── Telemetry & Batch Rendering via requestAnimationFrame ─────────
     let simTimer = null;
+    let apiPollTimer = null;
     let renderScheduled = false;
     const SAMPLE_DEVICES = ['MacBook-Pro', 'iPhone-16', 'Smart-TV', 'Home-Assistant'];
     const SAMPLE_ALLOWED = ['api.github.com', 'cloudflare.com', 'wikipedia.org', 'cdn.jsdelivr.net', 'developer.mozilla.org'];
@@ -809,7 +810,6 @@
         if (statusFilter === 'blocked') {
           if (lStatus !== 'blocked') return false;
         } else if (statusFilter === 'allowed') {
-          // Fix: Include both 'allowed' and NextDNS API 'default' status as valid allowed traffic
           if (lStatus !== 'allowed' && lStatus !== 'default') return false;
         }
 
@@ -879,6 +879,55 @@
           latency: Math.floor(Math.random() * 20) + 10
         });
       }, 1200);
+    }
+
+    async function fetchNextDNSLogs() {
+      if (STATE.mode !== 'api') return;
+      const profile = STATE.config.profile;
+      const apiKey = STATE.config.apiKey;
+      const proxy = STATE.config.proxy || 'https://api.nextdns.io';
+
+      if (!profile || !apiKey) return;
+
+      try {
+        const url = `${proxy.replace(/\/$/, '')}/profiles/${profile}/logs?limit=50`;
+        const res = await fetch(url, {
+          headers: {
+            'X-Api-Key': apiKey,
+            'Accept': 'application/json'
+          }
+        });
+
+        if (!res.ok) {
+          throw new Error(`NextDNS API error status ${res.status} ${res.statusText}`);
+        }
+
+        const data = await res.json();
+        const logsArray = data.data || data.logs || (Array.isArray(data) ? data : []);
+
+        for (const item of logsArray.reverse()) {
+          const clientObj = item.client || item.ip || {};
+          const ipVal = typeof clientObj === 'string' ? clientObj : (clientObj.ip || item.clientIp || 'WAN Client');
+          const nameVal = typeof clientObj === 'object' ? clientObj.name : (item.clientName || item.deviceName || item.device?.name);
+          const logObj = {
+            id: item.id || `log-${Math.random()}`,
+            time: item.timestamp ? new Date(item.timestamp) : new Date(),
+            domain: item.domain || 'unknown',
+            device: nameVal || item.device?.name || item.deviceName || 'NextDNS Device',
+            clientIp: ipVal,
+            status: item.status || 'allowed',
+            reasons: (item.reasons || []).map(r => typeof r === 'string' ? r : r.name || r.id),
+            proto: item.protocol || 'DoH',
+            type: item.root?.queryType || item.type || 'A',
+            latency: item.latency || 15
+          };
+          if (!STATE.logs.some(l => l.id === logObj.id)) {
+            handleIncomingLog(logObj);
+          }
+        }
+      } catch (err) {
+        console.warn('NextDNS API fetch failed:', err);
+      }
     }
 
     window.filterByDevice = function(dev) {
@@ -970,6 +1019,98 @@
         ctx.fillText('No telemetry data available for chart', width / 2, height / 2);
         return;
       }
+
+      const bucketsCount = 12;
+      const now = Date.now();
+      const bucketSizeMs = 5 * 60 * 1000;
+      const oldestTime = Math.min(...activeLogs.map(l => l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime()));
+      const span = Math.max(now - oldestTime, bucketsCount * bucketSizeMs);
+      const actualBucketMs = span / bucketsCount;
+
+      const buckets = Array.from({ length: bucketsCount }, () => ({ allowed: 0, blocked: 0, total: 0 }));
+
+      for (const l of activeLogs) {
+        const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
+        const diff = t - oldestTime;
+        let idx = Math.floor(diff / actualBucketMs);
+        if (idx < 0) idx = 0;
+        if (idx >= bucketsCount) idx = bucketsCount - 1;
+        
+        const lStatus = String(l.status || 'allowed').toLowerCase();
+        if (lStatus === 'blocked') {
+          buckets[idx].blocked++;
+        } else {
+          buckets[idx].allowed++;
+        }
+        buckets[idx].total++;
+      }
+
+      const maxVal = Math.max(1, ...buckets.map(b => Math.max(b.allowed, b.blocked, b.total)));
+      const padding = { top: 20, right: 30, bottom: 25, left: 35 };
+      const chartWidth = width - padding.left - padding.right;
+      const chartHeight = height - padding.top - padding.bottom;
+
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 4; i++) {
+        const y = padding.top + (chartHeight / 4) * i;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(width - padding.right, y);
+        ctx.stroke();
+
+        ctx.fillStyle = '#64748b';
+        ctx.font = '9px monospace';
+        ctx.textAlign = 'right';
+        const valLabel = Math.round(maxVal * (1 - i / 4));
+        ctx.fillText(valLabel, padding.left - 6, y + 3);
+      }
+
+      // Balken schmaler gestaltet (Abstand erhöht, max. Balkenbreite reduziert)
+      const slotWidth = chartWidth / bucketsCount;
+      const barWidth = Math.max(3, Math.min(8, slotWidth - 10));
+
+      buckets.forEach((b, i) => {
+        const x = padding.left + (i * slotWidth) + ((slotWidth - barWidth) / 2);
+        const allowedH = (b.allowed / maxVal) * chartHeight;
+        const blockedH = (b.blocked / maxVal) * chartHeight;
+
+        ctx.fillStyle = 'rgba(248, 113, 113, 0.75)';
+        ctx.fillRect(x, padding.top + chartHeight - blockedH, barWidth, blockedH);
+
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.75)';
+        ctx.fillRect(x, padding.top + chartHeight - blockedH - allowedH, barWidth, allowedH);
+      });
+
+      ctx.strokeStyle = '#4ade80';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      let hasStartedLine = false;
+
+      buckets.forEach((b, i) => {
+        const x = padding.left + (i * slotWidth) + (slotWidth / 2);
+        const ratio = b.total > 0 ? (b.blocked / b.total) : 0;
+        const y = padding.top + chartHeight - (ratio * chartHeight);
+
+        if (!hasStartedLine) {
+          ctx.moveTo(x, y);
+          hasStartedLine = true;
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+      ctx.stroke();
+
+      buckets.forEach((b, i) => {
+        const x = padding.left + (i * slotWidth) + (slotWidth / 2);
+        const ratio = b.total > 0 ? (b.blocked / b.total) : 0;
+        const y = padding.top + chartHeight - (ratio * chartHeight);
+
+        ctx.fillStyle = '#4ade80';
+        ctx.beginPath();
+        ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
     }
 
     function renderDenylist() {
@@ -1119,7 +1260,7 @@
       }
     });
     renderDenylist();
-    
+
     // Quick Verification & Initialization Check
     if (db) {
       console.log('NextDNS Sentinel - IndexedDB active and ready.');
