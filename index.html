@@ -323,8 +323,8 @@
       <a href="https://nextdns.io/?from=4ja3vp44" target="_blank" rel="noopener noreferrer" style="text-decoration:none; display:inline-flex; align-items:center; gap:0.25rem; font-size:0.75rem; color:#38bdf8; padding:0.35rem 0.6rem; border:1px solid rgba(56,189,248,0.3); border-radius:6px; background:rgba(56,189,248,0.1); font-weight:600;" title="Get NextDNS (Official Referral)">
         NextDNS ↗
       </a>
-      <span class="badge live" id="stream-status">● Live Simulator</span>
       <button class="btn-primary" id="btn-toggle-stream">Pause</button>
+      <span class="badge live" id="stream-status">● Live Simulator</span>
     </div>
   </header>
 
@@ -428,6 +428,10 @@
         <div class="card">
           <div class="card-title">DNS Security & Query Types</div>
           <div id="analytics-types" style="font-size: 0.75rem;"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Top Client IP Addresses (Requesting Sources)</div>
+          <div id="analytics-ips" style="font-size: 0.75rem;"></div>
         </div>
       </div>
     </section>
@@ -787,9 +791,12 @@
         }
       }
 
-      if (STATE.selectedDevice === 'all' || log.device === STATE.selectedDevice) {
-        renderLiveRow(log);
+      if (!log.clientIp) {
+        const ips = ['192.168.1.10', '192.168.1.15', '10.0.0.42', '192.168.1.105', '172.16.0.8'];
+        log.clientIp = ips[Math.floor(Math.random() * ips.length)];
       }
+
+      renderFilteredLiveLogs();
       updateAnalyticsKPIs();
     }
 
@@ -932,9 +939,12 @@
       `).join('');
 
       const typeMap = {};
+      const ipMap = {};
       for (const l of activeLogs) {
         const t = l.type || 'A';
         typeMap[t] = (typeMap[t] || 0) + 1;
+        const ip = l.clientIp || '192.168.1.10';
+        ipMap[ip] = (ipMap[ip] || 0) + 1;
       }
       const typeList = Object.entries(typeMap).sort((a,b)=>b[1]-a[1]);
       document.getElementById('analytics-types').innerHTML = typeList.length ? typeList.map(([t, c]) => `
@@ -946,6 +956,19 @@
           <div class="bar-bg"><div class="bar-fill" style="width:${Math.round((c/total)*100)}%; background:#38bdf8;"></div></div>
         </div>
       `).join('') : '<div style="color:var(--muted);">No query type telemetry available.</div>';
+
+      const ipList = Object.entries(ipMap).sort((a,b)=>b[1]-a[1]);
+      if (document.getElementById('analytics-ips')) {
+        document.getElementById('analytics-ips').innerHTML = ipList.length ? ipList.map(([ip, c]) => `
+          <div style="margin-bottom:6px;">
+            <div style="display:flex; justify-content:space-between; font-family:monospace; font-size: 0.72rem;">
+              <span style="color:#38bdf8;">IP: ${safeText(ip)}</span>
+              <span style="color:var(--muted);">${c} queries (${Math.round((c/total)*100)}%)</span>
+            </div>
+            <div class="bar-bg"><div class="bar-fill" style="width:${Math.round((c/total)*100)}%; background:#38bdf8;"></div></div>
+          </div>
+        `).join('') : '<div style="color:var(--muted);">No client IP telemetry available.</div>';
+      }
 
       renderAnalyticsChart();
     }
