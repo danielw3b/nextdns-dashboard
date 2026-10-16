@@ -545,7 +545,7 @@
 
   <div class="toast-container" id="toast-container"></div>
 
-  <!-- Vanilla Pure ES6 Logic with Optimized DOM Batching, Active IndexedDB & Slimmer Analytics Bars -->
+  <!-- Vanilla Pure ES6 Logic with Optimized DOM Batching, Active IndexedDB & Complete Analytics & Export -->
   <script>
     // ─── Security Sanitizer (Prevents DOM-XSS) ──────────────────────────
     function safeText(str) {
@@ -786,7 +786,6 @@
 
       scheduleBatchRender();
       updateAnalyticsKPIs();
-      renderHitsTable();
     }
 
     function scheduleBatchRender() {
@@ -960,10 +959,19 @@
       const blockedMap = {};
       const allowedMap = {};
       const devMap = {};
+      const typeMap = {};
+      const ipMap = {};
+
       for (const l of activeLogs) {
         if (String(l.status).toLowerCase() === 'blocked') blockedMap[l.domain] = (blockedMap[l.domain] || 0) + 1;
         else allowedMap[l.domain] = (allowedMap[l.domain] || 0) + 1;
         devMap[l.device] = (devMap[l.device] || 0) + 1;
+
+        const t = l.type || 'A';
+        typeMap[t] = (typeMap[t] || 0) + 1;
+
+        const ip = l.clientIp || '84.115.72.10';
+        ipMap[ip] = (ipMap[ip] || 0) + 1;
       }
 
       const topB = Object.entries(blockedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
@@ -993,7 +1001,49 @@
         </div>
       `).join('');
 
+      const typeList = Object.entries(typeMap).sort((a,b)=>b[1]-a[1]);
+      document.getElementById('analytics-types').innerHTML = typeList.length ? typeList.map(([t, c]) => `
+        <div style="margin-bottom:6px;">
+          <div style="display:flex; justify-content:space-between; font-family:monospace; font-size: 0.72rem;">
+            <span style="color:#38bdf8;">Query Type: ${safeText(t)}</span>
+            <span style="color:var(--muted);">${c} queries (${Math.round((c/total)*100)}%)</span>
+          </div>
+          <div class="bar-bg"><div class="bar-fill" style="width:${Math.min(100, Math.round((c/total)*100))}%; background:#38bdf8;"></div></div>
+        </div>
+      `).join('') : '<div style="color:var(--muted);">No query type telemetry available.</div>';
+
+      const IP_ISP_MAP = {
+        '82.165.188.20': 'Vodafone DSL Gateway',
+        '84.115.72.10': 'Deutsche Telekom Fiber Node',
+        '185.220.101.5': 'Telefonica O2 HomeNet'
+      };
+      function getISPName(ip) {
+        if (IP_ISP_MAP[ip]) return IP_ISP_MAP[ip];
+        if (!ip) return 'Unknown ISP';
+        if (ip.startsWith('84.') || ip.startsWith('217.')) return 'Deutsche Telekom AG';
+        if (ip.startsWith('82.') || ip.startsWith('91.')) return 'Vodafone DSL / Cable';
+        return 'Broadband WAN Gateway';
+      }
+
+      const ipList = Object.entries(ipMap).sort((a,b)=>b[1]-a[1]);
+      const ipElem = document.getElementById('analytics-ips');
+      if (ipElem) {
+        ipElem.innerHTML = ipList.length ? ipList.map(([ip, c]) => `
+          <div style="margin-bottom:8px;">
+            <div style="display:flex; justify-content:space-between; font-family:monospace; font-size: 0.72rem;">
+              <div>
+                <span style="color:#38bdf8; font-weight:600;">${safeText(ip)}</span>
+                <div style="color:var(--muted); font-size: 0.65rem;">ISP: ${safeText(getISPName(ip))}</div>
+              </div>
+              <span style="color:var(--muted);">${c} queries (${Math.round((c/total)*100)}%)</span>
+            </div>
+            <div class="bar-bg"><div class="bar-fill" style="width:${Math.min(100, Math.round((c/total)*100))}%; background:#38bdf8;"></div></div>
+          </div>
+        `).join('') : '<div style="color:var(--muted);">No ISP IP telemetry available.</div>';
+      }
+
       renderAnalyticsChart();
+      renderHitsTable();
     }
 
     function renderAnalyticsChart() {
@@ -1067,7 +1117,6 @@
         ctx.fillText(valLabel, padding.left - 6, y + 3);
       }
 
-      // Balken schmaler gestaltet (Abstand erhöht, max. Balkenbreite reduziert)
       const slotWidth = chartWidth / bucketsCount;
       const barWidth = Math.max(3, Math.min(8, slotWidth - 10));
 
@@ -1132,6 +1181,31 @@
       `).join('');
     }
 
+    function renderHitsTable() {
+      const tbody = document.getElementById('autoblock-hits-body');
+      if (!tbody) return;
+      const items = Object.entries(STATE.hits).map(([domain, h]) => ({ domain, count: h.count }));
+      items.sort((a, b) => b.count - a.count);
+
+      tbody.innerHTML = items.slice(0, 15).map(i => {
+        const pct = Math.min(100, Math.round((i.count / STATE.config.threshold) * 100));
+        const isSys = isProtected(i.domain);
+        return `
+          <tr>
+            <td class="domain-cell">${safeText(i.domain)} ${isSys ? '<span class="badge">Protected</span>' : ''}</td>
+            <td style="color: var(--warn); font-weight: bold;">${i.count}</td>
+            <td style="width: 140px;">
+              <div class="bar-bg"><div class="bar-fill" style="width:${pct}%; background:${pct>=100?'var(--blocked)':'var(--warn)'}"></div></div>
+            </td>
+            <td style="color: var(--muted);">${isSys ? 'Guardrail Active' : (pct >= 100 ? 'Auto-Denied' : 'Monitoring')}</td>
+            <td style="text-align: right;">
+              <button onclick="addQuickDeny('${safeText(i.domain)}')" class="btn-danger" style="padding: 0.2rem 0.5rem;">Block</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
     window.addQuickDeny = function(domain) {
       if (STATE.config.protectSystem && isProtected(domain)) {
         if (!confirm(`Warning: ${domain} is a critical system domain. Proceed anyway?`)) return;
@@ -1172,6 +1246,46 @@
       a.download = 'nextdns-logs.csv';
       a.click();
     }
+
+    function backupConfigJSON() {
+      const data = {
+        config: STATE.config,
+        denylist: STATE.denylist
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'nextdns-sentinel-backup.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+      showToast('Export Successful', 'Configuration and denylist downloaded successfully', 'success');
+    }
+
+    window.importConfigJSON = function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (parsed.config) {
+            STATE.config = { ...STATE.config, ...parsed.config };
+          }
+          if (parsed.denylist && Array.isArray(parsed.denylist)) {
+            STATE.denylist = parsed.denylist;
+          }
+          saveState();
+          loadConfigToUI();
+          renderDenylist();
+          showToast('Import Successful', 'Configuration and denylist loaded successfully', 'success');
+        } catch (err) {
+          showToast('Import Error', 'Invalid JSON backup file', 'danger');
+        }
+      };
+      reader.readAsText(file);
+    };
 
     // Navigation setup
     document.querySelectorAll('.nav-tabs button').forEach(btn => {
@@ -1222,6 +1336,9 @@
       updateThresholdBadge();
       showToast('Config Saved', 'Settings updated successfully', 'success');
     };
+
+    const btnBackup = document.getElementById('btn-backup-json');
+    if (btnBackup) btnBackup.onclick = backupConfigJSON;
 
     document.getElementById('live-status-filter').onchange = renderFilteredLiveLogs;
     document.getElementById('live-search').oninput = renderFilteredLiveLogs;
