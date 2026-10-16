@@ -430,7 +430,7 @@
           <div id="analytics-types" style="font-size: 0.75rem;"></div>
         </div>
         <div class="card">
-          <div class="card-title">Top Client IP Addresses (Requesting Sources)</div>
+          <div class="card-title">Top ISP IP Addresses (Requesting Sources)</div>
           <div id="analytics-ips" style="font-size: 0.75rem;"></div>
         </div>
       </div>
@@ -967,31 +967,29 @@
         </div>
       `).join('') : '<div style="color:var(--muted);">No query type telemetry available.</div>';
 
-      const IP_DNS_MAP = {
-        '192.168.1.10': 'MacBook-Pro.local',
-        '192.168.1.15': 'iPhone-16.lan',
-        '10.0.0.42': 'Smart-TV.lan',
-        '192.168.1.105': 'Home-Assistant.local',
-        '172.16.0.8': 'LivingRoom-AppleTV.lan'
+      const IP_ISP_MAP = {
+        '82.165.188.20': 'Vodafone DSL Gateway',
+        '84.115.72.10': 'Deutsche Telekom Fiber Node',
+        '185.220.101.5': 'Telefonica O2 HomeNet',
+        '91.64.12.88': 'Vodafone Cable Gateway'
       };
       const ipList = Object.entries(ipMap).sort((a,b)=>b[1]-a[1]);
       if (document.getElementById('analytics-ips')) {
         document.getElementById('analytics-ips').innerHTML = ipList.length ? ipList.map(([ip, c]) => {
-          const foundLog = activeLogs.find(x => x.clientIp === ip);
-          const hostname = IP_DNS_MAP[ip] || (foundLog ? foundLog.device + '.lan' : 'client-' + ip.replace(/\./g, '-') + '.lan');
+          const ispName = IP_ISP_MAP[ip] || 'ISP WAN Uplink';
           return `
             <div style="margin-bottom:8px;">
               <div style="display:flex; justify-content:space-between; font-family:monospace; font-size: 0.72rem;">
                 <div>
                   <span style="color:#38bdf8; font-weight:600;">${safeText(ip)}</span>
-                  <div style="color:var(--muted); font-size: 0.65rem;">DNS: ${safeText(hostname)}</div>
+                  <div style="color:var(--muted); font-size: 0.65rem;">ISP: ${safeText(ispName)}</div>
                 </div>
                 <span style="color:var(--muted);">${c} queries (${Math.round((c/total)*100)}%)</span>
               </div>
               <div class="bar-bg"><div class="bar-fill" style="width:${Math.round((c/total)*100)}%; background:#38bdf8;"></div></div>
             </div>
           `;
-        }).join('') : '<div style="color:var(--muted);">No client IP telemetry available.</div>';
+        }).join('') : '<div style="color:var(--muted);">No ISP IP telemetry available.</div>';
       }
 
       renderAnalyticsChart();
