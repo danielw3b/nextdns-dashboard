@@ -1094,16 +1094,32 @@
     const lDevFilter = document.getElementById('live-device-filter');
     if (lDevFilter) lDevFilter.onchange = (e) => filterByDevice(e.target.value);
 
-    // Initialize application storage, verification, and simulation
+    // Initialize application storage, verification, and API/Simulation mode
     loadConfigToUI();
     initDB().then(() => {
-      startSimulation();
+      if (STATE.config.profile && STATE.config.apiKey) {
+        STATE.mode = 'api';
+        document.getElementById('stream-status').textContent = '● Live NextDNS API';
+        document.getElementById('stream-status').className = 'badge live';
+        fetchNextDNSLogs();
+        if (apiPollTimer) clearInterval(apiPollTimer);
+        apiPollTimer = setInterval(fetchNextDNSLogs, 10000);
+        console.log('NextDNS Sentinel - Initialized in API Mode.');
+      } else {
+        STATE.mode = 'sim';
+        document.getElementById('stream-status').textContent = '● Live Simulator';
+        document.getElementById('stream-status').className = 'badge sim';
+        startSimulation();
+        console.log('NextDNS Sentinel - Initialized in Simulator Mode.');
+      }
     }).catch(err => {
       console.warn('IndexedDB failed to init, falling back to pure memory mode:', err);
-      startSimulation();
+      if (!STATE.config.profile || !STATE.config.apiKey) {
+        startSimulation();
+      }
     });
     renderDenylist();
-
+    
     // Quick Verification & Initialization Check
     if (db) {
       console.log('NextDNS Sentinel - IndexedDB active and ready.');
