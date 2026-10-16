@@ -786,6 +786,7 @@
 
       scheduleBatchRender();
       updateAnalyticsKPIs();
+      renderHitsTable();
     }
 
     function scheduleBatchRender() {
@@ -1180,7 +1181,7 @@
         btn.classList.add('active');
         document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
         if (btn.dataset.tab === 'analytics') { renderAnalyticsChart(); }
-        if (btn.dataset.tab === 'blocking') { renderDenylist(); }
+        if (btn.dataset.tab === 'blocking') { renderDenylist(); renderHitsTable(); }
         if (btn.dataset.tab === 'config') { loadConfigToUI(); }
       };
     });
