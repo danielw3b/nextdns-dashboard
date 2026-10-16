@@ -967,6 +967,13 @@
         </div>
       `).join('') : '<div style="color:var(--muted);">No query type telemetry available.</div>';
 
+      const IP_ISP_MAP = {
+        '82.165.188.20': 'Vodafone DSL Gateway',
+        '84.115.72.10': 'Deutsche Telekom Fiber Node',
+        '185.220.101.5': 'Telefonica O2 HomeNet',
+        '91.64.12.88': 'Vodafone Cable Gateway'
+      };
+
       function getISPName(ip) {
         if (IP_ISP_MAP[ip]) return IP_ISP_MAP[ip];
         if (!ip) return 'Unknown ISP';
