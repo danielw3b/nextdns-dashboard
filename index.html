@@ -792,8 +792,7 @@
       }
 
       if (!log.clientIp) {
-        const ips = ['192.168.1.10', '192.168.1.15', '10.0.0.42', '192.168.1.105', '172.16.0.8'];
-        log.clientIp = ips[Math.floor(Math.random() * ips.length)];
+        log.clientIp = '84.115.72.10';
       }
 
       renderFilteredLiveLogs();
@@ -829,10 +828,16 @@
 
     function startSimulation() {
       if (simTimer) clearInterval(simTimer);
+      const SIM_WAN_CLIENTS = [
+        { ip: '82.165.188.20', name: 'Vodafone-WAN-Gateway', isp: 'Vodafone DSL' },
+        { ip: '84.115.72.10', name: 'Telekom-Fiber-Node', isp: 'Deutsche Telekom' },
+        { ip: '185.220.101.5', name: 'O2-HomeNet-Router', isp: 'Telefonica O2' },
+        { ip: '91.64.12.88', name: 'Unitymedia-Cable-GW', isp: 'Vodafone Cable' }
+      ];
       simTimer = setInterval(() => {
         if (!STATE.isStreaming) return;
         const isBlocked = Math.random() < 0.28;
-        const dev = SAMPLE_DEVICES[Math.floor(Math.random() * SAMPLE_DEVICES.length)];
+        const client = SIM_WAN_CLIENTS[Math.floor(Math.random() * SIM_WAN_CLIENTS.length)];
         const domain = isBlocked
           ? SAMPLE_BLOCKED[Math.floor(Math.random() * SAMPLE_BLOCKED.length)]
           : SAMPLE_ALLOWED[Math.floor(Math.random() * SAMPLE_ALLOWED.length)];
@@ -844,7 +849,8 @@
           id: Date.now() + Math.random(),
           time: new Date(),
           domain,
-          device: dev,
+          device: client.name,
+          clientIp: client.ip,
           status,
           reasons: isCustomBlocked ? ['Custom Denylist Rule'] : (isBlocked ? ['Ad & Tracking Protection'] : []),
           proto: 'DoH',
@@ -1346,11 +1352,15 @@
         const logsArray = data.data || data.logs || (Array.isArray(data) ? data : []);
 
         for (const item of logsArray.reverse()) {
+          const clientObj = item.client || item.ip || {};
+          const ipVal = typeof clientObj === 'string' ? clientObj : (clientObj.ip || item.clientIp || 'WAN Client');
+          const nameVal = typeof clientObj === 'object' ? clientObj.name : (item.clientName || item.deviceName || item.device?.name);
           const logObj = {
             id: item.id || `log-${Math.random()}`,
             time: item.timestamp ? new Date(item.timestamp) : new Date(),
             domain: item.domain || 'unknown',
-            device: item.device?.name || item.deviceName || 'NextDNS Device',
+            device: nameVal || item.device?.name || item.deviceName || 'NextDNS Device',
+            clientIp: ipVal,
             status: item.status || 'allowed',
             reasons: (item.reasons || []).map(r => typeof r === 'string' ? r : r.name || r.id),
             proto: item.protocol || 'DoH',
