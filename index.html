@@ -802,7 +802,6 @@
     function renderFilteredLiveLogs() {
       const tbody = document.getElementById('live-log-body');
       if (!tbody) return;
-      tbody.innerHTML = '';
       const search = (document.getElementById('live-search')?.value || '').toLowerCase().trim();
       const statusFilter = (document.getElementById('live-status-filter')?.value || 'all').toLowerCase().trim();
 
@@ -821,9 +820,29 @@
         return true;
       });
 
+      const fragment = document.createDocumentFragment();
       for (const log of filtered.slice(0, 100)) {
-        renderLiveRow(log);
+        const tr = document.createElement('tr');
+        const isBlocked = String(log.status || 'allowed').toLowerCase() === 'blocked';
+        tr.innerHTML = `
+          <td>
+            <div style="font-weight: 500;">${log.time instanceof Date ? log.time.toLocaleTimeString() : new Date(log.time).toLocaleTimeString()}</div>
+            <div style="font-size: 0.62rem; color: var(--muted);">${safeText(log.proto)} / ${safeText(log.type)} (${log.latency}ms)</div>
+          </td>
+          <td><span class="status-pill ${isBlocked ? 'status-blocked' : 'status-allowed'}">${isBlocked ? 'Blocked' : 'Allowed'}</span></td>
+          <td class="domain-cell" style="color: ${isBlocked ? '#fca5a5' : '#f1f5f9'};">
+            <div style="font-weight: 600; font-family: monospace; word-break: break-all;">${safeText(log.domain)}</div>
+            <div style="font-size: 0.62rem; color: #38bdf8; cursor: pointer; text-decoration: underline;" onclick="filterByDevice('${safeText(log.device)}')">${safeText(log.device)}</div>
+          </td>
+          <td>
+            <div style="color: #fde047; font-size: 0.68rem;">${safeText((log.reasons || []).join(', ') || '—')}</div>
+            <div style="margin-top: 3px;"><button class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.62rem;" onclick="addQuickDeny('${safeText(log.domain)}')">Deny</button></div>
+          </td>
+        `;
+        fragment.appendChild(tr);
       }
+      tbody.innerHTML = '';
+      tbody.appendChild(fragment);
     }
 
     function startSimulation() {
