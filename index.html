@@ -207,8 +207,12 @@
     }
     table {
       width: 100%;
-      table-layout: auto;
+      table-layout: fixed; /* Fixed layout prevents column jumping on filter changes */
     }
+    th:nth-child(1), td:nth-child(1) { width: 22%; }
+    th:nth-child(2), td:nth-child(2) { width: 14%; }
+    th:nth-child(3), td:nth-child(3) { width: 42%; }
+    th:nth-child(4), td:nth-child(4) { width: 22%; }
     th, td {
       padding: 0.5rem 0.75rem;
       border-bottom: 1px solid rgba(51, 65, 85, 0.5);
@@ -318,7 +322,7 @@
   <nav class="nav-tabs">
     <button class="active" data-tab="live">Live Log Stream</button>
     <button data-tab="analytics">Real-time Analytics</button>
-    <button data-tab="blocking">Custom Denylist & Auto-Block</button>
+    <button data-tab="blocking">Guardrails & Rules</button>
     <button data-tab="config">Configuration</button>
   </nav>
 
@@ -389,12 +393,13 @@
           <span style="font-size: 0.7rem; color: var(--muted);" id="analytics-chart-subtitle">Queries over time & block ratio</span>
         </div>
         <div style="position: relative; height: 180px; width: 100%;">
-          <canvas id="analytics-canvas" style="width: 100%; height: 100%; display: block;"></canvas>
+          <canvas id="analytics-canvas" style="width: 100%; height: 100%; display: block; cursor: crosshair;"></canvas>
+          <div id="chart-tooltip" style="position: absolute; display: none; background: #0b1324; border: 1px solid var(--border); padding: 6px 10px; border-radius: 6px; font-size: 11px; pointer-events: none; z-index: 20; box-shadow: 0 4px 12px rgba(0,0,0,0.4); color: #f1f5f9; font-family: monospace;"></div>
         </div>
         <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 0.5rem; font-size: 0.7rem; color: var(--muted);">
-          <span style="display:inline-flex; align-items:center; gap:0.3rem;"><span style="width:8px; height:8px; background:#38bdf8; border-radius:2px;"></span> Allowed</span>
-          <span style="display:inline-flex; align-items:center; gap:0.3rem;"><span style="width:8px; height:8px; background:#f87171; border-radius:2px;"></span> Blocked</span>
-          <span style="display:inline-flex; align-items:center; gap:0.3rem;"><span style="width:12px; height:2px; background:#4ade80;"></span> Block Ratio (%)</span>
+          <span style="display:inline-flex; align-items:center; gap:0.3rem;"><span style="width:8px; height:8px; background:#38bdf8; border-radius:2px;"></span> Allowed (Left Axis)</span>
+          <span style="display:inline-flex; align-items:center; gap:0.3rem;"><span style="width:8px; height:8px; background:#f87171; border-radius:2px;"></span> Blocked (Left Axis)</span>
+          <span style="display:inline-flex; align-items:center; gap:0.3rem;"><span style="width:12px; height:2px; background:#4ade80;"></span> Block Ratio % (Right Axis)</span>
         </div>
       </div>
 
@@ -422,7 +427,7 @@
       </div>
     </section>
 
-    <!-- TAB: CUSTOM BLOCKING -->
+    <!-- TAB: GUARDRAILS & RULES -->
     <section id="tab-blocking" class="tab-content">
       <div class="card">
         <div class="card-title">Add Custom Deny Rule or Wildcard</div>
@@ -441,16 +446,16 @@
       <div class="card">
         <div class="card-title">
           <span>Autonomous Auto-Block Monitor</span>
-          <span style="font-size: 0.7rem; color: var(--muted); font-family: monospace;" id="autoblock-threshold-badge">Threshold: 200 hits/24h</span>
+          <span style="font-size: 0.7rem; color: var(--muted); font-family: monospace;" id="autoblock-threshold-badge">Threshold: 20 hits/24h</span>
         </div>
         <div class="table-container">
           <table>
             <thead>
               <tr>
                 <th>Candidate Domain</th>
-                <th>Hits (24h)</th>
+                <th>Hits</th>
                 <th>Threshold Progress</th>
-                <th>Guardrail Status</th>
+                <th>Status</th>
                 <th style="text-align: right;">Action</th>
               </tr>
             </thead>
@@ -468,8 +473,7 @@
                 <th>State</th>
                 <th>Domain / Pattern</th>
                 <th>Category</th>
-                <th>Source</th>
-                <th>Hits Intercepted</th>
+                <th>Hits</th>
                 <th style="text-align: right;">Action</th>
               </tr>
             </thead>
@@ -545,7 +549,7 @@
 
   <div class="toast-container" id="toast-container"></div>
 
-  <!-- Vanilla Pure ES6 Logic with Dynamic Counters, Realistic Latency, and IndexedDB Integration -->
+  <!-- Vanilla Pure ES6 Logic with Persistent IndexedDB Storage & Dual-Axis Chart -->
   <script>
     // --- Security Sanitizer (Prevents DOM-XSS) ---
     function safeText(str) {
@@ -578,9 +582,9 @@
       mode: 'sim',
       selectedDevice: 'all',
       logs: [],
-      totalQueriesCounter: 0, // Dynamic running counter instead of hardcapped array size
+      totalQueriesCounter: 0,
       devices: new Set(),
-      hits: {},
+      hits: {}, // Persistent domain hits tracked across sessions via IndexedDB
       denylist: [
         { id: '1', domain: 'telemetry.samsungcloud.com', category: 'Tracking', active: true, hits: 341 },
         { id: '2', domain: 'events.redditmedia.com', category: 'Tracking', active: true, hits: 142 }
@@ -589,8 +593,6 @@
         profile: '',
         apiKey: '',
         proxy: '',
-        tgToken: '',
-        tgChat: '',
         threshold: 20,
         retentionDays: 7,
         cooldown: 60,
@@ -647,25 +649,29 @@
       }
     }
 
-    // --- Active IndexedDB Implementation ---
+    // --- Active IndexedDB Implementation (Logs & Persistent Hits Store) ---
     let db = null;
     const DB_NAME = 'NextDNSSentinelDB';
-    const STORE_NAME = 'logs';
+    const STORE_LOGS = 'logs';
+    const STORE_HITS = 'hits';
 
     async function initDB() {
       return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, 1);
+        const request = indexedDB.open(DB_NAME, 2);
         request.onerror = () => reject(request.error);
         request.onsuccess = (event) => {
           db = event.target.result;
-          loadLogsFromDB();
+          loadDataFromDB();
           resolve(db);
         };
         request.onupgradeneeded = (event) => {
           const database = event.target.result;
-          if (!database.objectStoreNames.contains(STORE_NAME)) {
-            const store = database.createObjectStore(STORE_NAME, { keyPath: 'id' });
+          if (!database.objectStoreNames.contains(STORE_LOGS)) {
+            const store = database.createObjectStore(STORE_LOGS, { keyPath: 'id' });
             store.createIndex('time', 'time', { unique: false });
+          }
+          if (!database.objectStoreNames.contains(STORE_HITS)) {
+            database.createObjectStore(STORE_HITS, { keyPath: 'domain' });
           }
         };
       });
@@ -674,8 +680,8 @@
     function saveLogToDB(log) {
       if (!db) return;
       try {
-        const tx = db.transaction(STORE_NAME, 'readwrite');
-        const store = tx.objectStore(STORE_NAME);
+        const tx = db.transaction(STORE_LOGS, 'readwrite');
+        const store = tx.objectStore(STORE_LOGS);
         store.put({
           ...log,
           time: log.time instanceof Date ? log.time.getTime() : log.time
@@ -685,12 +691,36 @@
       }
     }
 
-    function loadLogsFromDB() {
+    function saveHitToDB(domain, count, lastSeen) {
       if (!db) return;
       try {
-        const tx = db.transaction(STORE_NAME, 'readonly');
-        const store = tx.objectStore(STORE_NAME);
-        const index = store.index('time');
+        const tx = db.transaction(STORE_HITS, 'readwrite');
+        const store = tx.objectStore(STORE_HITS);
+        store.put({ domain, count, lastSeen });
+      } catch (e) {
+        console.warn('Failed to persist hit in IndexedDB:', e);
+      }
+    }
+
+    function loadDataFromDB() {
+      if (!db) return;
+      try {
+        // 1. Load persistent Hits
+        const txHits = db.transaction(STORE_HITS, 'readonly');
+        const storeHits = txHits.objectStore(STORE_HITS);
+        const reqHits = storeHits.getAll();
+        reqHits.onsuccess = () => {
+          if (reqHits.result && reqHits.result.length > 0) {
+            reqHits.result.forEach(h => {
+              STATE.hits[h.domain] = { count: h.count, lastSeen: h.lastSeen };
+            });
+          }
+        };
+
+        // 2. Load persistent Logs
+        const txLogs = db.transaction(STORE_LOGS, 'readonly');
+        const storeLogs = txLogs.objectStore(STORE_LOGS);
+        const index = storeLogs.index('time');
         const request = index.openCursor(null, 'prev');
         const loaded = [];
 
@@ -709,17 +739,15 @@
               STATE.totalQueriesCounter = Math.max(STATE.totalQueriesCounter, loaded.length);
               loaded.forEach(l => {
                 if (l.device) registerDevice(l.device);
-                const d = l.domain.toLowerCase();
-                if (!STATE.hits[d]) STATE.hits[d] = { count: 0, lastSeen: Date.now() };
-                STATE.hits[d].count++;
               });
               renderFilteredLiveLogs();
               updateAnalyticsKPIs();
+              renderHitsTable();
             }
           }
         };
       } catch (e) {
-        console.warn('Failed to load logs from IndexedDB:', e);
+        console.warn('Failed to load data from IndexedDB:', e);
       }
     }
 
@@ -761,14 +789,17 @@
     function handleIncomingLog(log) {
       saveLogToDB(log);
       STATE.logs.unshift(log);
-      STATE.totalQueriesCounter++; // Continuously increment total query count
-      if (STATE.logs.length > 500) STATE.logs.pop(); // DOM/RAM ring buffer limit
+      STATE.totalQueriesCounter++;
+      if (STATE.logs.length > 500) STATE.logs.pop();
       if (log.device) registerDevice(log.device);
 
       const d = log.domain.toLowerCase();
       if (!STATE.hits[d]) STATE.hits[d] = { count: 0, lastSeen: Date.now() };
       STATE.hits[d].count++;
       STATE.hits[d].lastSeen = Date.now();
+      
+      // Persist domain hits in IndexedDB
+      saveHitToDB(d, STATE.hits[d].count, STATE.hits[d].lastSeen);
 
       if (STATE.config.autoBlock && STATE.hits[d].count >= STATE.config.threshold) {
         const isDeniedAlready = STATE.denylist.some(r => r.domain.toLowerCase() === d);
@@ -794,6 +825,7 @@
 
       scheduleBatchRender();
       updateAnalyticsKPIs();
+      renderHitsTable();
     }
 
     function scheduleBatchRender() {
@@ -953,7 +985,6 @@
         ? STATE.logs
         : STATE.logs.filter(l => l.device === STATE.selectedDevice);
 
-      // Dynamic total count without hard cap limitation
       const total = STATE.selectedDevice === 'all' 
         ? Math.max(STATE.totalQueriesCounter, STATE.logs.length) 
         : activeLogs.length;
@@ -962,7 +993,6 @@
       const allowed = Math.max(0, total - blocked);
       const rate = total > 0 ? Math.round((blocked / total) * 100) : 0;
 
-      // Realistic dynamic average latency calculation
       const avgLatency = activeLogs.length > 0 
         ? Math.round(activeLogs.reduce((acc, l) => acc + (l.latency || 16), 0) / activeLogs.length) 
         : 16;
@@ -1061,8 +1091,10 @@
       }
 
       renderAnalyticsChart();
-      renderHitsTable();
     }
+
+    let currentChartBuckets = [];
+    let currentChartMetrics = {};
 
     function renderAnalyticsChart() {
       const canvas = document.getElementById('analytics-canvas');
@@ -1081,14 +1113,19 @@
         ? STATE.logs
         : STATE.logs.filter(l => l.device === STATE.selectedDevice);
 
-      // Define a fixed 60-minute rolling time window divided into 12 stable 5-minute buckets
       const bucketsCount = 12;
       const now = Date.now();
-      const windowMs = 60 * 60 * 1000; // Last 60 minutes fixed window
-      const bucketSizeMs = windowMs / bucketsCount; // 5 minutes per bucket
+      const windowMs = 60 * 60 * 1000; 
+      const bucketSizeMs = windowMs / bucketsCount; 
       const startTime = now - windowMs;
 
-      const buckets = Array.from({ length: bucketsCount }, () => ({ allowed: 0, blocked: 0, total: 0 }));
+      const buckets = Array.from({ length: bucketsCount }, (_, idx) => ({
+        index: idx,
+        startTime: startTime + (idx * bucketSizeMs),
+        allowed: 0, 
+        blocked: 0, 
+        total: 0 
+      }));
 
       for (const l of activeLogs) {
         const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
@@ -1108,49 +1145,58 @@
         buckets[idx].total++;
       }
 
+      currentChartBuckets = buckets;
       const maxVal = Math.max(1, ...buckets.map(b => Math.max(b.allowed, b.blocked, b.total)));
       
-      // Adjusted padding to leave space for axis labels
-      const padding = { top: 15, right: 35, bottom: 28, left: 40 };
+      const padding = { top: 15, right: 42, bottom: 28, left: 40 };
       const chartWidth = width - padding.left - padding.right;
       const chartHeight = height - padding.top - padding.bottom;
 
-      // Draw Y-Axis grid lines and value labels
-      ctx.strokeStyle = '#1e293b';
+      currentChartMetrics = { padding, chartWidth, chartHeight, maxVal, bucketsCount };
+
+      // Left Y-Axis (Absolute Queries in Allowed Blue)
       ctx.lineWidth = 1;
       for (let i = 0; i <= 4; i++) {
         const y = padding.top + (chartHeight / 4) * i;
+        ctx.strokeStyle = '#1e293b';
         ctx.beginPath();
         ctx.moveTo(padding.left, y);
         ctx.lineTo(width - padding.right, y);
         ctx.stroke();
 
-        ctx.fillStyle = '#64748b';
+        ctx.fillStyle = '#38bdf8';
         ctx.font = '9px monospace';
         ctx.textAlign = 'right';
         const valLabel = Math.round(maxVal * (1 - i / 4));
         ctx.fillText(valLabel, padding.left - 6, y + 3);
       }
 
+      // Right Y-Axis (Block Ratio % in Green)
+      for (let i = 0; i <= 4; i++) {
+        const y = padding.top + (chartHeight / 4) * i;
+        ctx.fillStyle = '#4ade80';
+        ctx.font = '9px monospace';
+        ctx.textAlign = 'left';
+        const pctLabel = Math.round(100 * (1 - i / 4)) + '%';
+        ctx.fillText(pctLabel, width - padding.right + 6, y + 3);
+      }
+
       const slotWidth = chartWidth / bucketsCount;
       const barWidth = Math.max(3, Math.min(8, slotWidth - 10));
 
-      // Draw stacked bars for allowed and blocked queries
       buckets.forEach((b, i) => {
         const x = padding.left + (i * slotWidth) + ((slotWidth - barWidth) / 2);
         const allowedH = (b.allowed / maxVal) * chartHeight;
         const blockedH = (b.blocked / maxVal) * chartHeight;
 
-        // Blocked Stack
         ctx.fillStyle = 'rgba(248, 113, 113, 0.75)';
         ctx.fillRect(x, padding.top + chartHeight - blockedH, barWidth, blockedH);
 
-        // Allowed Stack (stacked on top of blocked)
         ctx.fillStyle = 'rgba(56, 189, 248, 0.75)';
         ctx.fillRect(x, padding.top + chartHeight - blockedH - allowedH, barWidth, allowedH);
       });
 
-      // Draw X-Axis time labels (e.g., -60m, -45m, -30m, -15m, Now)
+      // X-Axis time labels
       ctx.fillStyle = '#64748b';
       ctx.font = '9px monospace';
       ctx.textAlign = 'center';
@@ -1163,7 +1209,7 @@
         ctx.fillText(label, x, height - 8);
       });
 
-      // Draw block ratio trend line
+      // Block ratio trend line
       ctx.strokeStyle = '#4ade80';
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -1183,7 +1229,6 @@
       });
       ctx.stroke();
 
-      // Draw trend line data points with ratio tooltip indicators
       buckets.forEach((b, i) => {
         const x = padding.left + (i * slotWidth) + (slotWidth / 2);
         const ratio = b.total > 0 ? (b.blocked / b.total) : 0;
@@ -1204,7 +1249,6 @@
           <td><span class="status-pill ${r.active ? 'status-blocked' : 'status-allowed'}">${r.active ? 'Enforced' : 'Disabled'}</span></td>
           <td class="domain-cell">${safeText(r.domain)}</td>
           <td style="color: var(--muted);">${safeText(r.category)}</td>
-          <td style="color: var(--muted);">${safeText(r.source || 'Manual')}</td>
           <td style="color: var(--blocked); font-weight: 700;">${r.hits || 0}</td>
           <td style="text-align: right;">
             <button onclick="toggleRule('${r.id}')" style="padding: 0.2rem 0.5rem;">${r.active ? 'Disable' : 'Enable'}</button>
@@ -1230,7 +1274,7 @@
             <td style="width: 140px;">
               <div class="bar-bg"><div class="bar-fill" style="width:${pct}%; background:${pct>=100?'var(--blocked)':'var(--warn)'}"></div></div>
             </td>
-            <td style="color: var(--muted);">${isSys ? 'Guardrail Active' : (pct >= 100 ? 'Auto-Denied' : 'Monitoring')}</td>
+            <td style="color: var(--muted);">${isSys ? 'Guardrail' : (pct >= 100 ? 'Auto-Denied' : 'Monitoring')}</td>
             <td style="text-align: right;">
               <button onclick="addQuickDeny('${safeText(i.domain)}')" class="btn-danger" style="padding: 0.2rem 0.5rem;">Block</button>
             </td>
@@ -1248,7 +1292,7 @@
         domain,
         category: 'Quick Deny',
         active: true,
-        hits: 1
+        hits: STATE.hits[domain]?.count || 1
       });
       saveState();
       renderDenylist();
@@ -1349,7 +1393,7 @@
         domain,
         category: document.getElementById('new-deny-category').value,
         active: true,
-        hits: 0
+        hits: STATE.hits[domain]?.count || 0
       });
       saveState();
       inp.value = '';
@@ -1413,10 +1457,51 @@
     });
     renderDenylist();
 
-    // Quick Verification & Initialization Check
-    if (db) {
-      console.log('NextDNS Sentinel - IndexedDB active and ready.');
-    }
+    // Interactive Hover Tooltip Event Listener for Canvas
+    document.addEventListener('DOMContentLoaded', () => {
+      const canvas = document.getElementById('analytics-canvas');
+      const tooltip = document.getElementById('chart-tooltip');
+      if (!canvas || !tooltip) return;
+
+      canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        const { padding, chartWidth, chartHeight, bucketsCount } = currentChartMetrics;
+
+        if (!chartWidth || mouseX < padding.left || mouseX > padding.left + chartWidth || mouseY < padding.top || mouseY > padding.top + chartHeight) {
+          tooltip.style.display = 'none';
+          return;
+        }
+
+        const slotWidth = chartWidth / bucketsCount;
+        const bucketIndex = Math.floor((mouseX - padding.left) / slotWidth);
+        const b = currentChartBuckets[bucketIndex];
+
+        if (!b) {
+          tooltip.style.display = 'none';
+          return;
+        }
+
+        const blockRatio = b.total > 0 ? Math.round((b.blocked / b.total) * 100) : 0;
+        const timeStr = new Date(b.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        tooltip.innerHTML = `
+          <div style="font-weight:600; color:#38bdf8; margin-bottom:2px;">Time Slot: ${timeStr}</div>
+          <div>Total Queries: <b>${b.total}</b></div>
+          <div style="color:#4ade80;">Allowed: ${b.allowed}</div>
+          <div style="color:#f87171;">Blocked: ${b.blocked}</div>
+          <div style="color:#4ade80; margin-top:2px; border-top:1px solid #334155; padding-top:2px;">Block Ratio: <b>${blockRatio}%</b></div>
+        `;
+        tooltip.style.display = 'block';
+        tooltip.style.left = (e.clientX - rect.left + 15) + 'px';
+        tooltip.style.top = (e.clientY - rect.top - 40) + 'px';
+      });
+
+      canvas.addEventListener('mouseleave', () => {
+        tooltip.style.display = 'none';
+      });
+    });
   </script>
 </body>
 </html>
