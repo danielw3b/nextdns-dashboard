@@ -207,12 +207,16 @@
     }
     table {
       width: 100%;
-      table-layout: fixed; /* Fixed layout prevents column jumping on filter changes */
     }
-    th:nth-child(1), td:nth-child(1) { width: 22%; }
-    th:nth-child(2), td:nth-child(2) { width: 14%; }
-    th:nth-child(3), td:nth-child(3) { width: 42%; }
-    th:nth-child(4), td:nth-child(4) { width: 22%; }
+    /* Fixed column layout exclusively for the live stream table */
+    #tab-live table {
+      table-layout: fixed;
+    }
+    #tab-live th:nth-child(1), #tab-live td:nth-child(1) { width: 22%; }
+    #tab-live th:nth-child(2), #tab-live td:nth-child(2) { width: 14%; }
+    #tab-live th:nth-child(3), #tab-live td:nth-child(3) { width: 42%; }
+    #tab-live th:nth-child(4), #tab-live td:nth-child(4) { width: 22%; }
+
     th, td {
       padding: 0.5rem 0.75rem;
       border-bottom: 1px solid rgba(51, 65, 85, 0.5);
@@ -714,6 +718,7 @@
             reqHits.result.forEach(h => {
               STATE.hits[h.domain] = { count: h.count, lastSeen: h.lastSeen };
             });
+            renderHitsTable();
           }
         };
 
@@ -1457,7 +1462,7 @@
     });
     renderDenylist();
 
-    // Interactive Hover Tooltip Event Listener for Canvas
+    // Interactive Hover Tooltip Event Listener for Canvas with smart edge detection
     document.addEventListener('DOMContentLoaded', () => {
       const canvas = document.getElementById('analytics-canvas');
       const tooltip = document.getElementById('chart-tooltip');
@@ -1493,9 +1498,17 @@
           <div style="color:#f87171;">Blocked: ${b.blocked}</div>
           <div style="color:#4ade80; margin-top:2px; border-top:1px solid #334155; padding-top:2px;">Block Ratio: <b>${blockRatio}%</b></div>
         `;
+        
         tooltip.style.display = 'block';
-        tooltip.style.left = (e.clientX - rect.left + 15) + 'px';
-        tooltip.style.top = (e.clientY - rect.top - 40) + 'px';
+        
+        // Smart positioning: flip tooltip to the left if near the canvas right edge
+        const tooltipWidth = 160;
+        if (mouseX + tooltipWidth > rect.width) {
+          tooltip.style.left = (mouseX - tooltipWidth - 10) + 'px';
+        } else {
+          tooltip.style.left = (mouseX + 15) + 'px';
+        }
+        tooltip.style.top = (mouseY - 40) + 'px';
       });
 
       canvas.addEventListener('mouseleave', () => {
