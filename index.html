@@ -1081,27 +1081,22 @@
         ? STATE.logs
         : STATE.logs.filter(l => l.device === STATE.selectedDevice);
 
-      if (activeLogs.length === 0) {
-        ctx.fillStyle = '#94a3b8';
-        ctx.font = '11px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('No telemetry data available for chart', width / 2, height / 2);
-        return;
-      }
-
+      // Define a fixed 60-minute rolling time window divided into 12 stable 5-minute buckets
       const bucketsCount = 12;
       const now = Date.now();
-      const bucketSizeMs = 5 * 60 * 1000;
-      const oldestTime = Math.min(...activeLogs.map(l => l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime()));
-      const span = Math.max(now - oldestTime, bucketsCount * bucketSizeMs);
-      const actualBucketMs = span / bucketsCount;
+      const windowMs = 60 * 60 * 1000; // Last 60 minutes fixed window
+      const bucketSizeMs = windowMs / bucketsCount; // 5 minutes per bucket
+      const startTime = now - windowMs;
 
       const buckets = Array.from({ length: bucketsCount }, () => ({ allowed: 0, blocked: 0, total: 0 }));
 
       for (const l of activeLogs) {
         const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
-        const diff = t - oldestTime;
-        let idx = Math.floor(diff / actualBucketMs);
+        // Skip logs older than our fixed 60-minute window
+        if (t < startTime || t > now) continue;
+
+        const diff = t - startTime;
+        let idx = Math.floor(diff / bucketSizeMs);
         if (idx < 0) idx = 0;
         if (idx >= bucketsCount) idx = bucketsCount - 1;
         
@@ -1119,6 +1114,7 @@
       const chartWidth = width - padding.left - padding.right;
       const chartHeight = height - padding.top - padding.bottom;
 
+      // Draw background grid lines
       ctx.strokeStyle = '#1e293b';
       ctx.lineWidth = 1;
       for (let i = 0; i <= 4; i++) {
@@ -1138,18 +1134,22 @@
       const slotWidth = chartWidth / bucketsCount;
       const barWidth = Math.max(3, Math.min(8, slotWidth - 10));
 
+      // Draw stacked bars for allowed and blocked queries
       buckets.forEach((b, i) => {
         const x = padding.left + (i * slotWidth) + ((slotWidth - barWidth) / 2);
         const allowedH = (b.allowed / maxVal) * chartHeight;
         const blockedH = (b.blocked / maxVal) * chartHeight;
 
+        // Blocked Stack
         ctx.fillStyle = 'rgba(248, 113, 113, 0.75)';
         ctx.fillRect(x, padding.top + chartHeight - blockedH, barWidth, blockedH);
 
+        // Allowed Stack (stacked on top of blocked)
         ctx.fillStyle = 'rgba(56, 189, 248, 0.75)';
         ctx.fillRect(x, padding.top + chartHeight - blockedH - allowedH, barWidth, allowedH);
       });
 
+      // Draw block ratio trend line
       ctx.strokeStyle = '#4ade80';
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -1169,6 +1169,7 @@
       });
       ctx.stroke();
 
+      // Draw trend line data points
       buckets.forEach((b, i) => {
         const x = padding.left + (i * slotWidth) + (slotWidth / 2);
         const ratio = b.total > 0 ? (b.blocked / b.total) : 0;
