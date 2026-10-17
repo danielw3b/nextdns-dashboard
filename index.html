@@ -1092,7 +1092,6 @@
 
       for (const l of activeLogs) {
         const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
-        // Skip logs older than our fixed 60-minute window
         if (t < startTime || t > now) continue;
 
         const diff = t - startTime;
@@ -1110,11 +1109,13 @@
       }
 
       const maxVal = Math.max(1, ...buckets.map(b => Math.max(b.allowed, b.blocked, b.total)));
-      const padding = { top: 20, right: 30, bottom: 25, left: 35 };
+      
+      // Adjusted padding to leave space for axis labels
+      const padding = { top: 15, right: 35, bottom: 28, left: 40 };
       const chartWidth = width - padding.left - padding.right;
       const chartHeight = height - padding.top - padding.bottom;
 
-      // Draw background grid lines
+      // Draw Y-Axis grid lines and value labels
       ctx.strokeStyle = '#1e293b';
       ctx.lineWidth = 1;
       for (let i = 0; i <= 4; i++) {
@@ -1149,6 +1150,19 @@
         ctx.fillRect(x, padding.top + chartHeight - blockedH - allowedH, barWidth, allowedH);
       });
 
+      // Draw X-Axis time labels (e.g., -60m, -45m, -30m, -15m, Now)
+      ctx.fillStyle = '#64748b';
+      ctx.font = '9px monospace';
+      ctx.textAlign = 'center';
+      
+      const labelIndices = [0, 3, 6, 9, 11];
+      labelIndices.forEach(i => {
+        const x = padding.left + (i * slotWidth) + (slotWidth / 2);
+        const minutesAgo = (bucketsCount - i) * 5;
+        const label = minutesAgo === 0 ? 'Now' : `-${minutesAgo}m`;
+        ctx.fillText(label, x, height - 8);
+      });
+
       // Draw block ratio trend line
       ctx.strokeStyle = '#4ade80';
       ctx.lineWidth = 2;
@@ -1169,7 +1183,7 @@
       });
       ctx.stroke();
 
-      // Draw trend line data points
+      // Draw trend line data points with ratio tooltip indicators
       buckets.forEach((b, i) => {
         const x = padding.left + (i * slotWidth) + (slotWidth / 2);
         const ratio = b.total > 0 ? (b.blocked / b.total) : 0;
