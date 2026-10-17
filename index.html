@@ -385,7 +385,7 @@
         </div>
         <div class="kpi-box">
           <div class="kpi-label">Avg Resolver Latency</div>
-          <div class="kpi-val" style="color: var(--accent);" id="kpi-latency">16 ms</div>
+          <div class="kpi-val" style="color: var(--accent);" id="kpi-latency">0 ms</div>
           <div class="kpi-sub">Encrypted DoH</div>
         </div>
       </div>
@@ -552,7 +552,7 @@
 
   <div class="toast-container" id="toast-container"></div>
 
-  <!-- Vanilla Pure ES6 Logic with Isolated Simulator and Persistent API Store -->
+  <!-- Vanilla Pure ES6 Logic with Precise QPM & Latency Metrics Calculation -->
   <script>
     // --- Security Sanitizer (Prevents DOM-XSS) ---
     function safeText(str) {
@@ -802,7 +802,6 @@
     }
 
     function handleIncomingLog(log) {
-      // Only persist to DB if running in real API mode (simulator is strictly RAM-isolated)
       if (STATE.mode === 'api') {
         saveLogToDB(log);
       }
@@ -1013,15 +1012,24 @@
       const allowed = Math.max(0, total - blocked);
       const rate = total > 0 ? Math.round((blocked / total) * 100) : 0;
 
+      // --- Precise QPM Measurement: Count logs occurring within the exact last 60 seconds ---
+      const nowMs = Date.now();
+      const oneMinuteAgo = nowMs - 60000;
+      const qpmCount = activeLogs.filter(l => {
+        const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
+        return t >= oneMinuteAgo && t <= nowMs;
+      }).length;
+
+      // --- Real Latency Averaging over current active logs ---
       const avgLatency = activeLogs.length > 0 
-        ? Math.round(activeLogs.reduce((acc, l) => acc + (l.latency || 16), 0) / activeLogs.length) 
-        : 16;
+        ? Math.round(activeLogs.reduce((acc, l) => acc + (Number(l.latency) || 16), 0) / activeLogs.length) 
+        : 0;
 
       document.getElementById('kpi-total').textContent = total;
       document.getElementById('kpi-blocked').textContent = blocked;
       document.getElementById('kpi-allowed').textContent = allowed;
       document.getElementById('kpi-rate').textContent = `${rate}% (${STATE.selectedDevice === 'all' ? 'All' : STATE.selectedDevice})`;
-      document.getElementById('kpi-qpm').textContent = `${Math.round(total * 0.8)} q/min`;
+      document.getElementById('kpi-qpm').textContent = `${qpmCount} q/min`;
       document.getElementById('kpi-latency').textContent = `${avgLatency} ms`;
 
       const blockedMap = {};
@@ -1377,7 +1385,6 @@
           loadConfigToUI();
           renderDenylist();
 
-          // If imported config contains active API credentials, switch mode and wipe sim data
           if (STATE.config.profile && STATE.config.apiKey) {
             if (simTimer) clearInterval(simTimer);
             clearDatabase();
@@ -1461,7 +1468,6 @@
       saveState();
       updateThresholdBadge();
 
-      // If switching from simulation to API, completely wipe all simulator memory/DOM elements
       if (wasSimMode && isNowApiMode) {
         if (simTimer) clearInterval(simTimer);
         clearDatabase();
@@ -1511,7 +1517,6 @@
     // Initialize application storage, verification, and API/Simulation mode
     loadConfigToUI();
     
-    // Check initial mode based on config credentials
     if (STATE.config.profile && STATE.config.apiKey) {
       STATE.mode = 'api';
     } else {
