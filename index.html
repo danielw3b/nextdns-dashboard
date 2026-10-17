@@ -208,7 +208,6 @@
     table {
       width: 100%;
     }
-    /* Fixed column layout exclusively for the live stream table */
     #tab-live table {
       table-layout: fixed;
     }
@@ -553,7 +552,7 @@
 
   <div class="toast-container" id="toast-container"></div>
 
-  <!-- Vanilla Pure ES6 Logic with Persistent IndexedDB Storage & Dual-Axis Chart -->
+  <!-- Vanilla Pure ES6 Logic with Isolated Simulator and Persistent API Store -->
   <script>
     // --- Security Sanitizer (Prevents DOM-XSS) ---
     function safeText(str) {
@@ -588,7 +587,7 @@
       logs: [],
       totalQueriesCounter: 0,
       devices: new Set(),
-      hits: {}, // Persistent domain hits tracked across sessions via IndexedDB
+      hits: {}, 
       denylist: [
         { id: '1', domain: 'telemetry.samsungcloud.com', category: 'Tracking', active: true, hits: 341 },
         { id: '2', domain: 'events.redditmedia.com', category: 'Tracking', active: true, hits: 142 }
@@ -653,7 +652,7 @@
       }
     }
 
-    // --- Active IndexedDB Implementation (Logs & Persistent Hits Store) ---
+    // --- Active IndexedDB Implementation (Exclusively for real API mode) ---
     let db = null;
     const DB_NAME = 'NextDNSSentinelDB';
     const STORE_LOGS = 'logs';
@@ -665,7 +664,9 @@
         request.onerror = () => reject(request.error);
         request.onsuccess = (event) => {
           db = event.target.result;
-          loadDataFromDB();
+          if (STATE.mode === 'api') {
+            loadDataFromDB();
+          }
           resolve(db);
         };
         request.onupgradeneeded = (event) => {
@@ -681,8 +682,19 @@
       });
     }
 
-    function saveLogToDB(log) {
+    function clearDatabase() {
       if (!db) return;
+      try {
+        const tx = db.transaction([STORE_LOGS, STORE_HITS], 'readwrite');
+        tx.objectStore(STORE_LOGS).clear();
+        tx.objectStore(STORE_HITS).clear();
+      } catch (e) {
+        console.warn('Failed to clear database:', e);
+      }
+    }
+
+    function saveLogToDB(log) {
+      if (!db || STATE.mode !== 'api') return;
       try {
         const tx = db.transaction(STORE_LOGS, 'readwrite');
         const store = tx.objectStore(STORE_LOGS);
@@ -696,7 +708,7 @@
     }
 
     function saveHitToDB(domain, count, lastSeen) {
-      if (!db) return;
+      if (!db || STATE.mode !== 'api') return;
       try {
         const tx = db.transaction(STORE_HITS, 'readwrite');
         const store = tx.objectStore(STORE_HITS);
@@ -707,9 +719,8 @@
     }
 
     function loadDataFromDB() {
-      if (!db) return;
+      if (!db || STATE.mode !== 'api') return;
       try {
-        // 1. Load persistent Hits
         const txHits = db.transaction(STORE_HITS, 'readonly');
         const storeHits = txHits.objectStore(STORE_HITS);
         const reqHits = storeHits.getAll();
@@ -722,7 +733,6 @@
           }
         };
 
-        // 2. Load persistent Logs
         const txLogs = db.transaction(STORE_LOGS, 'readonly');
         const storeLogs = txLogs.objectStore(STORE_LOGS);
         const index = storeLogs.index('time');
@@ -792,7 +802,11 @@
     }
 
     function handleIncomingLog(log) {
-      saveLogToDB(log);
+      // Only persist to DB if running in real API mode (simulator is strictly RAM-isolated)
+      if (STATE.mode === 'api') {
+        saveLogToDB(log);
+      }
+      
       STATE.logs.unshift(log);
       STATE.totalQueriesCounter++;
       if (STATE.logs.length > 500) STATE.logs.pop();
@@ -803,8 +817,9 @@
       STATE.hits[d].count++;
       STATE.hits[d].lastSeen = Date.now();
       
-      // Persist domain hits in IndexedDB
-      saveHitToDB(d, STATE.hits[d].count, STATE.hits[d].lastSeen);
+      if (STATE.mode === 'api') {
+        saveHitToDB(d, STATE.hits[d].count, STATE.hits[d].lastSeen);
+      }
 
       if (STATE.config.autoBlock && STATE.hits[d].count >= STATE.config.threshold) {
         const isDeniedAlready = STATE.denylist.some(r => r.domain.toLowerCase() === d);
@@ -901,7 +916,7 @@
         { ip: '185.220.101.5', name: 'O2-HomeNet-Router', isp: 'Telefonica O2' }
       ];
       simTimer = setInterval(() => {
-        if (!STATE.isStreaming) return;
+        if (!STATE.isStreaming || STATE.mode === 'api') return;
         const isBlocked = Math.random() < 0.28;
         const client = SIM_WAN_CLIENTS[Math.floor(Math.random() * SIM_WAN_CLIENTS.length)];
         const domain = isBlocked
@@ -1361,7 +1376,30 @@
           saveState();
           loadConfigToUI();
           renderDenylist();
-          showToast('Import Successful', 'Configuration and denylist loaded successfully', 'success');
+
+          // If imported config contains active API credentials, switch mode and wipe sim data
+          if (STATE.config.profile && STATE.config.apiKey) {
+            if (simTimer) clearInterval(simTimer);
+            clearDatabase();
+            STATE.logs = [];
+            STATE.totalQueriesCounter = 0;
+            STATE.devices.clear();
+            STATE.hits = {};
+            document.getElementById('global-device-select').innerHTML = '<option value="all">All Devices</option>';
+            const lSel = document.getElementById('live-device-filter');
+            if (lSel) lSel.innerHTML = '<option value="all">All Devices</option>';
+
+            STATE.mode = 'api';
+            document.getElementById('stream-status').textContent = '● Live NextDNS API';
+            document.getElementById('stream-status').className = 'badge live';
+            fetchNextDNSLogs();
+            if (apiPollTimer) clearInterval(apiPollTimer);
+            apiPollTimer = setInterval(fetchNextDNSLogs, 10000);
+          }
+
+          renderFilteredLiveLogs();
+          updateAnalyticsKPIs();
+          showToast('Import Successful', 'Configuration loaded and isolated successfully', 'success');
         } catch (err) {
           showToast('Import Error', 'Invalid JSON backup file', 'danger');
         }
@@ -1385,7 +1423,7 @@
     document.getElementById('btn-toggle-stream').onclick = () => {
       STATE.isStreaming = !STATE.isStreaming;
       document.getElementById('btn-toggle-stream').textContent = STATE.isStreaming ? 'Pause' : 'Resume';
-      document.getElementById('stream-status').textContent = STATE.isStreaming ? '● Streaming' : '○ Paused';
+      document.getElementById('stream-status').textContent = STATE.isStreaming ? (STATE.mode === 'api' ? '● Live NextDNS API' : '● Streaming') : '○ Paused';
       document.getElementById('stream-status').className = `badge ${STATE.isStreaming ? 'live' : ''}`;
     };
 
@@ -1407,8 +1445,14 @@
     };
 
     document.getElementById('btn-save-cfg').onclick = () => {
-      STATE.config.profile = document.getElementById('cfg-profile').value.trim();
-      STATE.config.apiKey = document.getElementById('cfg-apikey').value.trim();
+      const newProfile = document.getElementById('cfg-profile').value.trim();
+      const newApiKey = document.getElementById('cfg-apikey').value.trim();
+      
+      const wasSimMode = STATE.mode === 'sim';
+      const isNowApiMode = Boolean(newProfile && newApiKey);
+
+      STATE.config.profile = newProfile;
+      STATE.config.apiKey = newApiKey;
       STATE.config.proxy = document.getElementById('cfg-proxy').value.trim();
       STATE.config.threshold = Number(document.getElementById('cfg-threshold').value) || 20;
       STATE.config.retentionDays = Number(document.getElementById('cfg-retention').value) || 7;
@@ -1416,7 +1460,32 @@
       STATE.config.protectSystem = document.getElementById('cfg-protect').checked;
       saveState();
       updateThresholdBadge();
-      showToast('Config Saved', 'Settings updated successfully', 'success');
+
+      // If switching from simulation to API, completely wipe all simulator memory/DOM elements
+      if (wasSimMode && isNowApiMode) {
+        if (simTimer) clearInterval(simTimer);
+        clearDatabase();
+        STATE.logs = [];
+        STATE.totalQueriesCounter = 0;
+        STATE.devices.clear();
+        STATE.hits = {};
+        document.getElementById('global-device-select').innerHTML = '<option value="all">All Devices</option>';
+        const lSel = document.getElementById('live-device-filter');
+        if (lSel) lSel.innerHTML = '<option value="all">All Devices</option>';
+        
+        STATE.mode = 'api';
+        document.getElementById('stream-status').textContent = '● Live NextDNS API';
+        document.getElementById('stream-status').className = 'badge live';
+        fetchNextDNSLogs();
+        if (apiPollTimer) clearInterval(apiPollTimer);
+        apiPollTimer = setInterval(fetchNextDNSLogs, 10000);
+        showToast('API Mode Activated', 'Simulator data wiped. Fetching fresh NextDNS API telemetry...', 'success');
+      } else {
+        showToast('Config Saved', 'Settings updated successfully', 'success');
+      }
+      
+      renderFilteredLiveLogs();
+      updateAnalyticsKPIs();
     };
 
     const btnBackup = document.getElementById('btn-backup-json');
@@ -1428,8 +1497,11 @@
     document.getElementById('btn-clear-logs').onclick = () => {
       STATE.logs = [];
       STATE.totalQueriesCounter = 0;
+      STATE.hits = {};
       document.getElementById('live-log-body').innerHTML = '';
+      if (STATE.mode === 'api') clearDatabase();
       updateAnalyticsKPIs();
+      renderHitsTable();
     };
 
     document.getElementById('global-device-select').onchange = (e) => filterByDevice(e.target.value);
@@ -1438,9 +1510,16 @@
 
     // Initialize application storage, verification, and API/Simulation mode
     loadConfigToUI();
+    
+    // Check initial mode based on config credentials
+    if (STATE.config.profile && STATE.config.apiKey) {
+      STATE.mode = 'api';
+    } else {
+      STATE.mode = 'sim';
+    }
+
     initDB().then(() => {
-      if (STATE.config.profile && STATE.config.apiKey) {
-        STATE.mode = 'api';
+      if (STATE.mode === 'api') {
         document.getElementById('stream-status').textContent = '● Live NextDNS API';
         document.getElementById('stream-status').className = 'badge live';
         fetchNextDNSLogs();
@@ -1448,15 +1527,14 @@
         apiPollTimer = setInterval(fetchNextDNSLogs, 10000);
         console.log('NextDNS Sentinel - Initialized in API Mode.');
       } else {
-        STATE.mode = 'sim';
         document.getElementById('stream-status').textContent = '● Live Simulator';
         document.getElementById('stream-status').className = 'badge sim';
         startSimulation();
         console.log('NextDNS Sentinel - Initialized in Simulator Mode.');
       }
     }).catch(err => {
-      console.warn('IndexedDB failed to init, falling back to pure memory mode:', err);
-      if (!STATE.config.profile || !STATE.config.apiKey) {
+      console.warn('IndexedDB failed to init:', err);
+      if (STATE.mode === 'sim') {
         startSimulation();
       }
     });
