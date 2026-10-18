@@ -91,6 +91,8 @@
     .btn-primary:hover { background: var(--accent-hover); }
     .btn-danger { background: var(--blocked-bg); color: #fca5a5; border-color: rgba(239, 68, 68, 0.3); }
     .btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
+
+    .black-icon {filter: grayscale(100%) brightness(0);}
     
     .nav-tabs {
       background: var(--surface);
@@ -315,7 +317,7 @@
 
     <div class="header-actions">
       <span class="badge live" id="stream-status">Live</span>
-      <button class="btn-primary" id="btn-toggle-stream" title="Pause / Resume Stream" style="font-size: 1rem; padding: 0.3rem 0.6rem;">&#x23F8;&#xFE0E;</button> <!-- ■ -->
+      <button class="btn-primary black-icon" id="btn-toggle-stream" title="Pause / Resume Stream" style="font-size: 1rem; padding: 0.3rem 0.6rem;">&#x23F8;&#xFE0E;</button> <!-- ■ -->
       <select id="global-device-select" style="padding: 0.35rem 0.5rem;" title="Filter all logs and analytics by device">
         <option value="all">All Devices</option>
       </select>
@@ -1158,7 +1160,7 @@
 
     document.getElementById('btn-toggle-stream').onclick = () => {
       STATE.isStreaming = !STATE.isStreaming;
-      document.getElementById('btn-toggle-stream').textContent = STATE.isStreaming ? '&#x23F8;&#xFE0E;' : '&#x23F5;&#xFE0E;'; //■ ⏵︎
+      document.getElementById('btn-toggle-stream').textContent = STATE.isStreaming ? '\u{23F8}\u{FE0E}' : '\u{23F5}\u{FE0E}'; //■ ⏵︎
       document.getElementById('stream-status').textContent = STATE.isStreaming ? (STATE.mode === 'api' ? 'Live' : 'Demo') : 'Paused';
     };
 
