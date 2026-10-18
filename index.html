@@ -112,7 +112,6 @@
     .btn-danger { background: var(--blocked-bg); color: #fca5a5; border-color: rgba(239, 68, 68, 0.3); }
     .btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
     
-    /* Sticky Navigation Tabs under Header */
     .nav-tabs {
       background: var(--surface);
       border-bottom: 1px solid var(--border);
@@ -216,12 +215,8 @@
       min-height: 350px;
       overflow-y: auto;
     }
-    table {
-      width: 100%;
-    }
-    #tab-live table {
-      table-layout: fixed;
-    }
+    table { width: 100%; }
+    #tab-live table { table-layout: fixed; }
     #tab-live th:nth-child(1), #tab-live td:nth-child(1) { width: 22%; }
     #tab-live th:nth-child(2), #tab-live td:nth-child(2) { width: 14%; }
     #tab-live th:nth-child(3), #tab-live td:nth-child(3) { width: 42%; }
@@ -878,13 +873,17 @@
         const logsArray = data.data || data.logs || (Array.isArray(data) ? data : []);
 
         for (const item of logsArray.reverse()) {
-          const clientObj = item.client || item.ip || {};
+          // Robust device name extraction matching NextDNS API schema
+          const clientObj = item.client || {};
+          const deviceName = clientObj.name || item.deviceName || item.device?.name || (typeof clientObj === 'string' ? clientObj : 'NextDNS Device');
+          const ipVal = typeof clientObj === 'string' ? clientObj : (clientObj.ip || item.clientIp || '78.35.136.14');
+
           const logObj = {
             id: item.id || `log-${Math.random()}`,
             time: item.timestamp ? new Date(item.timestamp) : new Date(),
             domain: item.domain || 'unknown',
-            device: clientObj.name || item.deviceName || 'Device',
-            clientIp: typeof clientObj === 'string' ? clientObj : (clientObj.ip || '78.35.136.14'),
+            device: deviceName,
+            clientIp: ipVal,
             status: item.status || 'allowed',
             reasons: (item.reasons || []).map(r => typeof r === 'string' ? r : r.name),
             proto: item.protocol || 'DoH',
@@ -936,7 +935,6 @@
         ipMap[l.clientIp || '78.35.136.14'] = (ipMap[l.clientIp || '78.35.136.14'] || 0) + 1;
       }
 
-      // Render Top Blocked without "hits" text
       const topB = Object.entries(blockedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
       document.getElementById('analytics-top-blocked').innerHTML = topB.length ? topB.map(([d, c]) => `
         <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-family:monospace;">
@@ -945,7 +943,6 @@
         </div>
       `).join('') : '<div style="color:var(--muted);">No blocked queries.</div>';
 
-      // Render Top Allowed without "hits" text
       const topA = Object.entries(allowedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
       document.getElementById('analytics-top-allowed').innerHTML = topA.length ? topA.map(([d, c]) => `
         <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-family:monospace;">
@@ -976,7 +973,6 @@
         </div>
       `).join('') : '<div style="color:var(--muted);">No data.</div>';
 
-      // Family Network IP Map handler
       function getFamilyISPName(ip) {
         if (ip.includes('95.229.184.162')) return 'Mothers Mobile (Santa Croce, Italy)';
         if (ip.includes('2a02:3030')) return 'Living Room Tablet (IPv6 Home)';
