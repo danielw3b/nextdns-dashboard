@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#090d16">
   <meta name="description" content="NextDNS Zero-Dependency PWA: Real-time telemetry, analytics, and custom domain blocking.">
-  <title>NextDNS Sentinel</title>
+  <title>NextDNS Sentinel Dashboard</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <style>
@@ -65,7 +65,7 @@
     }
     .badge {
       font-size: 0.7rem;
-      padding: 0.15rem 0.5rem;
+      padding: 0.2rem 0.6rem;
       border-radius: 99px;
       background: var(--surface-2);
       border: 1px solid var(--border);
@@ -162,10 +162,11 @@
       align-items: center;
       justify-content: space-between;
       gap: 0.5rem;
+      flex-wrap: wrap;
     }
     .kpi-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
       gap: 0.75rem;
       margin-bottom: 1.25rem;
     }
@@ -174,10 +175,12 @@
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 0.9rem;
+      display: flex;
+      flex-direction: column;
     }
-    .kpi-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 0.25rem; }
-    .kpi-val { font-size: 1.4rem; font-weight: 700; font-family: monospace; }
-    .kpi-sub { font-size: 0.7rem; color: var(--muted); margin-top: 0.2rem; }
+    .kpi-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); order: 2; margin-top: 0.25rem; }
+    .kpi-val { font-size: 1.4rem; font-weight: 700; font-family: monospace; order: 1; }
+    .kpi-sub { font-size: 0.68rem; color: var(--muted); order: 3; margin-top: 0.2rem; }
     .filter-bar {
       display: flex;
       gap: 0.5rem;
@@ -202,7 +205,8 @@
       border: 1px solid var(--border);
       border-radius: 8px;
       background: #060911;
-      max-height: 520px;
+      height: calc(100vh - 220px);
+      min-height: 350px;
       overflow-y: auto;
     }
     table {
@@ -279,17 +283,17 @@
     .bar-fill { height: 100%; border-radius: 99px; transition: width 0.3s ease; }
     .form-group { margin-bottom: 0.9rem; }
     .form-group label { display: block; font-size: 0.72rem; color: var(--muted); margin-bottom: 0.3rem; font-weight: 500; }
-    @media (max-width: 640px) {
-      .domain-cell {
-        max-width: 160px;
-        word-break: break-all;
-        white-space: normal;
-      }
-      th, td {
-        padding: 0.4rem 0.5rem;
-        font-size: 0.71rem;
-        vertical-align: top;
-      }
+    footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 0.75rem 1rem;
+      text-align: right;
+      font-size: 0.75rem;
+    }
+    footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
+    footer a:hover { text-decoration: underline; }
+    @media (max-width: 513px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
     }
   </style>
 </head>
@@ -313,11 +317,8 @@
       <select id="global-device-select" style="padding: 0.35rem 0.5rem;" title="Filter all logs and analytics by device">
         <option value="all">All Devices</option>
       </select>
-      <a href="https://nextdns.io/?from=4ja3vp44" target="_blank" rel="noopener noreferrer" style="text-decoration:none; display:inline-flex; align-items:center; gap:0.25rem; font-size:0.75rem; color:#38bdf8; padding:0.35rem 0.6rem; border:1px solid rgba(56,189,248,0.3); border-radius:6px; background:rgba(56,189,248,0.1); font-weight:600;" title="Get NextDNS (Official Referral)">
-        NextDNS ↗
-      </a>
-      <button class="btn-primary" id="btn-toggle-stream">Pause</button>
-      <span class="badge live" id="stream-status">● Live Simulator</span>
+      <button class="btn-primary" id="btn-toggle-stream" title="Pause / Resume Stream">⏸ Pause</button>
+      <span class="badge live" id="stream-status">Live</span>
     </div>
   </header>
 
@@ -336,14 +337,11 @@
     <section id="tab-live" class="tab-content active">
       <div class="card" style="padding: 0.75rem 1rem;">
         <div class="filter-bar">
-          <input type="text" id="live-search" placeholder="Search domain, device, or reason..." style="flex: 1; min-width: 200px;">
-          <select id="live-status-filter">
+          <input type="text" id="live-search" placeholder="Search domain, device, or reason..." style="flex: 1; min-width: 180px;">
+          <select id="live-status-filter" style="min-width: 120px;">
             <option value="all">All Traffic</option>
             <option value="blocked">Blocked Only</option>
             <option value="allowed">Allowed Only</option>
-          </select>
-          <select id="live-device-filter">
-            <option value="all">All Devices</option>
           </select>
           <button id="btn-export-live">Export CSV</button>
           <button id="btn-clear-logs" class="btn-danger">Clear</button>
@@ -369,23 +367,23 @@
     <section id="tab-analytics" class="tab-content">
       <div class="kpi-grid">
         <div class="kpi-box">
-          <div class="kpi-label">Total Queries</div>
           <div class="kpi-val" id="kpi-total">0</div>
+          <div class="kpi-label">Total Queries</div>
           <div class="kpi-sub" id="kpi-qpm">0 q/min</div>
         </div>
         <div class="kpi-box">
-          <div class="kpi-label">Blocked Interceptions</div>
           <div class="kpi-val" style="color: var(--blocked);" id="kpi-blocked">0</div>
+          <div class="kpi-label">Blocked Interceptions</div>
           <div class="kpi-sub" id="kpi-rate">0% block rate</div>
         </div>
         <div class="kpi-box">
-          <div class="kpi-label">Clean Allowed</div>
           <div class="kpi-val" style="color: var(--allowed);" id="kpi-allowed">0</div>
+          <div class="kpi-label">Clean Allowed</div>
           <div class="kpi-sub">Validated DNS</div>
         </div>
         <div class="kpi-box">
-          <div class="kpi-label">Avg Resolver Latency</div>
           <div class="kpi-val" style="color: var(--accent);" id="kpi-latency">0 ms</div>
+          <div class="kpi-label">Avg Resolver Latency</div>
           <div class="kpi-sub">Encrypted DoH</div>
         </div>
       </div>
@@ -399,14 +397,14 @@
           <canvas id="analytics-canvas" style="width: 100%; height: 100%; display: block; cursor: crosshair;"></canvas>
           <div id="chart-tooltip" style="position: absolute; display: none; background: #0b1324; border: 1px solid var(--border); padding: 6px 10px; border-radius: 6px; font-size: 11px; pointer-events: none; z-index: 20; box-shadow: 0 4px 12px rgba(0,0,0,0.4); color: #f1f5f9; font-family: monospace;"></div>
         </div>
-        <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 0.5rem; font-size: 0.7rem; color: var(--muted);">
+        <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 0.5rem; font-size: 0.7rem; color: var(--muted); flex-wrap: wrap;">
           <span style="display:inline-flex; align-items:center; gap:0.3rem;"><span style="width:8px; height:8px; background:#38bdf8; border-radius:2px;"></span> Allowed (Left Axis)</span>
           <span style="display:inline-flex; align-items:center; gap:0.3rem;"><span style="width:8px; height:8px; background:#f87171; border-radius:2px;"></span> Blocked (Left Axis)</span>
           <span style="display:inline-flex; align-items:center; gap:0.3rem;"><span style="width:12px; height:2px; background:#4ade80;"></span> Block Ratio % (Right Axis)</span>
         </div>
       </div>
 
-      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
         <div class="card" style="margin-bottom:0;">
           <div class="card-title">Top Blocked Domains (Threats & Trackers)</div>
           <div id="analytics-top-blocked" style="font-size: 0.75rem;"></div>
@@ -433,25 +431,11 @@
     <!-- TAB: GUARDRAILS & RULES -->
     <section id="tab-blocking" class="tab-content">
       <div class="card">
-        <div class="card-title">Add Custom Deny Rule or Wildcard</div>
-        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-          <input type="text" id="new-deny-domain" placeholder="e.g. *.doubleclick.net or ads.example.com" style="flex: 2; min-width: 240px; font-family: monospace;">
-          <select id="new-deny-category" style="flex: 1; min-width: 150px;">
-            <option value="Tracking">Tracking / Telemetry</option>
-            <option value="Advertising">Advertising</option>
-            <option value="Social Media">Social Media</option>
-            <option value="Malware">Suspicious / Malware</option>
-          </select>
-          <button class="btn-primary" id="btn-add-deny">+ Block Domain</button>
-        </div>
-      </div>
-
-      <div class="card">
         <div class="card-title">
-          <span>Autonomous Auto-Block Monitor</span>
+          <span>Frequent Hit Monitor & Guardrail</span>
           <span style="font-size: 0.7rem; color: var(--muted); font-family: monospace;" id="autoblock-threshold-badge">Threshold: 20 hits/24h</span>
         </div>
-        <div class="table-container">
+        <div class="table-container" style="height: auto; max-height: 320px;">
           <table>
             <thead>
               <tr>
@@ -468,8 +452,22 @@
       </div>
 
       <div class="card">
+        <div class="card-title">Add Custom Deny Rule or Wildcard</div>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <input type="text" id="new-deny-domain" placeholder="e.g. *.domain.com" style="flex: 2; min-width: 180px; font-family: monospace;">
+          <select id="new-deny-category" style="flex: 1; min-width: 130px;">
+            <option value="Tracking">Tracking</option>
+            <option value="Advertising">Advertising</option>
+            <option value="Social Media">Social Media</option>
+            <option value="Malware">Malware</option>
+          </select>
+          <button class="btn-primary" id="btn-add-deny">+ Block</button>
+        </div>
+      </div>
+
+      <div class="card">
         <div class="card-title">Active NextDNS Denylist Rules</div>
-        <div class="table-container">
+        <div class="table-container" style="height: auto; max-height: 320px;">
           <table>
             <thead>
               <tr>
@@ -489,7 +487,10 @@
     <!-- TAB: CONFIGURATION -->
     <section id="tab-config" class="tab-content">
       <div class="card">
-        <div class="card-title">Configuration & Credentials</div>
+        <div class="card-title">
+          <span>Configuration & Credentials</span>
+          <a href="https://nextdns.io/?from=4ja3vp44" target="_blank" rel="noopener noreferrer" style="font-size: 0.75rem; color: #38bdf8; text-decoration: none; font-weight: 600;">Get NextDNS ↗</a>
+        </div>
         
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
           <div class="form-group">
@@ -513,7 +514,7 @@
           </div>
         </div>
 
-        <div class="card-title" style="margin-top: 1.25rem;">Auto-Block Thresholds & Retention</div>
+        <div class="card-title" style="margin-top: 1.25rem;">Thresholds & Retention</div>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
           <div class="form-group">
             <label>Hit Threshold (hits / 24h)</label>
@@ -527,8 +528,8 @@
 
         <div class="form-group" style="margin-bottom: 0.75rem;">
           <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-            <input type="checkbox" id="cfg-autoblock" checked>
-            <span>Enable Autonomous Domain Auto-Blocking</span>
+            <input type="checkbox" id="cfg-autoblock">
+            <span>Enable Autonomous Domain Auto-Blocking (Caution)</span>
           </label>
         </div>
         <div class="form-group" style="margin-bottom: 1.25rem;">
@@ -550,9 +551,13 @@
 
   </main>
 
+  <footer>
+    <a href="https://nextdns.io/?from=4ja3vp44" target="_blank" rel="noopener noreferrer">Get NextDNS ↗</a> (The new firewall for the modern Internet.)
+  </footer>
+
   <div class="toast-container" id="toast-container"></div>
 
-  <!-- Vanilla Pure ES6 Logic with Precise QPM & Latency Metrics Calculation -->
+  <!-- Vanilla Pure ES6 Logic with Stable Bucket Sizing and Device Filter Support -->
   <script>
     // --- Security Sanitizer (Prevents DOM-XSS) ---
     function safeText(str) {
@@ -652,7 +657,7 @@
       }
     }
 
-    // --- Active IndexedDB Implementation (Exclusively for real API mode) ---
+    // --- Active IndexedDB Implementation ---
     let db = null;
     const DB_NAME = 'NextDNSSentinelDB';
     const STORE_LOGS = 'logs';
@@ -779,11 +784,10 @@
       }, 4000);
     }
 
-    // --- Telemetry & Batch Rendering via requestAnimationFrame ---
+    // --- Telemetry & Batch Rendering ---
     let simTimer = null;
     let apiPollTimer = null;
     let renderScheduled = false;
-    const SAMPLE_DEVICES = ['MacBook-Pro', 'iPhone-16', 'Smart-TV', 'Home-Assistant'];
     const SAMPLE_ALLOWED = ['api.github.com', 'cloudflare.com', 'wikipedia.org', 'cdn.jsdelivr.net', 'developer.mozilla.org'];
     const SAMPLE_BLOCKED = ['telemetry.samsungcloud.com', 'pagead2.googlesyndication.com', 'graph.instagram.com', 'events.redditmedia.com'];
 
@@ -791,13 +795,11 @@
       if (!deviceName || STATE.devices.has(deviceName)) return;
       STATE.devices.add(deviceName);
       const gSel = document.getElementById('global-device-select');
-      const lSel = document.getElementById('live-device-filter');
       if (gSel && !gSel.querySelector(`option[value="${CSS.escape(deviceName)}"]`)) {
         const opt = document.createElement('option');
         opt.value = deviceName;
         opt.textContent = deviceName;
         gSel.appendChild(opt);
-        if (lSel) lSel.appendChild(opt.cloneNode(true));
       }
     }
 
@@ -833,7 +835,7 @@
             hits: STATE.hits[d].count
           });
           saveState();
-          showToast('🚫 Autonomous Guard Denied', `Auto-blocked <code>${safeText(d)}</code> after ${STATE.hits[d].count} hits`, 'danger');
+          showToast('🚫 Guard Denied', `Blocked <code>${safeText(d)}</code> after ${STATE.hits[d].count} hits`, 'danger');
           renderDenylist();
         }
       }
@@ -910,9 +912,9 @@
     function startSimulation() {
       if (simTimer) clearInterval(simTimer);
       const SIM_WAN_CLIENTS = [
-        { ip: '82.165.188.20', name: 'Vodafone-WAN-Gateway', isp: 'Vodafone DSL' },
-        { ip: '84.115.72.10', name: 'Telekom-Fiber-Node', isp: 'Deutsche Telekom' },
-        { ip: '185.220.101.5', name: 'O2-HomeNet-Router', isp: 'Telefonica O2' }
+        { ip: '82.165.188.20', name: 'Vodafone-Gateway', isp: 'Vodafone DSL' },
+        { ip: '84.115.72.10', name: 'Telekom-Node', isp: 'Deutsche Telekom' },
+        { ip: '185.220.101.5', name: 'O2-HomeNet', isp: 'Telefonica O2' }
       ];
       simTimer = setInterval(() => {
         if (!STATE.isStreaming || STATE.mode === 'api') return;
@@ -957,9 +959,7 @@
           }
         });
 
-        if (!res.ok) {
-          throw new Error(`NextDNS API error status ${res.status} ${res.statusText}`);
-        }
+        if (!res.ok) throw new Error(`API error status ${res.status}`);
 
         const data = await res.json();
         const logsArray = data.data || data.logs || (Array.isArray(data) ? data : []);
@@ -991,9 +991,8 @@
 
     window.filterByDevice = function(dev) {
       STATE.selectedDevice = dev;
-      document.getElementById('global-device-select').value = dev;
-      const lSel = document.getElementById('live-device-filter');
-      if (lSel) lSel.value = dev;
+      const gSel = document.getElementById('global-device-select');
+      if (gSel) gSel.value = dev;
       renderFilteredLiveLogs();
       updateAnalyticsKPIs();
       showToast('Device Filter Active', `Filtered view to ${safeText(dev)}`, 'warn');
@@ -1012,7 +1011,6 @@
       const allowed = Math.max(0, total - blocked);
       const rate = total > 0 ? Math.round((blocked / total) * 100) : 0;
 
-      // --- Precise QPM Measurement: Count logs occurring within the exact last 60 seconds ---
       const nowMs = Date.now();
       const oneMinuteAgo = nowMs - 60000;
       const qpmCount = activeLogs.filter(l => {
@@ -1020,7 +1018,6 @@
         return t >= oneMinuteAgo && t <= nowMs;
       }).length;
 
-      // --- Real Latency Averaging over current active logs ---
       const avgLatency = activeLogs.length > 0 
         ? Math.round(activeLogs.reduce((acc, l) => acc + (Number(l.latency) || 16), 0) / activeLogs.length) 
         : 0;
@@ -1143,9 +1140,12 @@
 
       const bucketsCount = 12;
       const now = Date.now();
+      
+      // Robust bucket alignment: anchor window to the newest log timestamp if present to prevent empty shifting
+      const newestTime = activeLogs.length > 0 ? Math.max(...activeLogs.map(l => l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime())) : now;
       const windowMs = 60 * 60 * 1000; 
       const bucketSizeMs = windowMs / bucketsCount; 
-      const startTime = now - windowMs;
+      const startTime = newestTime - windowMs;
 
       const buckets = Array.from({ length: bucketsCount }, (_, idx) => ({
         index: idx,
@@ -1157,9 +1157,8 @@
 
       for (const l of activeLogs) {
         const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
-        if (t < startTime || t > now) continue;
-
         const diff = t - startTime;
+        if (diff < 0 || diff > windowMs) continue;
         let idx = Math.floor(diff / bucketSizeMs);
         if (idx < 0) idx = 0;
         if (idx >= bucketsCount) idx = bucketsCount - 1;
@@ -1289,10 +1288,22 @@
     function renderHitsTable() {
       const tbody = document.getElementById('autoblock-hits-body');
       if (!tbody) return;
-      const items = Object.entries(STATE.hits).map(([domain, h]) => ({ domain, count: h.count }));
+      
+      // Filter hits based on active selectedDevice filter
+      const activeLogs = STATE.selectedDevice === 'all'
+        ? STATE.logs
+        : STATE.logs.filter(l => l.device === STATE.selectedDevice);
+
+      const deviceHits = {};
+      activeLogs.forEach(l => {
+        const d = l.domain.toLowerCase();
+        deviceHits[d] = (deviceHits[d] || 0) + 1;
+      });
+
+      const items = Object.entries(deviceHits).map(([domain, count]) => ({ domain, count }));
       items.sort((a, b) => b.count - a.count);
 
-      tbody.innerHTML = items.slice(0, 15).map(i => {
+      tbody.innerHTML = items.length ? items.slice(0, 15).map(i => {
         const pct = Math.min(100, Math.round((i.count / STATE.config.threshold) * 100));
         const isSys = isProtected(i.domain);
         return `
@@ -1302,13 +1313,13 @@
             <td style="width: 140px;">
               <div class="bar-bg"><div class="bar-fill" style="width:${pct}%; background:${pct>=100?'var(--blocked)':'var(--warn)'}"></div></div>
             </td>
-            <td style="color: var(--muted);">${isSys ? 'Guardrail' : (pct >= 100 ? 'Auto-Denied' : 'Monitoring')}</td>
+            <td style="color: var(--muted);">${isSys ? 'Guardrail' : (pct >= 100 ? 'Threshold Met' : 'Monitoring')}</td>
             <td style="text-align: right;">
               <button onclick="addQuickDeny('${safeText(i.domain)}')" class="btn-danger" style="padding: 0.2rem 0.5rem;">Block</button>
             </td>
           </tr>
         `;
-      }).join('');
+      }).join('') : `<tr><td colspan="5" style="text-align:center; color:var(--muted);">No frequency data for this device filter.</td></tr>`;
     }
 
     window.addQuickDeny = function(domain) {
@@ -1353,10 +1364,7 @@
     }
 
     function backupConfigJSON() {
-      const data = {
-        config: STATE.config,
-        denylist: STATE.denylist
-      };
+      const data = { config: STATE.config, denylist: STATE.denylist };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
@@ -1365,7 +1373,7 @@
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(a.href);
-      showToast('Export Successful', 'Configuration and denylist downloaded successfully', 'success');
+      showToast('Export Successful', 'Configuration downloaded successfully', 'success');
     }
 
     window.importConfigJSON = function(event) {
@@ -1375,12 +1383,8 @@
       reader.onload = (e) => {
         try {
           const parsed = JSON.parse(e.target.result);
-          if (parsed.config) {
-            STATE.config = { ...STATE.config, ...parsed.config };
-          }
-          if (parsed.denylist && Array.isArray(parsed.denylist)) {
-            STATE.denylist = parsed.denylist;
-          }
+          if (parsed.config) STATE.config = { ...STATE.config, ...parsed.config };
+          if (parsed.denylist && Array.isArray(parsed.denylist)) STATE.denylist = parsed.denylist;
           saveState();
           loadConfigToUI();
           renderDenylist();
@@ -1393,11 +1397,8 @@
             STATE.devices.clear();
             STATE.hits = {};
             document.getElementById('global-device-select').innerHTML = '<option value="all">All Devices</option>';
-            const lSel = document.getElementById('live-device-filter');
-            if (lSel) lSel.innerHTML = '<option value="all">All Devices</option>';
-
             STATE.mode = 'api';
-            document.getElementById('stream-status').textContent = '● Live NextDNS API';
+            document.getElementById('stream-status').textContent = 'Live';
             document.getElementById('stream-status').className = 'badge live';
             fetchNextDNSLogs();
             if (apiPollTimer) clearInterval(apiPollTimer);
@@ -1406,9 +1407,9 @@
 
           renderFilteredLiveLogs();
           updateAnalyticsKPIs();
-          showToast('Import Successful', 'Configuration loaded and isolated successfully', 'success');
+          showToast('Import Successful', 'Configuration loaded successfully', 'success');
         } catch (err) {
-          showToast('Import Error', 'Invalid JSON backup file', 'danger');
+          showToast('Import Error', 'Invalid JSON file', 'danger');
         }
       };
       reader.readAsText(file);
@@ -1429,9 +1430,9 @@
 
     document.getElementById('btn-toggle-stream').onclick = () => {
       STATE.isStreaming = !STATE.isStreaming;
-      document.getElementById('btn-toggle-stream').textContent = STATE.isStreaming ? 'Pause' : 'Resume';
-      document.getElementById('stream-status').textContent = STATE.isStreaming ? (STATE.mode === 'api' ? '● Live NextDNS API' : '● Streaming') : '○ Paused';
-      document.getElementById('stream-status').className = `badge ${STATE.isStreaming ? 'live' : ''}`;
+      const btn = document.getElementById('btn-toggle-stream');
+      btn.innerHTML = STATE.isStreaming ? '⏸ Pause' : '▶ Play';
+      document.getElementById('stream-status').textContent = STATE.isStreaming ? (STATE.mode === 'api' ? 'Live' : 'Demo') : 'Paused';
     };
 
     document.getElementById('btn-add-deny').onclick = () => {
@@ -1454,7 +1455,6 @@
     document.getElementById('btn-save-cfg').onclick = () => {
       const newProfile = document.getElementById('cfg-profile').value.trim();
       const newApiKey = document.getElementById('cfg-apikey').value.trim();
-      
       const wasSimMode = STATE.mode === 'sim';
       const isNowApiMode = Boolean(newProfile && newApiKey);
 
@@ -1476,16 +1476,13 @@
         STATE.devices.clear();
         STATE.hits = {};
         document.getElementById('global-device-select').innerHTML = '<option value="all">All Devices</option>';
-        const lSel = document.getElementById('live-device-filter');
-        if (lSel) lSel.innerHTML = '<option value="all">All Devices</option>';
-        
         STATE.mode = 'api';
-        document.getElementById('stream-status').textContent = '● Live NextDNS API';
+        document.getElementById('stream-status').textContent = 'Live';
         document.getElementById('stream-status').className = 'badge live';
         fetchNextDNSLogs();
         if (apiPollTimer) clearInterval(apiPollTimer);
         apiPollTimer = setInterval(fetchNextDNSLogs, 10000);
-        showToast('API Mode Activated', 'Simulator data wiped. Fetching fresh NextDNS API telemetry...', 'success');
+        showToast('API Mode Activated', 'Fetching fresh NextDNS API telemetry...', 'success');
       } else {
         showToast('Config Saved', 'Settings updated successfully', 'success');
       }
@@ -1511,12 +1508,9 @@
     };
 
     document.getElementById('global-device-select').onchange = (e) => filterByDevice(e.target.value);
-    const lDevFilter = document.getElementById('live-device-filter');
-    if (lDevFilter) lDevFilter.onchange = (e) => filterByDevice(e.target.value);
 
-    // Initialize application storage, verification, and API/Simulation mode
+    // Initialize application
     loadConfigToUI();
-    
     if (STATE.config.profile && STATE.config.apiKey) {
       STATE.mode = 'api';
     } else {
@@ -1525,27 +1519,23 @@
 
     initDB().then(() => {
       if (STATE.mode === 'api') {
-        document.getElementById('stream-status').textContent = '● Live NextDNS API';
+        document.getElementById('stream-status').textContent = 'Live';
         document.getElementById('stream-status').className = 'badge live';
         fetchNextDNSLogs();
         if (apiPollTimer) clearInterval(apiPollTimer);
         apiPollTimer = setInterval(fetchNextDNSLogs, 10000);
-        console.log('NextDNS Sentinel - Initialized in API Mode.');
       } else {
-        document.getElementById('stream-status').textContent = '● Live Simulator';
+        document.getElementById('stream-status').textContent = 'Demo';
         document.getElementById('stream-status').className = 'badge sim';
         startSimulation();
-        console.log('NextDNS Sentinel - Initialized in Simulator Mode.');
       }
     }).catch(err => {
       console.warn('IndexedDB failed to init:', err);
-      if (STATE.mode === 'sim') {
-        startSimulation();
-      }
+      if (STATE.mode === 'sim') startSimulation();
     });
     renderDenylist();
 
-    // Interactive Hover Tooltip Event Listener for Canvas with smart edge detection
+    // Chart Tooltip interaction
     document.addEventListener('DOMContentLoaded', () => {
       const canvas = document.getElementById('analytics-canvas');
       const tooltip = document.getElementById('chart-tooltip');
@@ -1583,8 +1573,6 @@
         `;
         
         tooltip.style.display = 'block';
-        
-        // Smart positioning: flip tooltip to the left if near the canvas right edge
         const tooltipWidth = 160;
         if (mouseX + tooltipWidth > rect.width) {
           tooltip.style.left = (mouseX - tooltipWidth - 10) + 'px';
