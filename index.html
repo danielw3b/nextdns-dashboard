@@ -87,7 +87,7 @@
       color: var(--text);
     }
     button:hover { background: var(--border); }
-    .btn-primary { background: var(--accent); color: #090d16; }
+    .btn-primary { background: /*var(--accent)*/ var(--surface-2); color: #090d16; }
     .btn-primary:hover { background: var(--accent-hover); }
     .btn-danger { background: var(--blocked-bg); color: #fca5a5; border-color: rgba(239, 68, 68, 0.3); }
     .btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
@@ -293,7 +293,7 @@
     footer a:hover { text-decoration: underline; }
 
     @media (max-width: 600px) {
-      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      /*.kpi-grid { grid-template-columns: repeat(2, 1fr); }*/
     }
   </style>
 </head>
@@ -314,11 +314,11 @@
     </div>
 
     <div class="header-actions">
+      <span class="badge live" id="stream-status">Live</span>
+      <button class="btn-primary" id="btn-toggle-stream" title="Pause / Resume Stream" style="font-size: 1rem; padding: 0.3rem 0.6rem;">■</button>
       <select id="global-device-select" style="padding: 0.35rem 0.5rem;" title="Filter all logs and analytics by device">
         <option value="all">All Devices</option>
       </select>
-      <button class="btn-primary" id="btn-toggle-stream" title="Pause / Resume Stream" style="font-size: 1rem; padding: 0.3rem 0.6rem;">⏸</button>
-      <span class="badge live" id="stream-status">Live</span>
     </div>
   </header>
 
@@ -1158,7 +1158,7 @@
 
     document.getElementById('btn-toggle-stream').onclick = () => {
       STATE.isStreaming = !STATE.isStreaming;
-      document.getElementById('btn-toggle-stream').textContent = STATE.isStreaming ? '⏸' : '▶';
+      document.getElementById('btn-toggle-stream').textContent = STATE.isStreaming ? '■' : '▶';
       document.getElementById('stream-status').textContent = STATE.isStreaming ? (STATE.mode === 'api' ? 'Live' : 'Demo') : 'Paused';
     };
 
