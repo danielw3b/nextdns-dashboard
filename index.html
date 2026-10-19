@@ -54,7 +54,7 @@
       align-items: center;
       gap: 0.6rem;
     }
-    .brand svg { width: 28px; height: 28px; }
+    .brand svg { width: 48px; height: 48px; }
     .brand h1 { font-size: 1rem; font-weight: 600; letter-spacing: -0.02em; }
     .badge {
       font-size: 0.7rem;
@@ -302,7 +302,7 @@
   <!-- Header -->
   <header>
     <div class="brand">
-      <svg viewBox="0 0 100 100" fill="none">
+      <svg id="wakeLockIcon" viewBox="0 0 100 100" fill="none">
         <rect width="100" height="100" rx="24" fill="#0f172a"/>
         <path d="M50 20L28 30V54C28 69 37 82 50 86C63 82 72 69 72 54V30L50 20Z" fill="#1e293b" stroke="#38bdf8" stroke-width="4"/>
         <path d="M42 52L48 58L58 46" stroke="#4ade80" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -1233,6 +1233,68 @@
         tooltip.style.display = 'none';
       });
     });
+
+    // ── Streamlined Wake Lock (Activation Only) ────────
+    let wakeLock = null;
+    async function requestWakeLock() {
+      if (!("wakeLock" in navigator)) return;
+      if (wakeLock !== null) return; 
+      // Prevents the error if the page is not visible at that exact moment.
+      if (document.visibilityState !== "visible") return;
+    
+      try {
+        wakeLock = await navigator.wakeLock.request("screen");
+        wakeLock.addEventListener("release", () => {
+          wakeLock = null;
+          const icon = document.getElementById("wakeLockIcon");
+          if (icon) {
+            icon.style.opacity = ".3";
+            icon.title = "Screen lock inactive";
+          }
+        });
+        const icon = document.getElementById("wakeLockIcon");
+        if (icon) {
+          icon.style.opacity = "1";
+          icon.title = "Screen stays on";
+        }
+      } catch (err) {
+        // NotAllowedError interception
+        if (err.name !== "NotAllowedError") {
+          console.warn(`Wake Lock failed: ${err.name} - ${err.message}`);
+        }
+      }
+    }
+    
+    document.addEventListener("DOMContentLoaded", () => {
+      const wakeLockIcon = document.getElementById("wakeLockIcon");
+      if (wakeLockIcon) {
+        wakeLockIcon.addEventListener("click", requestWakeLock);
+      }
+    });
+    
+    // ── Smart Visibility Watcher ───────────────────────
+    let backgroundTimestamp = Date.now();
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") {
+        backgroundTimestamp = Date.now();
+      }
+      if (document.visibilityState === "visible") {
+        const timeInBackground = Date.now() - backgroundTimestamp;
+        setTimeout(() => { requestWakeLock(); }, 1000);
+        /*if (mqttWs) {
+          const isSocketBroken = (mqttWs.readyState !== 1);
+          const wasHiddenLongTime = (timeInBackground > 30000);
+          if (isSocketBroken || wasHiddenLongTime) {
+            if (mqttWs.readyState === 1 || mqttWs.readyState === 0) {
+              //console.warn(`MQTT reset triggered (Broken: ${isSocketBroken}, Long Absence: ${wasHiddenLongTime})`);
+              try { mqttWs.close(); } catch {}
+            }
+          }
+        }*/
+      }
+    });
+    
+    requestWakeLock();    
 
     loadConfigToUI();
     STATE.mode = (STATE.config.profile && STATE.config.apiKey) ? 'api' : 'sim';
