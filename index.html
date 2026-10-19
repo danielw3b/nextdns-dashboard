@@ -87,7 +87,7 @@
       color: var(--text);
     }
     button:hover { background: var(--border); }
-    .btn-primary { background: var(--surface-2); color: #090d16; } /*var(--accent)*/
+    .btn-primary { background: var(--surface-2); color: #090d16; }
     .btn-primary:hover { background: var(--accent-hover); }
     .btn-danger { background: var(--blocked-bg); color: #fca5a5; border-color: rgba(239, 68, 68, 0.3); }
     .btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
@@ -196,7 +196,6 @@
       overflow-y: auto;
     }
     
-    /* Strict Responsive Compact Monitor Table without horizontal scrolling */
     .compact-table-container { 
       height: auto; 
       max-height: 280px; 
@@ -213,8 +212,7 @@
     .compact-table-container th:nth-child(4), .compact-table-container td:nth-child(4) { width: 14%; }
     .compact-table-container th:nth-child(5), .compact-table-container td:nth-child(5) { width: 12%; text-align: right; }
 
-    table { width: 100%; border-collapse: collapse; }
-    #tab-live table { table-layout: fixed; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
     #tab-live th:nth-child(1), #tab-live td:nth-child(1) { width: 22%; }
     #tab-live th:nth-child(2), #tab-live td:nth-child(2) { width: 14%; }
     #tab-live th:nth-child(3), #tab-live td:nth-child(3) { width: 42%; }
@@ -291,10 +289,6 @@
     }
     footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
     footer a:hover { text-decoration: underline; }
-
-    @media (max-width: 600px) {
-      /*.kpi-grid { grid-template-columns: repeat(2, 1fr); }*/
-    }
   </style>
 </head>
 <body>
@@ -315,7 +309,7 @@
 
     <div class="header-actions">
       <span class="badge live" id="stream-status">Live</span>
-      <button class="btn-primary" id="btn-toggle-stream" title="Pause / Resume Stream" style="font-size: 1rem; padding: 0.3rem 0.6rem;">◼</button> <!-- ◼ ■ -->
+      <button class="btn-primary" id="btn-toggle-stream" title="Pause / Resume Stream" style="font-size: 1rem; padding: 0.3rem 0.6rem;">◼</button>
       <select id="global-device-select" style="padding: 0.35rem 0.5rem;" title="Filter all logs and analytics by device">
         <option value="all">All Devices</option>
       </select>
@@ -541,6 +535,7 @@
   <div class="toast-container" id="toast-container"></div>
 
   <script>
+    // Sanitize user input to prevent XSS attacks
     function safeText(str) {
       if (str == null) return '';
       return String(str)
@@ -558,6 +553,7 @@
       'nextdns.io', 'local', 'lan'
     ];
 
+    // Check if domain is part of protected core infrastructure
     function isProtected(domain) {
       if (!domain) return false;
       const clean = domain.toLowerCase().trim();
@@ -587,6 +583,7 @@
       }
     };
 
+    // Load configuration and denylist from localStorage
     try {
       const savedCfg = localStorage.getItem('nextdns-single-cfg') || localStorage.getItem('nextdns-sentinel-cfg');
       if (savedCfg) {
@@ -633,6 +630,7 @@
     const STORE_LOGS = 'logs';
     const STORE_HITS = 'hits';
 
+    // Initialize IndexedDB for persistent storage in API mode
     async function initDB() {
       return new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME, 2);
@@ -655,6 +653,7 @@
       });
     }
 
+    // Clear database when switching from simulation to live API mode
     function clearDatabase() {
       if (!db) return;
       try {
@@ -742,6 +741,7 @@
     }
 
     function handleIncomingLog(log) {
+      // Only persist logs in DB if running in real API mode
       if (STATE.mode === 'api') saveLogToDB(log);
       
       STATE.logs.unshift(log);
@@ -1021,10 +1021,9 @@
       const activeLogs = STATE.selectedDevice === 'all' ? STATE.logs : STATE.logs.filter(l => l.device === STATE.selectedDevice);
       const bucketsCount = 12;
       const now = Date.now();
-      const newestTime = activeLogs.length > 0 ? Math.max(...activeLogs.map(l => l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime())) : now;
       const windowMs = 60 * 60 * 1000; 
       const bucketSizeMs = windowMs / bucketsCount; 
-      const startTime = newestTime - windowMs;
+      const startTime = now - windowMs;
 
       const buckets = Array.from({ length: bucketsCount }, (_, idx) => ({
         index: idx,
@@ -1145,6 +1144,61 @@
       showToast('Blocked', `Added ${safeText(domain)}`, 'danger');
     };
 
+    // Export configuration and denylist as a JSON file
+    function backupConfigJSON() {
+      const data = {
+        config: STATE.config,
+        denylist: STATE.denylist
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'nextdns-sentinel-backup.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+      showToast('Export Successful', 'Configuration and denylist downloaded successfully', 'success');
+    }
+
+    // Import configuration and denylist from a JSON backup file
+    window.importConfigJSON = function(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (parsed && typeof parsed === 'object') {
+            if (parsed.config) {
+              STATE.config = { ...STATE.config, ...parsed.config };
+            }
+            if (parsed.denylist && Array.isArray(parsed.denylist)) {
+              STATE.denylist = parsed.denylist;
+            }
+            saveState();
+            loadConfigToUI();
+            updateThresholdBadge();
+            if (typeof renderHitsTable === 'function') {
+              renderHitsTable();
+            }
+            showToast('Import Successful', 'Configuration and denylist loaded successfully', 'success');
+          } else {
+            throw new Error('Invalid JSON structure');
+          }
+        } catch (err) {
+          showToast('Import Error', 'Invalid JSON backup file: ' + err.message, 'danger');
+        } finally {
+          event.target.value = '';
+        }
+      };
+      reader.onerror = () => {
+        showToast('Import Error', 'Failed to read the backup file', 'error');
+      };
+      reader.readAsText(file);
+    };
+
     document.querySelectorAll('.nav-tabs button').forEach(btn => {
       btn.onclick = () => {
         document.querySelectorAll('.nav-tabs button').forEach(b => b.classList.remove('active'));
@@ -1158,7 +1212,7 @@
 
     document.getElementById('btn-toggle-stream').onclick = () => {
       STATE.isStreaming = !STATE.isStreaming;
-      document.getElementById('btn-toggle-stream').textContent = STATE.isStreaming ? '◼' : '▶︎'; //■ ◼ ⏵︎ ▶︎ ▸
+      document.getElementById('btn-toggle-stream').textContent = STATE.isStreaming ? '◼' : '▶︎';
       document.getElementById('stream-status').textContent = STATE.isStreaming ? (STATE.mode === 'api' ? 'Live' : 'Demo') : 'Paused';
     };
 
@@ -1173,11 +1227,49 @@
     };
 
     document.getElementById('btn-save-cfg').onclick = () => {
-      STATE.config.profile = document.getElementById('cfg-profile').value.trim();
-      STATE.config.apiKey = document.getElementById('cfg-apikey').value.trim();
+      const newProfile = document.getElementById('cfg-profile').value.trim();
+      const newApiKey = document.getElementById('cfg-apikey').value.trim();
+      const wasSimMode = STATE.mode === 'sim';
+      const isNowApiMode = Boolean(newProfile && newApiKey);
+
+      STATE.config.profile = newProfile;
+      STATE.config.apiKey = newApiKey;
+      STATE.config.proxy = document.getElementById('cfg-proxy').value.trim();
+      STATE.config.threshold = Number(document.getElementById('cfg-threshold').value) || 20;
+      STATE.config.retentionDays = Number(document.getElementById('cfg-retention').value) || 7;
+      STATE.config.autoBlock = document.getElementById('cfg-autoblock').checked;
+      STATE.config.protectSystem = document.getElementById('cfg-protect').checked;
       saveState();
-      showToast('Config Saved', 'Updated successfully', 'success');
+      updateThresholdBadge();
+
+      // Wipe simulation data when switching to API mode to prevent data mixing
+      if (wasSimMode && isNowApiMode) {
+        if (simTimer) clearInterval(simTimer);
+        clearDatabase();
+        STATE.logs = [];
+        STATE.totalQueriesCounter = 0;
+        STATE.devices.clear();
+        STATE.hits = {};
+        document.getElementById('global-device-select').innerHTML = '<option value="all">All Devices</option>';
+        
+        STATE.mode = 'api';
+        document.getElementById('stream-status').textContent = 'Live';
+        document.getElementById('stream-status').className = 'badge live';
+        fetchNextDNSLogs();
+        if (apiPollTimer) clearInterval(apiPollTimer);
+        apiPollTimer = setInterval(fetchNextDNSLogs, 10000);
+        showToast('API Mode Activated', 'Simulation data wiped. Fetching fresh NextDNS API telemetry...', 'success');
+      } else {
+        showToast('Config Saved', 'Updated successfully', 'success');
+      }
+      renderFilteredLiveLogs();
+      updateAnalyticsKPIs();
     };
+
+    const btnBackup = document.getElementById('btn-backup-json');
+    if (btnBackup) {
+      btnBackup.onclick = backupConfigJSON;
+    }
 
     document.getElementById('global-device-select').onchange = (e) => filterByDevice(e.target.value);
     document.getElementById('live-status-filter').onchange = renderFilteredLiveLogs;
@@ -1234,12 +1326,10 @@
       });
     });
 
-    // ── Streamlined Wake Lock (Activation Only) ────────
     let wakeLock = null;
     async function requestWakeLock() {
       if (!("wakeLock" in navigator)) return;
       if (wakeLock !== null) return; 
-      // Prevents the error if the page is not visible at that exact moment.
       if (document.visibilityState !== "visible") return;
     
       try {
@@ -1258,7 +1348,6 @@
           icon.title = "Screen stays on";
         }
       } catch (err) {
-        // NotAllowedError interception
         if (err.name !== "NotAllowedError") {
           console.warn(`Wake Lock failed: ${err.name} - ${err.message}`);
         }
@@ -1272,25 +1361,9 @@
       }
     });
     
-    // ── Smart Visibility Watcher ───────────────────────
-    let backgroundTimestamp = Date.now();
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "hidden") {
-        backgroundTimestamp = Date.now();
-      }
       if (document.visibilityState === "visible") {
-        const timeInBackground = Date.now() - backgroundTimestamp;
         setTimeout(() => { requestWakeLock(); }, 1000);
-        /*if (mqttWs) {
-          const isSocketBroken = (mqttWs.readyState !== 1);
-          const wasHiddenLongTime = (timeInBackground > 30000);
-          if (isSocketBroken || wasHiddenLongTime) {
-            if (mqttWs.readyState === 1 || mqttWs.readyState === 0) {
-              //console.warn(`MQTT reset triggered (Broken: ${isSocketBroken}, Long Absence: ${wasHiddenLongTime})`);
-              try { mqttWs.close(); } catch {}
-            }
-          }
-        }*/
       }
     });
     
