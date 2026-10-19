@@ -1161,11 +1161,10 @@
       showToast('Export Successful', 'Configuration and denylist downloaded successfully', 'success');
     }
 
-    // Import configuration and denylist from a JSON backup file
     window.importConfigJSON = function(event) {
       const file = event.target.files?.[0];
       if (!file) return;
-
+    
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
@@ -1177,13 +1176,23 @@
             if (parsed.denylist && Array.isArray(parsed.denylist)) {
               STATE.denylist = parsed.denylist;
             }
+    
             saveState();
             loadConfigToUI();
             updateThresholdBadge();
+    
             if (typeof renderHitsTable === 'function') {
               renderHitsTable();
             }
-            showToast('Import Successful', 'Configuration and denylist loaded successfully', 'success');
+    
+            showToast('Import Successful', 'Configuration loaded successfully', 'success');
+    
+            const saveBtn = document.getElementById('btn-save-cfg');
+            if (saveBtn) {
+              setTimeout(() => {
+                saveBtn.click();
+              }, 500);
+            }
           } else {
             throw new Error('Invalid JSON structure');
           }
