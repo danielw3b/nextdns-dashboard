@@ -899,7 +899,7 @@
       
       try {
         // Bypass cache to get real network latency
-        await fetch(`${proxy.replace(/\/$/, '')}/ping?t=${Date.now()}`, { 
+        await fetch(`${proxy.replace(/\/$/, '')}/profiles/${profile}?t=${Date.now()}`, { 
           method: 'HEAD',
           mode: 'no-cors', 
           cache: 'no-store' 
