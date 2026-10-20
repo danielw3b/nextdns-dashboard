@@ -929,7 +929,7 @@
     
       try {
         const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${profile}?t=${Date.now()}`, { 
-          method: 'HEAD',
+          method: 'GET',
           headers: { 'X-Api-Key': apiKey },
           cache: 'no-store',
           signal: controller.signal
