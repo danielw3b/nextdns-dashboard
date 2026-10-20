@@ -87,7 +87,7 @@
       color: var(--text);
     }
     button:hover { background: var(--border); }
-    .btn-primary { background: var(--surface-2); color: #090d16; }
+    .btn-primary { background: var(--accent); color: #090d16; }
     .btn-primary:hover { background: var(--accent-hover); }
     .btn-danger { background: var(--blocked-bg); color: #fca5a5; border-color: rgba(239, 68, 68, 0.3); }
     .btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
@@ -383,7 +383,7 @@
 
       <div class="card" style="margin-bottom: 1.25rem;">
         <div class="card-title">
-          <span>Evolution of Queries & Blocking Ratio over Time</span>
+          <span>Evolution of Queries</span>
           <span style="font-size: 0.7rem; color: var(--muted);" id="analytics-chart-subtitle">Queries over time & block ratio</span>
         </div>
         <div style="position: relative; height: 180px; width: 100%;">
@@ -397,7 +397,7 @@
         </div>
       </div>
 
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+      <div style="display: grid; /*grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));*/ gap: 1rem; margin-bottom: 1rem;">
         <div class="card" style="margin-bottom:0;">
           <div class="card-title">Top Blocked Domains</div>
           <div id="analytics-top-blocked" style="font-size: 0.75rem;"></div>
