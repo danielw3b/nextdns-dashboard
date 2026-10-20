@@ -992,7 +992,7 @@
       return { isp: 'Broadband WAN Gateway', location: '🇪🇺 Europe / Member Node' };
     }
 
-    function updateAnalyticsKPIs() {
+    /*function updateAnalyticsKPIs() {
       const activeLogs = STATE.selectedDevice === 'all' ? STATE.logs : STATE.logs.filter(l => l.device === STATE.selectedDevice);
       const total = STATE.selectedDevice === 'all' ? Math.max(STATE.totalQueriesCounter, STATE.logs.length) : activeLogs.length;
       const blocked = activeLogs.filter(l => String(l.status).toLowerCase() === 'blocked').length;
@@ -1015,8 +1015,43 @@
       document.getElementById('kpi-allowed').textContent = allowed;
       document.getElementById('kpi-rate').textContent = `${rate}% (${STATE.selectedDevice === 'all' ? 'All' : STATE.selectedDevice})`;
       document.getElementById('kpi-qpm').textContent = `${qpmCount} q/min`;
-      document.getElementById('kpi-latency').textContent = avgLatency === '--' ? '-- ms' : `${avgLatency} ms`;
+      document.getElementById('kpi-latency').textContent = avgLatency === '--' ? '-- ms' : `${avgLatency} ms`;*/
 
+    function updateAnalyticsKPIs() {
+      // Use our clean 60-minute RAM chart buffer instead of the limited ring buffer
+      const chartLogs = STATE.chartLogs || [];
+      const activeLogs = STATE.selectedDevice === 'all' 
+       ? chartLogs 
+       : chartLogs.filter(l => l.device === STATE.selectedDevice);
+      
+      // If the global counter is to be used in its entirety, while "blocked" and "allowed" are derived from the buffer—either proportionally or in absolute terms:
+      const total = STATE.selectedDevice === 'all' ? Math.max(STATE.totalQueriesCounter, chartLogs.length) : activeLogs.length;
+      const blocked = activeLogs.filter(l => String(l.status).toLowerCase() === 'blocked').length;
+      
+      // If 'total'—based on the global counter—exceeds the number of logs remaining in the buffer, 
+      // we adjust the 'allowed' portion accordingly:
+      const allowed = Math.max(0, total - blocked);
+      const rate = total > 0 ? Math.round((blocked / total) * 100) : 0;
+      
+      const nowMs = Date.now();
+      const qpmCount = activeLogs.filter(l => {
+       const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
+       return t >= (nowMs - 60000) && t <= nowMs;
+      }).length;
+      
+      const avgLatency = (typeof STATE.currentLatency === 'number' && !isNaN(STATE.currentLatency)) 
+       ? STATE.currentLatency 
+       : '--';
+      
+      // Update DOM KPI elements
+      document.getElementById('kpi-total').textContent = total;
+      document.getElementById('kpi-blocked').textContent = blocked; // Zeigt nun korrekt die Block-Anfragen an!
+      document.getElementById('kpi-allowed').textContent = allowed;
+      document.getElementById('kpi-rate').textContent = `${rate}% (${STATE.selectedDevice === 'all' ? 'All' : STATE.selectedDevice})`;
+      document.getElementById('kpi-qpm').textContent = `${qpmCount} q/min`;
+      document.getElementById('kpi-latency').textContent = avgLatency === '--' ? '-- ms' : `${avgLatency} ms`;
+          
+      // Aggregate data for breakdowns and top lists
       const blockedMap = {}, allowedMap = {}, devMap = {}, typeMap = {}, ipMap = {};
       for (const l of activeLogs) {
         if (String(l.status).toLowerCase() === 'blocked') blockedMap[l.domain] = (blockedMap[l.domain] || 0) + 1;
