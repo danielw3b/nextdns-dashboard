@@ -1125,24 +1125,25 @@
       const dpr = window.devicePixelRatio || 1;
       const width = canvas.parentElement.clientWidth || 400;
       const height = 180;
-      
-      // Use exact original buffer scaling to ensure correct size and crisp rendering
+          
+      // Use exact original buffer sizing, relying on your working CSS for display dimensions
       canvas.width = width * dpr;
       canvas.height = height * dpr;
       ctx.scale(dpr, dpr);
       ctx.clearRect(0, 0, width, height);
     
-      // Fetch historical logs from IndexedDB for true 60-minute persistence, falling back to RAM if unavailable
+      // Fetch historical logs from IndexedDB for true 60-minute persistence, falling back to RAM
       let activeLogs = [];
       if (typeof db !== 'undefined' && db) {
         try {
           const tx = db.transaction('logs', 'readonly');
           const store = tx.objectStore('logs');
-          activeLogs = await new Promise((resolve, reject) => {
+          const allDbLogs = await new Promise((resolve, reject) => {
             const req = store.getAll();
             req.onsuccess = () => resolve(req.result || []);
             req.onerror = () => reject(req.error);
           });
+          activeLogs = allDbLogs;
         } catch (err) {
           console.error('Failed to load chart logs from IndexedDB, falling back to RAM:', err);
           activeLogs = STATE.logs;
@@ -1173,9 +1174,11 @@
     
       for (const l of activeLogs) {
         const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
-        if (isNaN(t) || t < startTime || t > now) continue;
+        if (isNaN(t)) continue;
     
         const diff = t - startTime;
+        if (diff < 0 || diff > windowMs) continue;
+    
         let idx = Math.floor(diff / bucketSizeMs);
         if (idx < 0) idx = 0;
         if (idx >= bucketsCount) idx = bucketsCount - 1;
