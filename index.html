@@ -1125,32 +1125,24 @@
       const dpr = window.devicePixelRatio || 1;
       const width = canvas.parentElement.clientWidth || 400;
       const height = 180;
-          
-      // Use exact buffer scaling from the working legacy version
+      
+      // Use exact original buffer scaling to ensure correct size and crisp rendering
       canvas.width = width * dpr;
       canvas.height = height * dpr;
       ctx.scale(dpr, dpr);
       ctx.clearRect(0, 0, width, height);
     
-      // Define a fixed 60-minute rolling time window divided into 12 stable 5-minute buckets
-      const bucketsCount = 12;
-      const now = Date.now();
-      const windowMs = 60 * 60 * 1000; 
-      const bucketSizeMs = windowMs / bucketsCount; 
-      const startTime = now - windowMs;
-    
-      // Fetch logs from IndexedDB to cover the full 60-minute history beyond RAM limits, with fallback to RAM
+      // Fetch historical logs from IndexedDB for true 60-minute persistence, falling back to RAM if unavailable
       let activeLogs = [];
       if (typeof db !== 'undefined' && db) {
         try {
           const tx = db.transaction('logs', 'readonly');
           const store = tx.objectStore('logs');
-          const allDbLogs = await new Promise((resolve, reject) => {
+          activeLogs = await new Promise((resolve, reject) => {
             const req = store.getAll();
             req.onsuccess = () => resolve(req.result || []);
             req.onerror = () => reject(req.error);
           });
-          activeLogs = allDbLogs;
         } catch (err) {
           console.error('Failed to load chart logs from IndexedDB, falling back to RAM:', err);
           activeLogs = STATE.logs;
@@ -1164,6 +1156,13 @@
         activeLogs = activeLogs.filter(l => l.device === STATE.selectedDevice);
       }
     
+      // Define a fixed 60-minute rolling time window divided into 12 stable 5-minute buckets
+      const bucketsCount = 12;
+      const now = Date.now();
+      const windowMs = 60 * 60 * 1000; 
+      const bucketSizeMs = windowMs / bucketsCount; 
+      const startTime = now - windowMs;
+    
       const buckets = Array.from({ length: bucketsCount }, (_, idx) => ({
         index: idx,
         startTime: startTime + (idx * bucketSizeMs),
@@ -1174,11 +1173,9 @@
     
       for (const l of activeLogs) {
         const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
-        if (isNaN(t)) continue;
+        if (isNaN(t) || t < startTime || t > now) continue;
     
         const diff = t - startTime;
-        if (diff < 0 || diff > windowMs) continue;
-    
         let idx = Math.floor(diff / bucketSizeMs);
         if (idx < 0) idx = 0;
         if (idx >= bucketsCount) idx = bucketsCount - 1;
