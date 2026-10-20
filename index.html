@@ -867,7 +867,8 @@
         if (!res.ok) throw new Error(`API error`);
         const data = await res.json();
         const logsArray = data.data || data.logs || (Array.isArray(data) ? data : []);
-
+        console.log(logsArray);
+        
         for (const item of logsArray.reverse()) {
           const clientObj = item.client || {};
           const deviceName = clientObj.name || item.deviceName || item.device?.name || (typeof clientObj === 'string' ? clientObj : 'NextDNS Device');
