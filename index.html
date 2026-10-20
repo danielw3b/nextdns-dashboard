@@ -1125,10 +1125,19 @@
       const dpr = window.devicePixelRatio || 1;
       const width = canvas.parentElement.clientWidth || 400;
       const height = 180;
-          
-      // Use exact original buffer sizing, relying on your working CSS for display dimensions
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
+      
+      // Fix 1: Explicitly set CSS dimensions so the canvas scales and fills the container correctly
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+    
+      // Fix 2: Only re-allocate canvas buffer when dimensions actually change to eliminate flickering
+      const targetWidth = Math.round(width * dpr);
+      const targetHeight = Math.round(height * dpr);
+      if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+      }
+    
       ctx.scale(dpr, dpr);
       ctx.clearRect(0, 0, width, height);
     
@@ -1138,12 +1147,11 @@
         try {
           const tx = db.transaction('logs', 'readonly');
           const store = tx.objectStore('logs');
-          const allDbLogs = await new Promise((resolve, reject) => {
+          activeLogs = await new Promise((resolve, reject) => {
             const req = store.getAll();
             req.onsuccess = () => resolve(req.result || []);
             req.onerror = () => reject(req.error);
           });
-          activeLogs = allDbLogs;
         } catch (err) {
           console.error('Failed to load chart logs from IndexedDB, falling back to RAM:', err);
           activeLogs = STATE.logs;
@@ -1174,11 +1182,9 @@
     
       for (const l of activeLogs) {
         const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
-        if (isNaN(t)) continue;
+        if (isNaN(t) || t < startTime || t > now) continue;
     
         const diff = t - startTime;
-        if (diff < 0 || diff > windowMs) continue;
-    
         let idx = Math.floor(diff / bucketSizeMs);
         if (idx < 0) idx = 0;
         if (idx >= bucketsCount) idx = bucketsCount - 1;
