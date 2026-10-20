@@ -377,7 +377,7 @@
         </div>
         <div class="kpi-box">
           <div class="kpi-val" style="color: var(--accent);" id="kpi-latency">0 ms</div>
-          <div class="kpi-label">Avg Resolver Latency</div>
+          <div class="kpi-label">Edge Latency</div>
           <div class="kpi-sub">Encrypted DoH</div>
         </div>
       </div>
@@ -891,12 +891,39 @@
       } catch (e) {}
     }*/
 
+    
+    // Measures real-time HTTP round-trip latency to the NextDNS API/Proxy.
+    async function measureNextDNSLatency() {
+      const proxy = STATE.config.proxy || 'https://api.nextdns.io';
+      const start = performance.now();
+      
+      try {
+        // Bypass cache to get real network latency
+        await fetch(`${proxy.replace(/\/$/, '')}/ping?t=${Date.now()}`, { 
+          method: 'HEAD',
+          mode: 'no-cors', 
+          cache: 'no-store' 
+        });
+        const duration = performance.now() - start;
+        return Math.round(duration);
+      } catch (error) {
+        // Fallback using general performance timing if HEAD fails
+        return Math.round(performance.now() - start);
+      }
+    }
+    
+    
+    // Fetches logs and measures real network latency on every poll.
     async function fetchNextDNSLogs() {
       if (STATE.mode !== 'api') return;
       const profile = STATE.config.profile;
       const apiKey = STATE.config.apiKey;
       const proxy = STATE.config.proxy || 'https://api.nextdns.io';
       if (!profile || !apiKey) return;
+    
+      // Measure real RTT latency before/during fetch
+      const measuredLatency = await measureNextDNSLatency();
+      STATE.currentLatency = measuredLatency; // Save for UI KPI box
     
       try {
         const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${profile}/logs?limit=50`, {
@@ -924,16 +951,15 @@
             reasons: (item.reasons || []).map(r => typeof r === 'string' ? r : r.name),
             proto: item.protocol || 'DoH',
             type: item.root?.queryType || 'A',
-            latency: item.latency || 15
+            latency: measuredLatency // Use the real measured network latency instead of hardcoded 15ms!
           };
     
-          // Push normalized log object to the dedicated chart buffer
           STATE.chartLogs.push(logObj);
     
           if (!STATE.logs.some(l => l.id === logObj.id)) handleIncomingLog(logObj);
         }
     
-        // Prune chart logs older than 60 minutes to keep memory clean
+        // Prune chart logs older than 60 minutes
         const now = Date.now();
         const oneHourMs = 60 * 60 * 1000;
         STATE.chartLogs = STATE.chartLogs.filter(l => {
@@ -944,7 +970,7 @@
       } catch (e) {
         console.error('Failed to fetch NextDNS logs:', e);
       }
-    }    
+    }   
 
     window.filterByDevice = function(dev) {
       STATE.selectedDevice = dev;
@@ -972,21 +998,24 @@
       const blocked = activeLogs.filter(l => String(l.status).toLowerCase() === 'blocked').length;
       const allowed = Math.max(0, total - blocked);
       const rate = total > 0 ? Math.round((blocked / total) * 100) : 0;
-
+      
       const nowMs = Date.now();
       const qpmCount = activeLogs.filter(l => {
-        const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
-        return t >= (nowMs - 60000) && t <= nowMs;
+       const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
+       return t >= (nowMs - 60000) && t <= nowMs;
       }).length;
-
-      const avgLatency = activeLogs.length > 0 ? Math.round(activeLogs.reduce((acc, l) => acc + (Number(l.latency) || 16), 0) / activeLogs.length) : 0;
-
+      
+      // Use the real measured HTTP network latency, fallback to '--' if not yet measured
+      const avgLatency = (typeof STATE.currentLatency === 'number' && !isNaN(STATE.currentLatency)) 
+       ? STATE.currentLatency 
+       : '--';
+      
       document.getElementById('kpi-total').textContent = total;
       document.getElementById('kpi-blocked').textContent = blocked;
       document.getElementById('kpi-allowed').textContent = allowed;
       document.getElementById('kpi-rate').textContent = `${rate}% (${STATE.selectedDevice === 'all' ? 'All' : STATE.selectedDevice})`;
       document.getElementById('kpi-qpm').textContent = `${qpmCount} q/min`;
-      document.getElementById('kpi-latency').textContent = `${avgLatency} ms`;
+      document.getElementById('kpi-latency').textContent = avgLatency === '--' ? '-- ms' : `${avgLatency} ms`;
 
       const blockedMap = {}, allowedMap = {}, devMap = {}, typeMap = {}, ipMap = {};
       for (const l of activeLogs) {
