@@ -1126,18 +1126,9 @@
       const width = canvas.parentElement.clientWidth || 400;
       const height = 180;
           
-      // Set explicit CSS dimensions to prevent the chart from rendering too small
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-    
-      // Update canvas buffer only when dimensions change to eliminate flickering
-      const targetWidth = width * dpr;
-      const targetHeight = height * dpr;
-      if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
-        canvas.width = targetWidth;
-        canvas.height = targetHeight;
-      }
-    
+      // Use exact buffer scaling from the working legacy version
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
       ctx.scale(dpr, dpr);
       ctx.clearRect(0, 0, width, height);
     
