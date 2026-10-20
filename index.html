@@ -1005,7 +1005,7 @@
     let currentChartBuckets = [];
     let currentChartMetrics = {};
 
-    /*function renderAnalyticsChart() {
+    function renderAnalyticsChart() {
       const canvas = document.getElementById('analytics-canvas');
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
@@ -1114,10 +1114,10 @@
         ctx.arc(x, y, 2.5, 0, Math.PI * 2);
         ctx.fill();
       });
-    }*/
+    }
     
     // Render analytics chart using asynchronous IndexedDB logs with a fixed 60-minute time window
-    async function renderAnalyticsChart() {
+    /*async function renderAnalyticsChart() {
       const canvas = document.getElementById('analytics-canvas');
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
@@ -1296,7 +1296,7 @@
         ctx.arc(x, y, 2.5, 0, Math.PI * 2);
         ctx.fill();
       });
-    }
+    }*/
     
 
     function renderHitsTable() {
