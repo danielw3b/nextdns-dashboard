@@ -1003,7 +1003,7 @@
       renderAnalyticsChart();
     }
 
-    let currentChartBuckets = [];
+    /*let currentChartBuckets = [];
     let currentChartMetrics = {};
 
     function renderAnalyticsChart() {
@@ -1115,6 +1115,137 @@
         ctx.arc(x, y, 2.5, 0, Math.PI * 2);
         ctx.fill();
       });
+    }*/
+
+    let currentChartBuckets = [];
+    let currentChartMetrics = {};
+    
+    function renderAnalyticsChart() {
+      const canvas = document.getElementById('analytics-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const width = canvas.parentElement.clientWidth || 400;
+      const height = 180;
+    
+      if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+      }
+    
+      ctx.clearRect(0, 0, width, height);
+      ctx.scale(dpr, dpr);
+    
+      const activeLogs = STATE.selectedDevice === 'all' 
+        ? STATE.logs 
+        : STATE.logs.filter(l => l.device === STATE.selectedDevice);
+    
+      // 20 minutes window with 10-second steps = 120 buckets
+      const bucketsCount = 120;
+      const now = Date.now();
+      const windowMs = 20 * 60 * 1000;
+      const bucketSizeMs = windowMs / bucketsCount;
+      const startTime = now - windowMs;
+    
+      const buckets = Array.from({ length: bucketsCount }, (_, idx) => ({
+        index: idx,
+        startTime: startTime + (idx * bucketSizeMs),
+        allowed: 0,
+        blocked: 0,
+        total: 0,
+        ratio: 0
+      }));
+    
+      for (const l of activeLogs) {
+        const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
+        if (isNaN(t)) continue;
+        const diff = t - startTime;
+        if (diff < 0 || diff > windowMs) continue;
+        
+        let idx = Math.floor(diff / bucketSizeMs);
+        if (idx < 0) idx = 0;
+        if (idx >= bucketsCount) idx = bucketsCount - 1;
+    
+        if (String(l.status || 'allowed').toLowerCase() === 'blocked') {
+          buckets[idx].blocked++;
+        } else {
+          buckets[idx].allowed++;
+        }
+        buckets[idx].total++;
+      }
+    
+      buckets.forEach(b => {
+        b.ratio = b.total > 0 ? (b.blocked / b.total) * 100 : 0;
+      });
+    
+      currentChartBuckets = buckets;
+    
+      const maxVal = Math.max(1, ...buckets.map(b => Math.max(b.allowed, b.blocked, b.total)));
+      const padding = { top: 15, right: 42, bottom: 25, left: 40 };
+      const chartWidth = width - padding.left - padding.right;
+      const chartHeight = height - padding.top - padding.bottom;
+      
+      currentChartMetrics = { padding, chartWidth, chartHeight, maxVal, bucketsCount };
+    
+      // Draw background grid & axes
+      for (let i = 0; i <= 4; i++) {
+        const y = padding.top + (chartHeight / 4) * i;
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(width - padding.right, y);
+        ctx.stroke();
+    
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '9px monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText(Math.round(maxVal * (1 - i / 4)), padding.left - 6, y + 3);
+    
+        ctx.fillStyle = '#38bdf8';
+        ctx.textAlign = 'left';
+        ctx.fillText(Math.round(100 * (1 - i / 4)) + '%', width - padding.right + 6, y + 3);
+      }
+    
+      // Coordinate helper for line points
+      const getX = (index) => padding.left + (index / (bucketsCount - 1)) * chartWidth;
+    
+      // Draw allowed line (Green)
+      ctx.strokeStyle = '#4ade80';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      buckets.forEach((b, i) => {
+        const x = getX(i);
+        const y = padding.top + chartHeight - ((b.allowed / maxVal) * chartHeight);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    
+      // Draw blocked line (Red)
+      ctx.strokeStyle = '#f87171';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      buckets.forEach((b, i) => {
+        const x = getX(i);
+        const y = padding.top + chartHeight - ((b.blocked / maxVal) * chartHeight);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    
+      // Draw ratio line (Blue dashed)
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      buckets.forEach((b, i) => {
+        const x = getX(i);
+        const y = padding.top + chartHeight - ((b.ratio / 100) * chartHeight);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      ctx.setLineDash([]);
     }
 
     function renderHitsTable() {
@@ -1285,7 +1416,7 @@
     document.getElementById('live-status-filter').onchange = renderFilteredLiveLogs;
     document.getElementById('live-search').oninput = renderFilteredLiveLogs;
 
-    document.addEventListener('DOMContentLoaded', () => {
+    /*document.addEventListener('DOMContentLoaded', () => {
       const canvas = document.getElementById('analytics-canvas');
       const tooltip = document.getElementById('chart-tooltip');
       if (!canvas || !tooltip) return;
@@ -1331,6 +1462,58 @@
         tooltip.style.top = (mouseY - 40) + 'px';
       });
 
+      canvas.addEventListener('mouseleave', () => {
+        tooltip.style.display = 'none';
+      });
+    });*/
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const canvas = document.getElementById('analytics-canvas');
+      const tooltip = document.getElementById('chart-tooltip');
+      if (!canvas || !tooltip) return;
+    
+      canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        const { padding, chartWidth, chartHeight, bucketsCount } = currentChartMetrics;
+    
+        if (!chartWidth || mouseX < padding.left || mouseX > padding.left + chartWidth || mouseY < padding.top || mouseY > padding.top + chartHeight) {
+          tooltip.style.display = 'none';
+          return;
+        }
+    
+        // Map mouse position to the closest data point index for lines
+        const slotWidth = chartWidth / (bucketsCount - 1);
+        const bucketIndex = Math.round((mouseX - padding.left) / slotWidth);
+        const b = currentChartBuckets[bucketIndex];
+    
+        if (!b) {
+          tooltip.style.display = 'none';
+          return;
+        }
+    
+        const blockRatio = Math.round(b.ratio);
+        const timeStr = new Date(b.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    
+        tooltip.innerHTML = `
+          <div style="font-weight:600; color:#38bdf8; margin-bottom:2px;">Time: ${timeStr}</div>
+          <div>Total Queries: <b>${b.total}</b></div>
+          <div style="color:#4ade80;">Allowed: ${b.allowed}</div>
+          <div style="color:#f87171;">Blocked: ${b.blocked}</div>
+          <div style="color:#38bdf8; margin-top:2px; border-top:1px solid #334155; padding-top:2px;">Ratio: <b>${blockRatio}%</b></div>
+        `;
+        
+        tooltip.style.display = 'block';
+        const tooltipWidth = 160;
+        if (mouseX + tooltipWidth > rect.width) {
+          tooltip.style.left = (mouseX - tooltipWidth - 10) + 'px';
+        } else {
+          tooltip.style.left = (mouseX + 15) + 'px';
+        }
+        tooltip.style.top = (mouseY - 40) + 'px';
+      });
+    
       canvas.addEventListener('mouseleave', () => {
         tooltip.style.display = 'none';
       });
