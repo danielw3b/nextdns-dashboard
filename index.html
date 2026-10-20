@@ -1116,6 +1116,7 @@
       });
     }*/
     
+    // Render analytics chart using asynchronous IndexedDB logs with a fixed 60-minute time window
     async function renderAnalyticsChart() {
       const canvas = document.getElementById('analytics-canvas');
       if (!canvas) return;
@@ -1125,11 +1126,11 @@
       const width = canvas.parentElement.clientWidth || 400;
       const height = 180;
           
-      // 1. adjust height and width
+      // Set explicit CSS dimensions to prevent the chart from rendering too small
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
     
-      // 2. fix flickering
+      // Update canvas buffer only when dimensions change to eliminate flickering
       const targetWidth = width * dpr;
       const targetHeight = height * dpr;
       if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
@@ -1147,7 +1148,7 @@
       const bucketSizeMs = windowMs / bucketsCount; 
       const startTime = now - windowMs;
     
-      // Fetch logs from IndexedDB to cover the full 60-minute history beyond RAM limits
+      // Fetch logs from IndexedDB to cover the full 60-minute history beyond RAM limits, with fallback to RAM
       let activeLogs = [];
       if (typeof db !== 'undefined' && db) {
         try {
@@ -1167,7 +1168,7 @@
         activeLogs = STATE.logs;
       }
     
-      // Filter by selected device if applicable
+      // Filter logs by selected device if applicable
       if (STATE.selectedDevice !== 'all') {
         activeLogs = activeLogs.filter(l => l.device === STATE.selectedDevice);
       }
@@ -1182,9 +1183,11 @@
     
       for (const l of activeLogs) {
         const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
-        if (isNaN(t) || t < startTime || t > now) continue;
+        if (isNaN(t)) continue;
     
         const diff = t - startTime;
+        if (diff < 0 || diff > windowMs) continue;
+    
         let idx = Math.floor(diff / bucketSizeMs);
         if (idx < 0) idx = 0;
         if (idx >= bucketsCount) idx = bucketsCount - 1;
@@ -1198,13 +1201,18 @@
         buckets[idx].total++;
       }
     
+      if (typeof currentChartBuckets !== 'undefined') currentChartBuckets = buckets;
       const maxVal = Math.max(1, ...buckets.map(b => Math.max(b.allowed, b.blocked, b.total)));
       
       const padding = { top: 15, right: 42, bottom: 28, left: 40 };
       const chartWidth = width - padding.left - padding.right;
       const chartHeight = height - padding.top - padding.bottom;
     
-      // Draw Left Y-Axis (Absolute Queries) grid lines & labels
+      if (typeof currentChartMetrics !== 'undefined') {
+        currentChartMetrics = { padding, chartWidth, chartHeight, maxVal, bucketsCount };
+      }
+    
+      // Draw Left Y-Axis (Absolute Queries) grid lines and labels
       ctx.lineWidth = 1;
       for (let i = 0; i <= 4; i++) {
         const y = padding.top + (chartHeight / 4) * i;
