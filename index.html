@@ -384,7 +384,7 @@
 
       <div class="card" style="margin-bottom: 1.25rem;">
         <div class="card-title">
-          <span>Evolution of Queries & Blocking Ratio over Time</span>
+          <span>Evolution of Queries & Blocking Ratio over 60 Minutes</span>
          <!-- <span style="font-size: 0.7rem; color: var(--muted);" id="analytics-chart-subtitle">Queries over time & block ratio</span>-->
         </div>
         <div style="position: relative; height: 180px; width: 100%;">
@@ -392,13 +392,13 @@
           <div id="chart-tooltip" style="position: absolute; display: none; background: #0b1324; border: 1px solid var(--border); padding: 6px 10px; border-radius: 6px; font-size: 11px; pointer-events: none; z-index: 20; box-shadow: 0 4px 12px rgba(0,0,0,0.4); color: #f1f5f9; font-family: monospace;"></div>
         </div>
         <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 0.5rem; font-size: 0.7rem; color: var(--muted); flex-wrap: wrap;">
-          <span style="display:inline-flex; align-items:center; gap:0.3rem;"><span style="width:8px; height:8px; background:#38bdf8; border-radius:2px;"></span> Allowed (Left Axis)</span>
-          <span style="display:inline-flex; align-items:center; gap:0.3rem;"><span style="width:8px; height:8px; background:#f87171; border-radius:2px;"></span> Blocked (Left Axis)</span>
-          <span style="display:inline-flex; align-items:center; gap:0.3rem;"><span style="width:12px; height:2px; background:#4ade80;"></span> Block Ratio % (Right Axis)</span>
+          <span style="display:inline-flex; align-items:center; gap:0.3rem;"><span style="width:8px; height:8px; background:#4ade80; border-radius:2px;"></span> Allowed</span>
+          <span style="display:inline-flex; align-items:center; gap:0.3rem;"><span style="width:8px; height:8px; background:#f87171; border-radius:2px;"></span> Blocked</span>
+          <span style="display:inline-flex; align-items:center; gap:0.3rem;"><span style="width:12px; height:2px; background:#38bdf8;"></span> Block Ratio %</span>
         </div>
       </div>
 
-      <div style="display: grid; /*grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));*/ gap: 1rem; margin-bottom: 1rem;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
         <div class="card" style="margin-bottom:0;">
           <div class="card-title">Top Blocked Domains</div>
           <div id="analytics-top-blocked" style="font-size: 0.75rem;"></div>
@@ -1033,8 +1033,9 @@
         const data = await res.json();
         const logsArray = data.data || data.logs || (Array.isArray(data) ? data : []);
     
-        // Initialize chart RAM buffer if not present
+        // Initialize chart RAM buffer and KPI Session if not present
         if (!STATE.chartLogs) STATE.chartLogs = [];
+        if (!STATE.sessionLogs) STATE.sessionLogs = [];
     
         for (const item of logsArray.reverse()) {
           const clientObj = item.client || {};
@@ -1056,6 +1057,11 @@
     
           // Push to dedicated chart RAM buffer
           STATE.chartLogs.push(logObj);
+          // Accumulate all logs for session KPIs & filters
+          if (!STATE.sessionLogs.some(l => l.id === logObj.id)) {
+            STATE.sessionLogs.push(logObj);
+            //newLogsAdded = true;
+          }
     
           if (!STATE.logs.some(l => l.id === logObj.id)) handleIncomingLog(logObj);
         }
@@ -1071,11 +1077,8 @@
       } catch (e) {
         console.error('Failed to fetch NextDNS logs:', e);
         // Organic fallback jitter if fetch fails
-        STATE.currentLatency = Math.floor(Math.random() * 25) + 18;
-      } //finally {
-        // Always update KPIs immediately after poll (success or error)
-        //updateAnalyticsKPIs();
-      //}
+        //STATE.currentLatency = Math.floor(Math.random() * 25) + 18;
+      }
     }
     
     window.filterByDevice = function(dev) {
@@ -1091,9 +1094,9 @@
       if (ip.includes('95.229.184.162')) {
         return { isp: 'Telecom Italia S.p.A.', location: '🇮🇹 Santa Croce Camerina, Italy' };
       } else if (ip.includes('176.6.5.196') || ip.includes('176.6.63.5')) {
-        return { isp: 'Telefonica Germany GmbH & Co.', location: '🇩🇪 Cologne, Germany' };
-      } else if (ip.includes('2a02:3030:67a') || ip.includes('2a02:3030')) {
-        return { isp: 'Telefonica Germany GmbH & Co. OHG', location: '🇩🇪 Hanover, Germany' };
+        return { isp: 'Telefonica Germany GmbH & Co.', location: '🇩🇪 Duesseldorf, Germany' };
+      } else if (ip.includes('2001:4dd0:af15') || ip.includes('2a02:3030')) {
+        return { isp: 'NetCologne GmbH', location: '🇩🇪 Cologne, Germany' };
       }
       return { isp: 'Broadband WAN Gateway', location: '🇪🇺 Europe / Member Node' };
     }
@@ -1125,7 +1128,7 @@
 
     function updateAnalyticsKPIs() {
       // Use our clean 60-minute RAM chart buffer instead of the limited ring buffer
-      const chartLogs = STATE.chartLogs || [];
+      /*const chartLogs = STATE.chartLogs || [];
       const activeLogs = STATE.selectedDevice === 'all' 
        ? chartLogs 
        : chartLogs.filter(l => l.device === STATE.selectedDevice);
@@ -1137,6 +1140,17 @@
       // If 'total'—based on the global counter—exceeds the number of logs remaining in the buffer, 
       // we adjust the 'allowed' portion accordingly:
       const allowed = Math.max(0, total - blocked);
+      const rate = total > 0 ? Math.round((blocked / total) * 100) : 0;*/
+
+      // Use sessionLogs for lifetime metrics since app start, with device filter
+      const sessionLogs = STATE.sessionLogs || [];
+      const activeLogs = STATE.selectedDevice === 'all'
+        ? sessionLogs
+        : sessionLogs.filter(l => l.device === STATE.selectedDevice);
+    
+      const total = activeLogs.length;
+      const blocked = activeLogs.filter(l => String(l.status).toLowerCase() === 'blocked').length;
+      const allowed = total - blocked;
       const rate = total > 0 ? Math.round((blocked / total) * 100) : 0;
       
       const nowMs = Date.now();
