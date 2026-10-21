@@ -377,15 +377,15 @@
         </div>
         <div class="kpi-box">
           <div class="kpi-val" style="color: var(--accent);" id="kpi-latency">0 ms</div>
-          <div class="kpi-label">Edge Latency</div>
+          <div class="kpi-label">API Latency</div>
           <div class="kpi-sub">Encrypted DoH</div>
         </div>
       </div>
 
       <div class="card" style="margin-bottom: 1.25rem;">
         <div class="card-title">
-          <span>Evolution of Queries & Blocking Ratio over 60 Minutes</span>
-         <!-- <span style="font-size: 0.7rem; color: var(--muted);" id="analytics-chart-subtitle">Queries over time & block ratio</span>-->
+          <span>Queries & Blocking Ratio</span>
+          <span style="font-size: 0.7rem; color: var(--muted);" id="analytics-chart-subtitle">60 Minutes Window</span>
         </div>
         <div style="position: relative; height: 180px; width: 100%;">
           <canvas id="analytics-canvas" style="width: 100%; height: 100%; display: block; cursor: default;"></canvas>
@@ -871,7 +871,7 @@
         
         for (const item of logsArray.reverse()) {
           const clientObj = item.client || {};
-          const deviceName = clientObj.name || item.deviceName || item.device?.name || (typeof clientObj === 'string' ? clientObj : 'NextDNS Device');
+          const deviceName = clientObj.name || item.deviceName || item.device?.name || (typeof clientObj === 'string' ? clientObj : 'Unidentified'); // NextDNS Device
           const ipVal = typeof clientObj === 'string' ? clientObj : (clientObj.ip || item.clientIp || '95.229.184.162');
 
           const logObj = {
@@ -1039,7 +1039,7 @@
     
         for (const item of logsArray.reverse()) {
           const clientObj = item.client || {};
-          const deviceName = clientObj.name || item.deviceName || item.device?.name || (typeof clientObj === 'string' ? clientObj : 'NextDNS Device');
+          const deviceName = clientObj.name || item.deviceName || item.device?.name || (typeof clientObj === 'string' ? clientObj : 'Unidentified'); // NextDNS Device
           const ipVal = typeof clientObj === 'string' ? clientObj : (clientObj.ip || item.clientIp || '95.229.184.162');
     
           const logObj = {
@@ -1093,9 +1093,9 @@
     function getNextDNSIPDetails(ip) {
       if (ip.includes('95.229.184.162')) {
         return { isp: 'Telecom Italia S.p.A.', location: '🇮🇹 Santa Croce Camerina, Italy' };
-      } else if (ip.includes('176.6.5.196') || ip.includes('176.6.63.5')) {
+      } else if (ip.includes('176.6.5.196') || ip.includes('176.6.63.5') || ip.includes('2a02:3038')) {
         return { isp: 'Telefonica Germany GmbH & Co.', location: '🇩🇪 Duesseldorf, Germany' };
-      } else if (ip.includes('2001:4dd0:af15') || ip.includes('2a02:3030')) {
+      } else if (ip.includes('2001:4dd0:af15') || ip.includes('2a02:3030') || ip.includes('78.35') || ip.includes('2a0a:a547')) {
         return { isp: 'NetCologne GmbH', location: '🇩🇪 Cologne, Germany' };
       }
       return { isp: 'Broadband WAN Gateway', location: '🇪🇺 Europe / Member Node' };
@@ -1580,8 +1580,8 @@
         ctx.lineTo(width - padding.right, y);
         ctx.stroke();
     
-        // Left axis labels (Absolute queries)
-        ctx.fillStyle = '#94a3b8';
+        // Left axis labels (Absolute queries) in Green
+        ctx.fillStyle = '#4ade80';
         ctx.font = '9px monospace';
         ctx.textAlign = 'right';
         ctx.fillText(Math.round(maxVal * (1 - i / 4)), padding.left - 6, y + 3);
