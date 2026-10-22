@@ -740,7 +740,7 @@
       }
     }
 
-    function handleIncomingLog(log) {
+    /*function handleIncomingLog(log) {
       // Only persist logs in DB if running in real API mode
       if (STATE.mode === 'api') saveLogToDB(log);
       
@@ -768,6 +768,45 @@
 
       if (!log.clientIp) log.clientIp = '95.229.184.162';
 
+      if (!renderScheduled) {
+        renderScheduled = true;
+        requestAnimationFrame(() => {
+          renderScheduled = false;
+          renderFilteredLiveLogs();
+        });
+      }
+      updateAnalyticsKPIs();
+      renderHitsTable();
+    }*/
+
+    function handleIncomingLog(log) {
+      // Save log to DB if running in real API mode (IndexedDB can be muted later if needed)
+      if (STATE.mode === 'api' && typeof saveLogToDB === 'function') saveLogToDB(log);
+      
+      STATE.logs.unshift(log);
+      STATE.totalQueriesCounter++;
+      if (STATE.logs.length > 500) STATE.logs.pop();
+      if (log.device) registerDevice(log.device);
+    
+      const d = log.domain.toLowerCase();
+      if (!STATE.hits[d]) STATE.hits[d] = { count: 0, lastSeen: Date.now() };
+      STATE.hits[d].count++;
+      STATE.hits[d].lastSeen = Date.now();
+      
+      if (STATE.mode === 'api' && typeof saveHitToDB === 'function') saveHitToDB(d, STATE.hits[d].count, STATE.hits[d].lastSeen);
+    
+      if (STATE.config.autoBlock && STATE.hits[d].count >= STATE.config.threshold) {
+        const isDeniedAlready = STATE.denylist.some(r => r.domain.toLowerCase() === d);
+        const isSys = STATE.config.protectSystem && isProtected(d);
+        if (!isDeniedAlready && !isSys) {
+          STATE.denylist.unshift({ id: String(Date.now()), domain: d, category: 'Auto-Block', active: true, hits: STATE.hits[d].count });
+          saveState();
+          showToast('🚫 Guard Denied', `Blocked <code>${safeText(d)}</code>`, 'danger');
+        }
+      }
+    
+      if (!log.clientIp) log.clientIp = '95.229.184.162';
+    
       if (!renderScheduled) {
         renderScheduled = true;
         requestAnimationFrame(() => {
@@ -910,7 +949,7 @@
         // Fallback using general performance timing if HEAD fails
         return Math.round(performance.now() - start);
       }
-    }*/
+    }
 
 
     // Measures real-time HTTP round-trip latency to the NextDNS API/Proxy safely.
@@ -945,7 +984,7 @@
         // Organic jitter fallback if the HEAD request gets blocked or fails (e.g. 18ms - 43ms)
         return Math.floor(Math.random() * 25) + 18;
       }
-    }
+    }*/
     
     // Fetches logs and measures real network latency on every poll.
     /*async function fetchNextDNSLogs() {
@@ -1007,7 +1046,7 @@
     }*/  
 
     // Fetches real-time NextDNS logs and measures true API round-trip latency
-    async function fetchNextDNSLogs() {
+    /*async function fetchNextDNSLogs() {
       if (STATE.mode !== 'api') return;
       const profile = STATE.config.profile;
       const apiKey = STATE.config.apiKey;
@@ -1079,6 +1118,89 @@
         // Organic fallback jitter if fetch fails
         //STATE.currentLatency = Math.floor(Math.random() * 25) + 18;
       }
+    }*/
+
+    // Fetches real-time NextDNS logs and measures true API round-trip latency
+    async function fetchNextDNSLogs() {
+      if (STATE.mode !== 'api') return;
+      const profile = STATE.config.profile;
+      const apiKey = STATE.config.apiKey;
+      const proxy = STATE.config.proxy || 'https://api.nextdns.io';
+      if (!profile || !apiKey) return;
+    
+      const startTime = performance.now();
+    
+      try {
+        const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${profile}/logs?limit=50`, {
+          headers: { 
+            'X-Api-Key': apiKey, 
+            'Accept': 'application/json' 
+          }
+        });
+    
+        const duration = Math.round(performance.now() - startTime);
+        STATE.currentLatency = Math.max(12, duration);
+    
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        const data = await res.json();
+        const logsArray = data.data || data.logs || (Array.isArray(data) ? data : []);
+    
+        // Initialize RAM buffers if not present
+        if (!STATE.chartLogs) STATE.chartLogs = [];
+        if (!STATE.sessionLogs) STATE.sessionLogs = [];
+        if (!STATE.logs) STATE.logs = [];
+    
+        let newLogsAdded = false;
+    
+        for (const item of logsArray.reverse()) {
+          const clientObj = item.client || {};
+          const deviceName = clientObj.name || item.deviceName || item.device?.name || (typeof clientObj === 'string' ? clientObj : 'Unidentified');
+          const ipVal = typeof clientObj === 'string' ? clientObj : (clientObj.ip || item.clientIp || '95.229.184.162');
+    
+          const logObj = {
+            id: item.id || `log-${Math.random()}`,
+            time: item.timestamp ? new Date(item.timestamp) : new Date(),
+            domain: item.domain || 'unknown',
+            device: deviceName,
+            clientIp: ipVal,
+            status: item.status || 'allowed',
+            reasons: (item.reasons || []).map(r => typeof r === 'string' ? r : r.name),
+            proto: item.protocol || 'DoH',
+            type: item.root?.queryType || 'A',
+            latency: STATE.currentLatency
+          };
+    
+          // Strict session-wide uniqueness check to prevent double counting
+          const isDuplicate = STATE.sessionLogs.some(l => l.id === logObj.id);
+          if (!isDuplicate) {
+            // 1. Store in infinite session log array
+            STATE.sessionLogs.push(logObj);
+    
+            // 2. Store in 60-min rolling chart buffer
+            STATE.chartLogs.push(logObj);
+    
+            // 3. Process strictly new log through handler (updates DOM table and counters)
+            handleIncomingLog(logObj);
+            newLogsAdded = true;
+          }
+        }
+    
+        // Prune chart logs older than 60 minutes window
+        const now = Date.now();
+        const oneHourMs = 60 * 60 * 1000;
+        STATE.chartLogs = STATE.chartLogs.filter(l => {
+          const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
+          return !isNaN(t) && (now - t) <= oneHourMs;
+        });
+    
+        // Refresh chart if new unique logs were processed
+        if (newLogsAdded) {
+          renderAnalyticsChart();
+        }
+    
+      } catch (e) {
+        console.error('Failed to fetch NextDNS logs:', e);
+      }
     }
     
     window.filterByDevice = function(dev) {
@@ -1095,7 +1217,7 @@
         return { isp: 'Telecom Italia S.p.A.', location: '🇮🇹 Santa Croce Camerina, Italy' };
       } else if (ip.includes('176.6.5.196') || ip.includes('176.6.63.5') || ip.includes('2a02:3038')) {
         return { isp: 'Telefonica Germany GmbH & Co.', location: '🇩🇪 Duesseldorf, Germany' };
-      } else if (ip.includes('2001:4dd0:af15') || ip.includes('2a02:3030') || ip.includes('78.35') || ip.includes('2a0a:a547')) {
+      } else if (ip.includes('2001:4dd0') || ip.includes('2a02:3030') || ip.includes('78.35') || ip.includes('2a0a:a547')) {
         return { isp: 'NetCologne GmbH', location: '🇩🇪 Cologne, Germany' };
       }
       return { isp: 'Broadband WAN Gateway', location: '🇪🇺 Europe / Member Node' };
