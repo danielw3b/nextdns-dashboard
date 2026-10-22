@@ -1491,7 +1491,7 @@
         ctx.fill();
       });
 
-      // Auto-refresh active tooltip dynamically using fresh chart metrics during polling updates
+      // Auto-refresh active tooltip dynamically during polling updates
       if (activeTooltipIndex !== null) {
         const tooltip = document.getElementById('chart-tooltip');
         if (tooltip && tooltip.style.display === 'block') {
@@ -1505,7 +1505,7 @@
             }
           }
         }
-      }  
+      } 
     }
 
     function renderHitsTable() {
@@ -1744,15 +1744,15 @@
       });*/
       
       // tooltip for bucket chart
-      const canvas = document.getElementById('analytics-canvas');
+      /*const canvas = document.getElementById('analytics-canvas');
       const tooltip = document.getElementById('chart-tooltip');
       if (!canvas || !tooltip) return;
 
       // Track currently active tooltip index for live updates during polling
-      let activeTooltipIndex = null;
+      let activeTooltipIndex = null;*/
       
       // Inside mouse/touch interaction listener:
-      canvas.addEventListener('mousemove', (e) => {
+      /*canvas.addEventListener('mousemove', (e) => {
         const rect = canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
@@ -1774,10 +1774,10 @@
         lastContainerWidth = rect.width;
         
         updateTooltipContent(bucketIndex, mouseX, mouseY, rect.width);
-      });
+      });*/
 
       // Touch support for tablets and mobile devices
-      canvas.addEventListener('touchstart', (e) => {
+      /*canvas.addEventListener('touchstart', (e) => {
         const touch = e.touches[0];
         if (!touch) return;
         const rect = canvas.getBoundingClientRect();
@@ -1804,12 +1804,12 @@
         
         // Prevent page scrolling when interacting with the chart
         e.preventDefault();
-      }, { passive: false });
+      }, { passive: false });*/
       
-      canvas.addEventListener('mouseleave', () => {
+      /*canvas.addEventListener('mouseleave', () => {
         activeTooltipIndex = null;
         tooltip.style.display = 'none';
-      });
+      });*/
       
       // Helper function to render tooltip content dynamically
       function updateTooltipContent(bucketIndex, mouseX, mouseY, containerWidth) {
@@ -1837,6 +1837,50 @@
         }
         tooltip.style.top = (mouseY - 40) + 'px';
       }
+
+      // Central helper for both mouse and touch interactions
+      function handleChartInteraction(clientX, clientY, rect) {
+        const mouseX = clientX - rect.left;
+        const mouseY = clientY - rect.top;
+        const { padding, chartWidth, chartHeight, bucketsCount } = currentChartMetrics;
+        const tooltip = document.getElementById('chart-tooltip');
+      
+        if (!tooltip || !chartWidth || mouseX < padding.left || mouseX > padding.left + chartWidth || mouseY < padding.top || mouseY > padding.top + chartHeight) {
+          activeTooltipIndex = null;
+          if (tooltip) tooltip.style.display = 'none';
+          return;
+        }
+      
+        const slotWidth = chartWidth / bucketsCount;
+        const bucketIndex = Math.floor((mouseX - padding.left) / slotWidth);
+        
+        // Save state for periodic background polling refreshes
+        activeTooltipIndex = bucketIndex;
+        lastMouseX = mouseX;
+        lastMouseY = mouseY;
+        lastContainerWidth = rect.width;
+        
+        updateTooltipContent(bucketIndex, mouseX, mouseY, rect.width);
+      }
+      
+      // Desktop mouse event
+      canvas.addEventListener('mousemove', (e) => {
+        handleChartInteraction(e.clientX, e.clientY, canvas.getBoundingClientRect());
+      });
+      
+      canvas.addEventListener('mouseleave', () => {
+        activeTooltipIndex = null;
+        const tooltip = document.getElementById('chart-tooltip');
+        if (tooltip) tooltip.style.display = 'none';
+      });
+      
+      // Tablet / Mobile touch event
+      canvas.addEventListener('touchstart', (e) => {
+        const touch = e.touches[0];
+        if (!touch) return;
+        handleChartInteraction(touch.clientX, touch.clientY, canvas.getBoundingClientRect());
+        e.preventDefault();
+      }, { passive: false });
 
       // wakeLock
       const wakeLockIcon = document.getElementById("wakeLockIcon");
