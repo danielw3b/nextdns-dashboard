@@ -1491,13 +1491,21 @@
         ctx.fill();
       });
 
-      // Auto-refresh active tooltip if open during data updates
-      if (activeTooltipIndex !== null && currentChartBuckets[activeTooltipIndex]) {
+      // Auto-refresh active tooltip dynamically using fresh chart metrics during polling updates
+      if (activeTooltipIndex !== null) {
         const tooltip = document.getElementById('chart-tooltip');
         if (tooltip && tooltip.style.display === 'block') {
-          updateTooltipContent(activeTooltipIndex, lastMouseX, lastMouseY, lastContainerWidth);
+          const { padding, chartWidth, bucketsCount } = currentChartMetrics;
+          if (chartWidth > 0 && lastMouseX >= padding.left && lastMouseX <= padding.left + chartWidth) {
+            const slotWidth = chartWidth / bucketsCount;
+            const freshIndex = Math.floor((lastMouseX - padding.left) / slotWidth);
+            if (freshIndex >= 0 && freshIndex < bucketsCount && currentChartBuckets[freshIndex]) {
+              activeTooltipIndex = freshIndex;
+              updateTooltipContent(freshIndex, lastMouseX, lastMouseY, lastContainerWidth);
+            }
+          }
         }
-      }   
+      }  
     }
 
     function renderHitsTable() {
@@ -1767,6 +1775,36 @@
         
         updateTooltipContent(bucketIndex, mouseX, mouseY, rect.width);
       });
+
+      // Touch support for tablets and mobile devices
+      canvas.addEventListener('touchstart', (e) => {
+        const touch = e.touches[0];
+        if (!touch) return;
+        const rect = canvas.getBoundingClientRect();
+        const touchX = touch.clientX - rect.left;
+        const touchY = touch.clientY - rect.top;
+        const { padding, chartWidth, chartHeight, bucketsCount } = currentChartMetrics;
+      
+        if (!chartWidth || touchX < padding.left || touchX > padding.left + chartWidth || touchY < padding.top || touchY > padding.top + chartHeight) {
+          activeTooltipIndex = null;
+          tooltip.style.display = 'none';
+          return;
+        }
+      
+        const slotWidth = chartWidth / bucketsCount;
+        const bucketIndex = Math.floor((touchX - padding.left) / slotWidth);
+        
+        // Store touch position and index for live polling updates
+        activeTooltipIndex = bucketIndex;
+        lastMouseX = touchX;
+        lastMouseY = touchY;
+        lastContainerWidth = rect.width;
+        
+        updateTooltipContent(bucketIndex, touchX, touchY, rect.width);
+        
+        // Prevent page scrolling when interacting with the chart
+        e.preventDefault();
+      }, { passive: false });
       
       canvas.addEventListener('mouseleave', () => {
         activeTooltipIndex = null;
