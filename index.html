@@ -743,7 +743,7 @@
 
     function handleIncomingLog(log) {
       // Save log to DB if running in real API mode (IndexedDB can be muted later if needed)
-      if (STATE.mode === 'api' && typeof saveLogToDB === 'function') saveLogToDB(log);
+      //if (STATE.mode === 'api' && typeof saveLogToDB === 'function') saveLogToDB(log);
       
       STATE.logs.unshift(log);
       STATE.totalQueriesCounter++;
@@ -755,7 +755,7 @@
       STATE.hits[d].count++;
       STATE.hits[d].lastSeen = Date.now();
       
-      if (STATE.mode === 'api' && typeof saveHitToDB === 'function') saveHitToDB(d, STATE.hits[d].count, STATE.hits[d].lastSeen);
+      //if (STATE.mode === 'api' && typeof saveHitToDB === 'function') saveHitToDB(d, STATE.hits[d].count, STATE.hits[d].lastSeen);
     
       if (STATE.config.autoBlock && STATE.hits[d].count >= STATE.config.threshold) {
         const isDeniedAlready = STATE.denylist.some(r => r.domain.toLowerCase() === d);
@@ -978,8 +978,8 @@
         ? sessionLogs
         : sessionLogs.filter(l => l.device === STATE.selectedDevice);
     
-      //const total = activeLogs.length;
-      const total = STATE.totalQueriesCounter;
+      const total = activeLogs.length;
+      //const total = STATE.totalQueriesCounter;
       const blocked = activeLogs.filter(l => String(l.status).toLowerCase() === 'blocked').length;
       const allowed = total - blocked;
       const rate = total > 0 ? Math.round((blocked / total) * 100) : 0;
@@ -1074,120 +1074,6 @@
     }
 
     /*let currentChartBuckets = [];
-    let currentChartMetrics = {};
-
-    function renderAnalyticsChart() {
-      const canvas = document.getElementById('analytics-canvas');
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      const dpr = window.devicePixelRatio || 1;
-      const width = canvas.parentElement.clientWidth || 400;
-      const height = 180;
-      
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      ctx.scale(dpr, dpr);
-      ctx.clearRect(0, 0, width, height);
-
-      const activeLogs = STATE.selectedDevice === 'all' ? STATE.logs : STATE.logs.filter(l => l.device === STATE.selectedDevice);
-      const bucketsCount = 12;
-      const now = Date.now();
-      const windowMs = 60 * 60 * 1000; 
-      const bucketSizeMs = windowMs / bucketsCount; 
-      const startTime = now - windowMs;
-
-      const buckets = Array.from({ length: bucketsCount }, (_, idx) => ({
-        index: idx,
-        startTime: startTime + (idx * bucketSizeMs),
-        allowed: 0, blocked: 0, total: 0 
-      }));
-
-      for (const l of activeLogs) {
-        const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
-        const diff = t - startTime;
-        if (diff < 0 || diff > windowMs) continue;
-        let idx = Math.floor(diff / bucketSizeMs);
-        if (idx < 0) idx = 0;
-        if (idx >= bucketsCount) idx = bucketsCount - 1;
-        
-        if (String(l.status || 'allowed').toLowerCase() === 'blocked') buckets[idx].blocked++;
-        else buckets[idx].allowed++;
-        buckets[idx].total++;
-      }
-
-      currentChartBuckets = buckets;
-      const maxVal = Math.max(1, ...buckets.map(b => Math.max(b.allowed, b.blocked, b.total)));
-      const padding = { top: 15, right: 42, bottom: 28, left: 40 };
-      const chartWidth = width - padding.left - padding.right;
-      const chartHeight = height - padding.top - padding.bottom;
-      currentChartMetrics = { padding, chartWidth, chartHeight, maxVal, bucketsCount };
-
-      for (let i = 0; i <= 4; i++) {
-        const y = padding.top + (chartHeight / 4) * i;
-        ctx.strokeStyle = '#1e293b';
-        ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(padding.left, y); ctx.lineTo(width - padding.right, y); ctx.stroke();
-
-        ctx.fillStyle = '#38bdf8';
-        ctx.font = '9px monospace';
-        ctx.textAlign = 'right';
-        ctx.fillText(Math.round(maxVal * (1 - i / 4)), padding.left - 6, y + 3);
-      }
-
-      for (let i = 0; i <= 4; i++) {
-        const y = padding.top + (chartHeight / 4) * i;
-        ctx.fillStyle = '#4ade80';
-        ctx.font = '9px monospace';
-        ctx.textAlign = 'left';
-        ctx.fillText(Math.round(100 * (1 - i / 4)) + '%', width - padding.right + 6, y + 3);
-      }
-
-      const slotWidth = chartWidth / bucketsCount;
-      const barWidth = Math.max(3, Math.min(8, slotWidth - 10));
-
-      buckets.forEach((b, i) => {
-        const x = padding.left + (i * slotWidth) + ((slotWidth - barWidth) / 2);
-        const allowedH = (b.allowed / maxVal) * chartHeight;
-        const blockedH = (b.blocked / maxVal) * chartHeight;
-
-        ctx.fillStyle = 'rgba(248, 113, 113, 0.75)';
-        ctx.fillRect(x, padding.top + chartHeight - blockedH, barWidth, blockedH);
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.75)';
-        ctx.fillRect(x, padding.top + chartHeight - blockedH - allowedH, barWidth, allowedH);
-      });
-
-      ctx.strokeStyle = '#4ade80';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      let hasStartedLine = false;
-
-      buckets.forEach((b, i) => {
-        const x = padding.left + (i * slotWidth) + (slotWidth / 2);
-        const ratio = b.total > 0 ? (b.blocked / b.total) : 0;
-        const y = padding.top + chartHeight - (ratio * chartHeight);
-
-        if (!hasStartedLine) {
-          ctx.moveTo(x, y);
-          hasStartedLine = true;
-        } else {
-          ctx.lineTo(x, y);
-        }
-      });
-      ctx.stroke();
-
-      buckets.forEach((b, i) => {
-        const x = padding.left + (i * slotWidth) + (slotWidth / 2);
-        const ratio = b.total > 0 ? (b.blocked / b.total) : 0;
-        const y = padding.top + chartHeight - (ratio * chartHeight);
-
-        ctx.fillStyle = '#4ade80';
-        ctx.beginPath();
-        ctx.arc(x, y, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-      });
-    }
-
-    let currentChartBuckets = [];
     let currentChartMetrics = {};
     
     function renderAnalyticsChart() {
@@ -1321,10 +1207,8 @@
     let currentChartBuckets = [];
     let currentChartMetrics = {};
     
-    /**
-     * Renders the 60-minute analytics chart using the dedicated RAM chart buffer,
-     * 12 fixed 5-minute buckets, stacked bars, and a blue ratio trend line.
-     */
+    // Renders the 60-minute analytics chart using the dedicated RAM chart buffer,
+    // 12 fixed 5-minute buckets, stacked bars, and a blue ratio trend line.
     function renderAnalyticsChart() {
       const canvas = document.getElementById('analytics-canvas');
       if (!canvas) return;
@@ -1486,23 +1370,38 @@
     function renderHitsTable() {
       const tbody = document.getElementById('autoblock-hits-body');
       if (!tbody) return;
-      const activeLogs = STATE.selectedDevice === 'all' ? STATE.logs : STATE.logs.filter(l => l.device === STATE.selectedDevice);
+    
+      // Use sessionLogs buffer for frequency monitoring, respecting device filter
+      const sessionLogs = STATE.sessionLogs || [];
+      const activeLogs = STATE.selectedDevice === 'all' 
+        ? sessionLogs 
+        : sessionLogs.filter(l => l.device === STATE.selectedDevice);
+    
       const deviceHits = {};
-      activeLogs.forEach(l => { const d = l.domain.toLowerCase(); deviceHits[d] = (deviceHits[d] || 0) + 1; });
-      const items = Object.entries(deviceHits).map(([domain, count]) => ({ domain, count })).sort((a, b) => b.count - a.count);
-
+      activeLogs.forEach(l => { 
+        const d = (l.domain || 'unknown').toLowerCase(); 
+        deviceHits[d] = (deviceHits[d] || 0) + 1; 
+      });
+    
+      const items = Object.entries(deviceHits)
+        .map(([domain, count]) => ({ domain, count }))
+        .sort((a, b) => b.count - a.count);
+    
       tbody.innerHTML = items.length ? items.slice(0, 15).map(i => {
-        const pct = Math.min(100, Math.round((i.count / STATE.config.threshold) * 100));
+        const pct = Math.min(100, Math.round((i.count / (STATE.config.threshold || 10)) * 100));
+        const isSys = typeof isProtected === 'function' ? isProtected(i.domain) : false;
         return `
           <tr>
-            <td class="domain-cell" title="${safeText(i.domain)}">${safeText(i.domain)}</td>
+            <td class="domain-cell" title="${safeText(i.domain)}">${safeText(i.domain)} ${isSys ? '<span class="badge">Protected</span>' : ''}</td>
             <td style="color: var(--warn); font-weight: bold; font-family: monospace;">${i.count}</td>
-            <td><div class="bar-bg"><div class="bar-fill" style="width:${pct}%;"></div></div></td>
-            <td style="color: var(--muted); font-size: 0.7rem;">Monitoring</td>
+            <td style="width: 140px;">
+              <div class="bar-bg"><div class="bar-fill" style="width:${pct}%; background:${pct >= 100 ? 'var(--blocked)' : 'var(--warn)'}"></div></div>
+            </td>
+            <td style="color: var(--muted); font-size: 0.7rem;">${isSys ? 'Guardrail' : (pct >= 100 ? 'Auto-Denied' : 'Monitoring')}</td>
             <td style="text-align: right;"><button onclick="addQuickDeny('${safeText(i.domain)}')" class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">Block</button></td>
           </tr>
         `;
-      }).join('') : `<tr><td colspan="5" style="text-align:center; color:var(--muted);">No frequency data for this device.</td></tr>`;
+      }).join('') : `<tr><td colspan="5" style="text-align:center; color:var(--muted);">No frequency data for this selection.</td></tr>`;
     }
 
     window.addQuickDeny = function(domain) {
@@ -1588,7 +1487,7 @@
 
     document.getElementById('btn-toggle-stream').onclick = () => {
       STATE.isStreaming = !STATE.isStreaming;
-      document.getElementById('btn-toggle-stream').textContent = STATE.isStreaming ? '◼' : '▶︎';
+      document.getElementById('btn-toggle-stream').textContent = STATE.isStreaming ? '⏸️' : '▶️';
       document.getElementById('stream-status').textContent = STATE.isStreaming ? (STATE.mode === 'api' ? 'Live' : 'Demo') : 'Paused';
     };
 
@@ -1621,7 +1520,7 @@
       // Wipe simulation data when switching to API mode to prevent data mixing
       if (wasSimMode && isNowApiMode) {
         if (simTimer) clearInterval(simTimer);
-        clearDatabase();
+        //clearDatabase();
         STATE.logs = [];
         STATE.totalQueriesCounter = 0;
         STATE.devices.clear();
