@@ -1486,6 +1486,24 @@
         ctx.arc(x, y, 2.5, 0, Math.PI * 2);
         ctx.fill();
       });
+
+      // Auto-refresh active tooltip if open during data updates
+      if (activeTooltipIndex !== null && currentChartBuckets[activeTooltipIndex]) {
+        const tooltip = document.getElementById('chart-tooltip');
+        if (tooltip && tooltip.style.display === 'block') {
+          // Use estimated or stored mouse coordinates if needed, or simply update innerHTML
+          const b = currentChartBuckets[activeTooltipIndex];
+          const blockRatio = b.total > 0 ? Math.round((b.blocked / b.total) * 100) : 0;
+          const timeStr = new Date(b.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          tooltip.innerHTML = `
+            <div style="font-weight:600; color:#38bdf8; margin-bottom:2px;">Time Slot: ${timeStr}</div>
+            <div>Total Queries: <b>${b.total}</b></div>
+            <div style="color:#4ade80;">Allowed: ${b.allowed}</div>
+            <div style="color:#f87171;">Blocked: ${b.blocked}</div>
+            <div style="color:#4ade80; margin-top:2px; border-top:1px solid #334155; padding-top:2px;">Block Ratio: <b>${blockRatio}%</b></div>
+          `;
+        }
+      }    
     }
 
     function renderHitsTable() {
@@ -1728,29 +1746,43 @@
       const tooltip = document.getElementById('chart-tooltip');
       if (!canvas || !tooltip) return;
 
+      // Track currently active tooltip index for live updates during polling
+      let activeTooltipIndex = null;
+      
+      // Inside mouse/touch interaction listener:
       canvas.addEventListener('mousemove', (e) => {
         const rect = canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
         const { padding, chartWidth, chartHeight, bucketsCount } = currentChartMetrics;
-
+      
         if (!chartWidth || mouseX < padding.left || mouseX > padding.left + chartWidth || mouseY < padding.top || mouseY > padding.top + chartHeight) {
+          activeTooltipIndex = null;
           tooltip.style.display = 'none';
           return;
         }
-
+      
         const slotWidth = chartWidth / bucketsCount;
         const bucketIndex = Math.floor((mouseX - padding.left) / slotWidth);
+        activeTooltipIndex = bucketIndex; // Save active index
+        
+        updateTooltipContent(bucketIndex, mouseX, mouseY, rect.width);
+      });
+      
+      canvas.addEventListener('mouseleave', () => {
+        activeTooltipIndex = null;
+        tooltip.style.display = 'none';
+      });
+      
+      // Helper function to render tooltip content dynamically
+      function updateTooltipContent(bucketIndex, mouseX, mouseY, containerWidth) {
+        const tooltip = document.getElementById('chart-tooltip');
         const b = currentChartBuckets[bucketIndex];
-
-        if (!b) {
-          tooltip.style.display = 'none';
-          return;
-        }
-
+        if (!tooltip || !b) return;
+      
         const blockRatio = b.total > 0 ? Math.round((b.blocked / b.total) * 100) : 0;
         const timeStr = new Date(b.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
+      
         tooltip.innerHTML = `
           <div style="font-weight:600; color:#38bdf8; margin-bottom:2px;">Time Slot: ${timeStr}</div>
           <div>Total Queries: <b>${b.total}</b></div>
@@ -1761,24 +1793,20 @@
         
         tooltip.style.display = 'block';
         const tooltipWidth = 160;
-        if (mouseX + tooltipWidth > rect.width) {
+        if (mouseX + tooltipWidth > containerWidth) {
           tooltip.style.left = (mouseX - tooltipWidth - 10) + 'px';
         } else {
           tooltip.style.left = (mouseX + 15) + 'px';
         }
         tooltip.style.top = (mouseY - 40) + 'px';
-      });
-
-      canvas.addEventListener('mouseleave', () => {
-        tooltip.style.display = 'none';
-      });
+      }
 
       // wakeLock
       const wakeLockIcon = document.getElementById("wakeLockIcon");
       if (wakeLockIcon) {
         wakeLockIcon.addEventListener("click", requestWakeLock);
       }
-    });
+    }
     
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") {
