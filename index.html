@@ -1121,7 +1121,7 @@
     }*/
 
     // Fetches real-time NextDNS logs and measures true API round-trip latency
-    async function fetchNextDNSLogs() {
+    /*async function fetchNextDNSLogs() {
       if (STATE.mode !== 'api') return;
       const profile = STATE.config.profile;
       const apiKey = STATE.config.apiKey;
@@ -1197,6 +1197,101 @@
         if (newLogsAdded) {
           renderAnalyticsChart();
         }
+    
+      } catch (e) {
+        console.error('Failed to fetch NextDNS logs:', e);
+      }
+    }*/
+
+    // Fetches real-time NextDNS logs, prevents duplicate counting, and handles initial load correctly
+    async function fetchNextDNSLogs() {
+      if (STATE.mode !== 'api') return;
+      const profile = STATE.config.profile;
+      const apiKey = STATE.config.apiKey;
+      const proxy = STATE.config.proxy || 'https://api.nextdns.io';
+      if (!profile || !apiKey) return;
+    
+      const startTime = performance.now();
+    
+      try {
+        const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${profile}/logs?limit=50`, {
+          headers: { 
+            'X-Api-Key': apiKey, 
+            'Accept': 'application/json' 
+          }
+        });
+    
+        const duration = Math.round(performance.now() - startTime);
+        STATE.currentLatency = Math.max(12, duration); // Measured API round-trip latency
+    
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        const data = await res.json();
+        const logsArray = data.data || data.logs || (Array.isArray(data) ? data : []);
+    
+        // Initialize RAM buffers if not present
+        if (!STATE.chartLogs) STATE.chartLogs = [];
+        if (!STATE.sessionLogs) STATE.sessionLogs = [];
+        if (!STATE.logs) STATE.logs = [];
+    
+        const isInitialLoad = STATE.sessionLogs.length === 0;
+        let newLogsAdded = false;
+    
+        for (const item of logsArray.reverse()) {
+          const clientObj = item.client || {};
+          const deviceName = clientObj.name || item.deviceName || item.device?.name || (typeof clientObj === 'string' ? clientObj : 'Unidentified');
+          const ipVal = typeof clientObj === 'string' ? clientObj : (clientObj.ip || item.clientIp || '95.229.184.162');
+    
+          const logObj = {
+            id: item.id || `log-${Math.random()}`,
+            time: item.timestamp ? new Date(item.timestamp) : new Date(),
+            domain: item.domain || 'unknown',
+            device: deviceName,
+            clientIp: ipVal,
+            status: item.status || 'allowed',
+            reasons: (item.reasons || []).map(r => typeof r === 'string' ? r : r.name),
+            proto: item.protocol || 'DoH',
+            type: item.root?.queryType || 'A',
+            latency: STATE.currentLatency
+          };
+    
+          // Check if log is already tracked in session storage
+          const exists = STATE.sessionLogs.some(l => l.id === logObj.id);
+    
+          if (!exists) {
+            // 1. Add to lifetime session logs
+            STATE.sessionLogs.push(logObj);
+    
+            // 2. Add to 60-min rolling chart buffer
+            STATE.chartLogs.push(logObj);
+    
+            // 3. Process via handler ONLY if it's a genuine new live request (not part of initial batch)
+            if (!isInitialLoad) {
+              handleIncomingLog(logObj);
+              newLogsAdded = true;
+            }
+          }
+        }
+    
+        // Handle initial load setup without inflating live counters artificially
+        if (isInitialLoad) {
+          STATE.totalQueriesCounter = STATE.sessionLogs.length;
+          // Populate initial live DOM table (max 500 entries)
+          STATE.logs = [...STATE.sessionLogs].slice(-500).reverse();
+          updateAnalyticsKPIs();
+          renderAnalyticsChart();
+          if (typeof renderHitsTable === 'function') renderHitsTable();
+        } else if (newLogsAdded) {
+          // Refresh chart if new unique live logs arrived during polling
+          renderAnalyticsChart();
+        }
+    
+        // Prune chart buffer strictly to the last 60 minutes window
+        const now = Date.now();
+        const oneHourMs = 60 * 60 * 1000;
+        STATE.chartLogs = STATE.chartLogs.filter(l => {
+          const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
+          return !isNaN(t) && (now - t) <= oneHourMs;
+        });
     
       } catch (e) {
         console.error('Failed to fetch NextDNS logs:', e);
