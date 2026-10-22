@@ -892,123 +892,37 @@
       }, 1500);
     }
 
-    /*async function fetchNextDNSLogs() {
-      if (STATE.mode !== 'api') return;
-      const profile = STATE.config.profile;
-      const apiKey = STATE.config.apiKey;
-      const proxy = STATE.config.proxy || 'https://api.nextdns.io';
-      if (!profile || !apiKey) return;
-
-      try {
-        const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${profile}/logs?limit=50`, {
-          headers: { 'X-Api-Key': apiKey, 'Accept': 'application/json' }
-        });
-        if (!res.ok) throw new Error(`API error`);
-        const data = await res.json();
-        const logsArray = data.data || data.logs || (Array.isArray(data) ? data : []);
-        console.log(logsArray);
-        
-        for (const item of logsArray.reverse()) {
-          const clientObj = item.client || {};
-          const deviceName = clientObj.name || item.deviceName || item.device?.name || (typeof clientObj === 'string' ? clientObj : 'Unidentified'); // NextDNS Device
-          const ipVal = typeof clientObj === 'string' ? clientObj : (clientObj.ip || item.clientIp || '95.229.184.162');
-
-          const logObj = {
-            id: item.id || `log-${Math.random()}`,
-            time: item.timestamp ? new Date(item.timestamp) : new Date(),
-            domain: item.domain || 'unknown',
-            device: deviceName,
-            clientIp: ipVal,
-            status: item.status || 'allowed',
-            reasons: (item.reasons || []).map(r => typeof r === 'string' ? r : r.name),
-            proto: item.protocol || 'DoH',
-            type: item.root?.queryType || 'A',
-            latency: item.latency || 15
-          };
-          if (!STATE.logs.some(l => l.id === logObj.id)) handleIncomingLog(logObj);
-        }
-      } catch (e) {}
-    }*/
-
-    
-    // Measures real-time HTTP round-trip latency to the NextDNS API/Proxy.
-    /*async function measureNextDNSLatency() {
-      const proxy = STATE.config.proxy || 'https://api.nextdns.io';
-      const start = performance.now();
-      
-      try {
-        // Bypass cache to get real network latency
-        await fetch(`${proxy.replace(/\/$/, '')}/profiles/${profile}?t=${Date.now()}`, { 
-          method: 'HEAD',
-          mode: 'no-cors', 
-          cache: 'no-store' 
-        });
-        const duration = performance.now() - start;
-        return Math.round(duration);
-      } catch (error) {
-        // Fallback using general performance timing if HEAD fails
-        return Math.round(performance.now() - start);
-      }
-    }
-
-
-    // Measures real-time HTTP round-trip latency to the NextDNS API/Proxy safely.
-    async function measureNextDNSLatency() {
-      const proxy = STATE.config.proxy || 'https://api.nextdns.io';
-      const profile = STATE.config.profile;
-      const apiKey = STATE.config.apiKey;
-      
-      if (!profile || !apiKey) return Math.floor(Math.random() * 15) + 20;
-    
-      const start = performance.now();
-      
-      // Prevent hanging requests from locking up the UI using an AbortController (4s timeout)
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
-    
-      try {
-        const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${profile}?t=${Date.now()}`, { 
-          method: 'GET',
-          headers: { 'X-Api-Key': apiKey },
-          cache: 'no-store',
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-        
-        const duration = Math.round(performance.now() - start);
-        // Real network requests take at least a few milliseconds; ensure realistic baseline
-        return Math.max(12, duration);
-      } catch (error) {
-        clearTimeout(timeoutId);
-        console.warn('Latency measurement network fallback activated.');
-        // Organic jitter fallback if the HEAD request gets blocked or fails (e.g. 18ms - 43ms)
-        return Math.floor(Math.random() * 25) + 18;
-      }
-    }*/
-    
-    // Fetches logs and measures real network latency on every poll.
-    /*async function fetchNextDNSLogs() {
+    // Fetch real-time NextDNS logs safely, preventing duplicate counts across polling intervals
+    async function fetchNextDNSLogs() {
       if (STATE.mode !== 'api') return;
       const profile = STATE.config.profile;
       const apiKey = STATE.config.apiKey;
       const proxy = STATE.config.proxy || 'https://api.nextdns.io';
       if (!profile || !apiKey) return;
     
-      // Measure real RTT latency before/during fetch
-      const measuredLatency = await measureNextDNSLatency();
-      STATE.currentLatency = measuredLatency; // Save for UI KPI box
+      const startTime = performance.now();
     
       try {
         const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${profile}/logs?limit=50`, {
           headers: { 'X-Api-Key': apiKey, 'Accept': 'application/json' }
         });
-        if (!res.ok) throw new Error(`API error`);
+    
+        const duration = Math.round(performance.now() - startTime);
+        STATE.currentLatency = Math.max(12, duration);
+    
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
         const data = await res.json();
         const logsArray = data.data || data.logs || (Array.isArray(data) ? data : []);
     
-        // Initialize chart RAM buffer if not present
+        // Initialize RAM buffers if missing
+        if (!STATE.sessionLogs) STATE.sessionLogs = [];
         if (!STATE.chartLogs) STATE.chartLogs = [];
+        if (!STATE.logs) STATE.logs = [];
     
+        const isInitialLoad = STATE.sessionLogs.length === 0;
+        let newLogsProcessed = false;
+    
+        // Process logs from oldest to newest
         for (const item of logsArray.reverse()) {
           const clientObj = item.client || {};
           const deviceName = clientObj.name || item.deviceName || item.device?.name || (typeof clientObj === 'string' ? clientObj : 'NextDNS Device');
@@ -1024,264 +938,36 @@
             reasons: (item.reasons || []).map(r => typeof r === 'string' ? r : r.name),
             proto: item.protocol || 'DoH',
             type: item.root?.queryType || 'A',
-            latency: measuredLatency // Use the real measured network latency instead of hardcoded 15ms!
-          };
-    
-          STATE.chartLogs.push(logObj);
-    
-          if (!STATE.logs.some(l => l.id === logObj.id)) handleIncomingLog(logObj);
-        }
-    
-        // Prune chart logs older than 60 minutes
-        const now = Date.now();
-        const oneHourMs = 60 * 60 * 1000;
-        STATE.chartLogs = STATE.chartLogs.filter(l => {
-          const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
-          return !isNaN(t) && (now - t) <= oneHourMs;
-        });
-    
-      } catch (e) {
-        console.error('Failed to fetch NextDNS logs:', e);
-      }
-    }*/  
-
-    // Fetches real-time NextDNS logs and measures true API round-trip latency
-    /*async function fetchNextDNSLogs() {
-      if (STATE.mode !== 'api') return;
-      const profile = STATE.config.profile;
-      const apiKey = STATE.config.apiKey;
-      const proxy = STATE.config.proxy || 'https://api.nextdns.io';
-      if (!profile || !apiKey) return;
-    
-      // Start high-precision timer for the actual API request
-      const startTime = performance.now();
-    
-      try {
-        const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${profile}/logs?limit=50`, {
-          headers: { 
-            'X-Api-Key': apiKey, 
-            'Accept': 'application/json' 
-          }
-        });
-    
-        // Measure real HTTP round-trip time of the successful logs response
-        const duration = Math.round(performance.now() - startTime);
-        STATE.currentLatency = Math.max(12, duration); // Store true latency, minimum baseline 12ms
-    
-        if (!res.ok) throw new Error(`API error: ${res.status}`);
-        const data = await res.json();
-        const logsArray = data.data || data.logs || (Array.isArray(data) ? data : []);
-    
-        // Initialize chart RAM buffer and KPI Session if not present
-        if (!STATE.chartLogs) STATE.chartLogs = [];
-        if (!STATE.sessionLogs) STATE.sessionLogs = [];
-    
-        for (const item of logsArray.reverse()) {
-          const clientObj = item.client || {};
-          const deviceName = clientObj.name || item.deviceName || item.device?.name || (typeof clientObj === 'string' ? clientObj : 'Unidentified'); // NextDNS Device
-          const ipVal = typeof clientObj === 'string' ? clientObj : (clientObj.ip || item.clientIp || '95.229.184.162');
-    
-          const logObj = {
-            id: item.id || `log-${Math.random()}`,
-            time: item.timestamp ? new Date(item.timestamp) : new Date(),
-            domain: item.domain || 'unknown',
-            device: deviceName,
-            clientIp: ipVal,
-            status: item.status || 'allowed',
-            reasons: (item.reasons || []).map(r => typeof r === 'string' ? r : r.name),
-            proto: item.protocol || 'DoH',
-            type: item.root?.queryType || 'A',
-            latency: STATE.currentLatency // Use the measured API round-trip latency
-          };
-    
-          // Push to dedicated chart RAM buffer
-          STATE.chartLogs.push(logObj);
-          // Accumulate all logs for session KPIs & filters
-          if (!STATE.sessionLogs.some(l => l.id === logObj.id)) {
-            STATE.sessionLogs.push(logObj);
-            //newLogsAdded = true;
-          }
-    
-          if (!STATE.logs.some(l => l.id === logObj.id)) handleIncomingLog(logObj);
-        }
-    
-        // Prune chart logs older than 60 minutes
-        const now = Date.now();
-        const oneHourMs = 60 * 60 * 1000;
-        STATE.chartLogs = STATE.chartLogs.filter(l => {
-          const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
-          return !isNaN(t) && (now - t) <= oneHourMs;
-        });
-    
-      } catch (e) {
-        console.error('Failed to fetch NextDNS logs:', e);
-        // Organic fallback jitter if fetch fails
-        //STATE.currentLatency = Math.floor(Math.random() * 25) + 18;
-      }
-    }*/
-
-    // Fetches real-time NextDNS logs and measures true API round-trip latency
-    /*async function fetchNextDNSLogs() {
-      if (STATE.mode !== 'api') return;
-      const profile = STATE.config.profile;
-      const apiKey = STATE.config.apiKey;
-      const proxy = STATE.config.proxy || 'https://api.nextdns.io';
-      if (!profile || !apiKey) return;
-    
-      const startTime = performance.now();
-    
-      try {
-        const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${profile}/logs?limit=50`, {
-          headers: { 
-            'X-Api-Key': apiKey, 
-            'Accept': 'application/json' 
-          }
-        });
-    
-        const duration = Math.round(performance.now() - startTime);
-        STATE.currentLatency = Math.max(12, duration);
-    
-        if (!res.ok) throw new Error(`API error: ${res.status}`);
-        const data = await res.json();
-        const logsArray = data.data || data.logs || (Array.isArray(data) ? data : []);
-    
-        // Initialize RAM buffers if not present
-        if (!STATE.chartLogs) STATE.chartLogs = [];
-        if (!STATE.sessionLogs) STATE.sessionLogs = [];
-        if (!STATE.logs) STATE.logs = [];
-    
-        let newLogsAdded = false;
-    
-        for (const item of logsArray.reverse()) {
-          const clientObj = item.client || {};
-          const deviceName = clientObj.name || item.deviceName || item.device?.name || (typeof clientObj === 'string' ? clientObj : 'Unidentified');
-          const ipVal = typeof clientObj === 'string' ? clientObj : (clientObj.ip || item.clientIp || '95.229.184.162');
-    
-          const logObj = {
-            id: item.id || `log-${Math.random()}`,
-            time: item.timestamp ? new Date(item.timestamp) : new Date(),
-            domain: item.domain || 'unknown',
-            device: deviceName,
-            clientIp: ipVal,
-            status: item.status || 'allowed',
-            reasons: (item.reasons || []).map(r => typeof r === 'string' ? r : r.name),
-            proto: item.protocol || 'DoH',
-            type: item.root?.queryType || 'A',
             latency: STATE.currentLatency
           };
     
-          // Strict session-wide uniqueness check to prevent double counting
-          const isDuplicate = STATE.sessionLogs.some(l => l.id === logObj.id);
-          if (!isDuplicate) {
-            // 1. Store in infinite session log array
-            STATE.sessionLogs.push(logObj);
-    
-            // 2. Store in 60-min rolling chart buffer
-            STATE.chartLogs.push(logObj);
-    
-            // 3. Process strictly new log through handler (updates DOM table and counters)
-            handleIncomingLog(logObj);
-            newLogsAdded = true;
-          }
-        }
-    
-        // Prune chart logs older than 60 minutes window
-        const now = Date.now();
-        const oneHourMs = 60 * 60 * 1000;
-        STATE.chartLogs = STATE.chartLogs.filter(l => {
-          const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
-          return !isNaN(t) && (now - t) <= oneHourMs;
-        });
-    
-        // Refresh chart if new unique logs were processed
-        if (newLogsAdded) {
-          renderAnalyticsChart();
-        }
-    
-      } catch (e) {
-        console.error('Failed to fetch NextDNS logs:', e);
-      }
-    }*/
-
-    // Fetches real-time NextDNS logs, prevents duplicate counting, and handles initial load correctly
-    async function fetchNextDNSLogs() {
-      if (STATE.mode !== 'api') return;
-      const profile = STATE.config.profile;
-      const apiKey = STATE.config.apiKey;
-      const proxy = STATE.config.proxy || 'https://api.nextdns.io';
-      if (!profile || !apiKey) return;
-    
-      const startTime = performance.now();
-    
-      try {
-        const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${profile}/logs?limit=50`, {
-          headers: { 
-            'X-Api-Key': apiKey, 
-            'Accept': 'application/json' 
-          }
-        });
-    
-        const duration = Math.round(performance.now() - startTime);
-        STATE.currentLatency = Math.max(12, duration); // Measured API round-trip latency
-    
-        if (!res.ok) throw new Error(`API error: ${res.status}`);
-        const data = await res.json();
-        const logsArray = data.data || data.logs || (Array.isArray(data) ? data : []);
-    
-        // Initialize RAM buffers if not present
-        if (!STATE.chartLogs) STATE.chartLogs = [];
-        if (!STATE.sessionLogs) STATE.sessionLogs = [];
-        if (!STATE.logs) STATE.logs = [];
-    
-        const isInitialLoad = STATE.sessionLogs.length === 0;
-        let newLogsAdded = false;
-    
-        for (const item of logsArray.reverse()) {
-          const clientObj = item.client || {};
-          const deviceName = clientObj.name || item.deviceName || item.device?.name || (typeof clientObj === 'string' ? clientObj : 'Unidentified');
-          const ipVal = typeof clientObj === 'string' ? clientObj : (clientObj.ip || item.clientIp || '95.229.184.162');
-    
-          const logObj = {
-            id: item.id || `log-${Math.random()}`,
-            time: item.timestamp ? new Date(item.timestamp) : new Date(),
-            domain: item.domain || 'unknown',
-            device: deviceName,
-            clientIp: ipVal,
-            status: item.status || 'allowed',
-            reasons: (item.reasons || []).map(r => typeof r === 'string' ? r : r.name),
-            proto: item.protocol || 'DoH',
-            type: item.root?.queryType || 'A',
-            latency: STATE.currentLatency
-          };
-    
-          // Check if log is already tracked in session storage
+          // Strict check: Has this specific log ID already been processed in this session?
           const exists = STATE.sessionLogs.some(l => l.id === logObj.id);
     
           if (!exists) {
-            // 1. Add to lifetime session logs
+            // 1. Add to infinite session history for lifetime stats & filters
             STATE.sessionLogs.push(logObj);
     
             // 2. Add to 60-min rolling chart buffer
             STATE.chartLogs.push(logObj);
     
-            // 3. Process via handler ONLY if it's a genuine new live request (not part of initial batch)
+            // 3. If it's NOT the very first initial batch load, handle as a genuine new live request
             if (!isInitialLoad) {
               handleIncomingLog(logObj);
-              newLogsAdded = true;
+              newLogsProcessed = true;
             }
           }
         }
     
-        // Handle initial load setup without inflating live counters artificially
+        // Special handling for the very first app load (populate initial view without inflating counters)
         if (isInitialLoad) {
           STATE.totalQueriesCounter = STATE.sessionLogs.length;
-          // Populate initial live DOM table (max 500 entries)
-          STATE.logs = [...STATE.sessionLogs].slice(-500).reverse();
+          STATE.logs = [...STATE.sessionLogs].slice(-500).reverse(); // Fill DOM table ring buffer
           updateAnalyticsKPIs();
           renderAnalyticsChart();
           if (typeof renderHitsTable === 'function') renderHitsTable();
-        } else if (newLogsAdded) {
-          // Refresh chart if new unique live logs arrived during polling
+        } else if (newLogsProcessed) {
+          // Refresh chart if genuine new logs arrived during polling
           renderAnalyticsChart();
         }
     
