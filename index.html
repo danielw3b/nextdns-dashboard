@@ -318,8 +318,8 @@
 
   <!-- Sticky Navigation Tabs -->
   <nav class="nav-tabs">
-    <button data-tab="analytics">Real-time Analytics</button>
-    <button class="active" data-tab="live">Live Log Stream</button>
+    <button class="active" data-tab="analytics">Real-time Analytics</button>
+    <button data-tab="live">Live Log Stream</button>
     <button data-tab="blocking">Guardrails & Rules</button>
     <button data-tab="config">Settings</button>
   </nav>
@@ -328,7 +328,7 @@
   <main>
 
     <!-- TAB: ANALYTICS -->
-    <section id="tab-analytics" class="tab-content">
+    <section id="tab-analytics" class="tab-content active">
       <div class="kpi-grid">
         <div class="kpi-box">
           <div class="kpi-val" id="kpi-total">0</div>
@@ -394,7 +394,7 @@
     </section>
 
     <!-- TAB: LIVE STREAM -->
-    <section id="tab-live" class="tab-content active">
+    <section id="tab-live" class="tab-content">
       <div class="card" style="padding: 0.75rem 1rem;">
         <div class="filter-bar">
           <input type="text" id="live-search" placeholder="Search domain, device, or reason..." style="flex: 1; min-width: 180px;">
@@ -564,7 +564,9 @@
       isStreaming: true,
       mode: 'sim',
       selectedDevice: 'all',
-      logs: [],
+      logs: [],          // Max 500 entries for live DOM table
+      sessionLogs: [],   // Infinite RAM array for lifetime KPIs and filters
+      chartLogs: [],     // 60-minute rolling RAM buffer for canvas chart
       totalQueriesCounter: 0,
       devices: new Set(),
       hits: {}, 
@@ -741,7 +743,7 @@
       }
     }
 
-    function handleIncomingLog(log) {
+    /*function handleIncomingLog(log) {
       // Save log to DB if running in real API mode (IndexedDB can be muted later if needed)
       //if (STATE.mode === 'api' && typeof saveLogToDB === 'function') saveLogToDB(log);
       
@@ -774,6 +776,66 @@
         requestAnimationFrame(() => {
           renderScheduled = false;
           renderFilteredLiveLogs();
+        });
+      }
+      updateAnalyticsKPIs();
+      renderHitsTable();
+    }*/
+
+    // Central ingestion function for both simulation and API logs
+    function handleIncomingLog(log) {
+      // Strict check: Has this exact log ID already been processed in this session?
+      const exists = STATE.sessionLogs.some(l => l.id === log.id);
+      if (exists) return; // Skip duplicates completely
+    
+      // 1. Add to infinite session history for lifetime stats & filters
+      STATE.sessionLogs.push(log);
+    
+      // 2. Add to 60-min rolling chart buffer
+      STATE.chartLogs.push(log);
+    
+      // 3. Add to live DOM table ring buffer (max 500 entries)
+      STATE.logs.unshift(log);
+      if (STATE.logs.length > 500) STATE.logs.pop();
+    
+      // Global counter & device registration
+      STATE.totalQueriesCounter++;
+      if (log.device) registerDevice(log.device);
+    
+      // Frequency hits tracking
+      const d = (log.domain || 'unknown').toLowerCase();
+      if (!STATE.hits[d]) STATE.hits[d] = { count: 0, lastSeen: Date.now() };
+      STATE.hits[d].count++;
+      STATE.hits[d].lastSeen = Date.now();
+    
+      // Auto-block guard evaluation
+      if (STATE.config.autoBlock && STATE.hits[d].count >= STATE.config.threshold) {
+        const isDeniedAlready = STATE.denylist.some(r => r.domain.toLowerCase() === d);
+        const isSys = STATE.config.protectSystem && isProtected(d);
+        if (!isDeniedAlready && !isSys) {
+          STATE.denylist.unshift({ id: String(Date.now()), domain: d, category: 'Auto-Block', active: true, hits: STATE.hits[d].count });
+          saveState();
+          showToast('🚫 Guard Denied', `Blocked <code>${safeText(d)}</code>`, 'danger');
+        }
+      }
+    
+      if (!log.clientIp) log.clientIp = '95.229.184.162';
+    
+      // Prune chartLogs strictly to the last 60 minutes window
+      const now = Date.now();
+      const oneHourMs = 60 * 60 * 1000;
+      STATE.chartLogs = STATE.chartLogs.filter(l => {
+        const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
+        return !isNaN(t) && (now - t) <= oneHourMs;
+      });
+    
+      // Schedule UI renders
+      if (!renderScheduled) {
+        renderScheduled = true;
+        requestAnimationFrame(() => {
+          renderScheduled = false;
+          renderFilteredLiveLogs();
+          renderAnalyticsChart();
         });
       }
       updateAnalyticsKPIs();
@@ -855,7 +917,7 @@
     }
 
     // Fetch real-time NextDNS logs safely, preventing duplicate counts across polling intervals
-    async function fetchNextDNSLogs() {
+    /*async function fetchNextDNSLogs() {
       if (STATE.mode !== 'api') return;
       const profile = STATE.config.profile;
       const apiKey = STATE.config.apiKey;
@@ -949,6 +1011,60 @@
       } catch (e) {
         console.error('Failed to fetch NextDNS logs:', e);
       }
+    }*/
+
+    // Fetches real-time NextDNS logs and passes them to the central handler
+    async function fetchNextDNSLogs() {
+      if (STATE.mode !== 'api') return;
+      const profile = STATE.config.profile;
+      const apiKey = STATE.config.apiKey;
+      const proxy = STATE.config.proxy || 'https://api.nextdns.io';
+      if (!profile || !apiKey) return;
+    
+      const startTime = performance.now();
+    
+      try {
+        const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${profile}/logs?limit=50`, {
+          headers: { 'X-Api-Key': apiKey, 'Accept': 'application/json' }
+        });
+    
+        const duration = Math.round(performance.now() - startTime);
+        STATE.currentLatency = Math.max(12, duration);
+    
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        const data = await res.json();
+        const logsArray = data.data || data.logs || (Array.isArray(data) ? data : []);
+    
+        // Process logs from oldest to newest via central handler
+        for (const item of logsArray.reverse()) {
+          const clientObj = item.client || {};
+          const deviceName = clientObj.name || item.deviceName || item.device?.name || (typeof clientObj === 'string' ? clientObj : 'NextDNS Device');
+          const ipVal = typeof clientObj === 'string' ? clientObj : (clientObj.ip || item.clientIp || '95.229.184.162');
+          const statusVal = item.status || 'allowed';
+          const timeVal = item.timestamp ? new Date(item.timestamp) : new Date();
+    
+          // Deterministic unique ID to prevent polling duplication
+          const uniqueId = item.id || `${timeVal.getTime()}_${item.domain || 'unknown'}_${deviceName}_${statusVal}`;
+    
+          const logObj = {
+            id: uniqueId,
+            time: timeVal,
+            domain: item.domain || 'unknown',
+            device: deviceName,
+            clientIp: ipVal,
+            status: statusVal,
+            reasons: (item.reasons || []).map(r => typeof r === 'string' ? r : r.name),
+            proto: item.protocol || 'DoH',
+            type: item.root?.queryType || 'A',
+            latency: STATE.currentLatency
+          };
+    
+          handleIncomingLog(logObj);
+        }
+    
+      } catch (e) {
+        console.error('Failed to fetch NextDNS logs:', e);
+      }
     }
     
     window.filterByDevice = function(dev) {
@@ -963,7 +1079,7 @@
     function getNextDNSIPDetails(ip) {
       if (ip.includes('95.229.184.162')) {
         return { isp: 'Telecom Italia S.p.A.', location: '🇮🇹 Santa Croce Camerina, Italy' };
-      } else if (ip.includes('176.6.5.196') || ip.includes('176.6.63.5') || ip.includes('2a02:3038')) {
+      } else if (ip.includes('176.6.5.196') || ip.includes('176.6.63.5') || ip.includes('2a02:3038') || ip.includes('2a02:3035')) {
         return { isp: 'Telefonica Germany GmbH & Co.', location: '🇩🇪 Duesseldorf, Germany' };
       } else if (ip.includes('2001:4dd0') || ip.includes('2a02:3030') || ip.includes('78.35') || ip.includes('2a0a:a547')) {
         return { isp: 'NetCologne GmbH', location: '🇩🇪 Cologne, Germany' };
@@ -977,8 +1093,13 @@
       const activeLogs = STATE.selectedDevice === 'all'
         ? sessionLogs
         : sessionLogs.filter(l => l.device === STATE.selectedDevice);
-    
-      const total = activeLogs.length;
+
+
+      // Total queries (global counter for 'all', filtered count for devices)
+      const total = STATE.selectedDevice === 'all' 
+        ? Math.max(STATE.totalQueriesCounter || 0, sessionLogs.length) 
+        : activeLogs.length;
+      //const total = activeLogs.length;
       //const total = STATE.totalQueriesCounter;
       const blocked = activeLogs.filter(l => String(l.status).toLowerCase() === 'blocked').length;
       const allowed = total - blocked;
