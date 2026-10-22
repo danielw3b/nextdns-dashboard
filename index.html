@@ -166,6 +166,12 @@
     .kpi-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); order: 2; margin-top: 0.25rem; }
     .kpi-val { font-size: 1.3rem; font-weight: 700; font-family: monospace; order: 1; }
     .kpi-sub { font-size: 0.68rem; color: var(--muted); order: 3; margin-top: 0.2rem; }
+
+    #analytics-canvas {
+      width: 100% !important;
+      height: 180px !important;
+      display: block;
+    }
     
     .filter-bar {
       display: flex;
@@ -1340,14 +1346,18 @@
       const ctx = canvas.getContext('2d');
       
       const dpr = window.devicePixelRatio || 1;
-      const width = canvas.parentElement.clientWidth || 400;
+      
+      // Read current layout width safely without triggering flex loops
+      const rect = canvas.getBoundingClientRect();
+      const width = rect.width > 0 ? rect.width : (canvas.parentElement ? canvas.parentElement.clientWidth : 800);
       const height = 180;
       
-      if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
-        canvas.width = width * dpr;
-        canvas.height = height * dpr;
-        canvas.style.width = width + 'px';
-        canvas.style.height = height + 'px';
+      const targetWidth = Math.round(width * dpr);
+      const targetHeight = Math.round(height * dpr);
+      
+      if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
       }
     
       ctx.clearRect(0, 0, width, height);
