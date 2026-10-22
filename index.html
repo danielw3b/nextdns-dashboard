@@ -309,7 +309,7 @@
 
     <div class="header-actions">
       <span class="badge live" id="stream-status">Live</span>
-      <button class="btn-primary" id="btn-toggle-stream" title="Pause / Resume Stream" style="font-size: 1rem; padding: 0.3rem 0.6rem;">◼</button>
+      <button class="btn-primary" id="btn-toggle-stream" title="Pause / Resume Stream" style="font-size: 1rem; padding: 0.3rem 0.6rem;">⏸️</button>
       <select id="global-device-select" style="padding: 0.35rem 0.5rem;" title="Filter all logs and analytics by device">
         <option value="all">All Devices</option>
       </select>
@@ -318,44 +318,14 @@
 
   <!-- Sticky Navigation Tabs -->
   <nav class="nav-tabs">
-    <button class="active" data-tab="live">Live Log Stream</button>
     <button data-tab="analytics">Real-time Analytics</button>
+    <button class="active" data-tab="live">Live Log Stream</button>
     <button data-tab="blocking">Guardrails & Rules</button>
     <button data-tab="config">Settings</button>
   </nav>
 
   <!-- Main Content Area -->
   <main>
-
-    <!-- TAB: LIVE STREAM -->
-    <section id="tab-live" class="tab-content active">
-      <div class="card" style="padding: 0.75rem 1rem;">
-        <div class="filter-bar">
-          <input type="text" id="live-search" placeholder="Search domain, device, or reason..." style="flex: 1; min-width: 180px;">
-          <select id="live-status-filter" style="min-width: 120px;">
-            <option value="all">All Traffic</option>
-            <option value="blocked">Blocked Only</option>
-            <option value="allowed">Allowed Only</option>
-          </select>
-          <button id="btn-export-live">Export CSV</button>
-          <button id="btn-clear-logs" class="btn-danger">Clear</button>
-        </div>
-      </div>
-
-      <div class="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>Time / Proto</th>
-              <th>Status</th>
-              <th>Domain / Device</th>
-              <th>Reason / Action</th>
-            </tr>
-          </thead>
-          <tbody id="live-log-body"></tbody>
-        </table>
-      </div>
-    </section>
 
     <!-- TAB: ANALYTICS -->
     <section id="tab-analytics" class="tab-content">
@@ -423,6 +393,36 @@
       </div>
     </section>
 
+    <!-- TAB: LIVE STREAM -->
+    <section id="tab-live" class="tab-content active">
+      <div class="card" style="padding: 0.75rem 1rem;">
+        <div class="filter-bar">
+          <input type="text" id="live-search" placeholder="Search domain, device, or reason..." style="flex: 1; min-width: 180px;">
+          <select id="live-status-filter" style="min-width: 120px;">
+            <option value="all">All Traffic</option>
+            <option value="blocked">Blocked Only</option>
+            <option value="allowed">Allowed Only</option>
+          </select>
+          <button id="btn-export-live">Export CSV</button>
+          <button id="btn-clear-logs" class="btn-danger">Clear</button>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Time / Proto</th>
+              <th>Status</th>
+              <th>Domain / Device</th>
+              <th>Reason / Action</th>
+            </tr>
+          </thead>
+          <tbody id="live-log-body"></tbody>
+        </table>
+      </div>
+    </section>
+    
     <!-- TAB: GUARDRAILS & RULES -->
     <section id="tab-blocking" class="tab-content">
       <div class="card">
