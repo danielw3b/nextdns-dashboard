@@ -1721,15 +1721,15 @@
       const tooltip = document.getElementById('chart-tooltip');
       if (!canvas || !tooltip) return;
     
-      // Central handler for chart interactions (mouse and touch)
-      function handleChartInteraction(clientX, clientY, rect) {
-        const mouseX = clientX - rect.left;
-        const mouseY = clientY - rect.top;
+      canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
         const { padding, chartWidth, chartHeight, bucketsCount } = currentChartMetrics;
     
         if (!chartWidth || mouseX < padding.left || mouseX > padding.left + chartWidth || mouseY < padding.top || mouseY > padding.top + chartHeight) {
-          activeTooltipIndex = null;
           tooltip.style.display = 'none';
+          activeTooltipIndex = null;
           return;
         }
     
@@ -1738,38 +1738,58 @@
         const b = currentChartBuckets[bucketIndex];
     
         if (!b) {
-          activeTooltipIndex = null;
           tooltip.style.display = 'none';
+          activeTooltipIndex = null;
           return;
         }
     
-        // Save state for background polling updates
+        // Save active state for live polling updates
         activeTooltipIndex = bucketIndex;
         lastMouseX = mouseX;
         lastMouseY = mouseY;
         lastContainerWidth = rect.width;
     
-        updateTooltipContent(bucketIndex, mouseX, mouseY, rect.width);
-      }
+        const blockRatio = b.total > 0 ? Math.round((b.blocked / b.total) * 100) : 0;
+        const timeStr = new Date(b.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     
-      // Desktop mouse move event
-      canvas.addEventListener('mousemove', (e) => {
-        handleChartInteraction(e.clientX, e.clientY, canvas.getBoundingClientRect());
+        tooltip.innerHTML = `
+          <div style="font-weight:600; color:#38bdf8; margin-bottom:2px;">Time Slot: ${timeStr}</div>
+          <div>Total Queries: <b>${b.total}</b></div>
+          <div style="color:#4ade80;">Allowed: ${b.allowed}</div>
+          <div style="color:#f87171;">Blocked: ${b.blocked}</div>
+          <div style="color:#4ade80; margin-top:2px; border-top:1px solid #334155; padding-top:2px;">Block Ratio: <b>${blockRatio}%</b></div>
+        `;
+        
+        tooltip.style.display = 'block';
+        const tooltipWidth = 160;
+        if (mouseX + tooltipWidth > rect.width) {
+          tooltip.style.left = (mouseX - tooltipWidth - 10) + 'px';
+        } else {
+          tooltip.style.left = (mouseX + 15) + 'px';
+        }
+        tooltip.style.top = (mouseY - 40) + 'px';
       });
     
-      // Mouse leave event
       canvas.addEventListener('mouseleave', () => {
-        activeTooltipIndex = null;
-        tooltip.style.display = 'none';
+        // Option: Desktop-> mouseleave, Tablets display: block
+        // tooltip.style.display = 'none'; 
+        // activeTooltipIndex = null;
       });
     
-      // Tablet / Mobile touch event
-      canvas.addEventListener('touchstart', (e) => {
-        const touch = e.touches[0];
-        if (!touch) return;
-        handleChartInteraction(touch.clientX, touch.clientY, canvas.getBoundingClientRect());
-        e.preventDefault();
-      }, { passive: false });
+      // Global click / touch outside listener to dismiss tooltip
+      document.addEventListener('click', (e) => {
+        if (!canvas.contains(e.target) && !tooltip.contains(e.target)) {
+          tooltip.style.display = 'none';
+          activeTooltipIndex = null;
+        }
+      });
+    
+      document.addEventListener('touchstart', (e) => {
+        if (!canvas.contains(e.target) && !tooltip.contains(e.target)) {
+          tooltip.style.display = 'none';
+          activeTooltipIndex = null;
+        }
+      }, { passive: true });
 
       // wakeLock
       const wakeLockIcon = document.getElementById("wakeLockIcon");
