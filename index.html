@@ -1670,8 +1670,60 @@
     document.getElementById('global-device-select').onchange = (e) => filterByDevice(e.target.value);
     document.getElementById('live-status-filter').onchange = renderFilteredLiveLogs;
     document.getElementById('live-search').oninput = renderFilteredLiveLogs;
-
+    
     document.addEventListener('DOMContentLoaded', () => {
+      // tooltip for line chart
+      /*const canvas = document.getElementById('analytics-canvas');
+      const tooltip = document.getElementById('chart-tooltip');
+      if (!canvas || !tooltip) return;
+    
+      canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        const { padding, chartWidth, chartHeight, bucketsCount } = currentChartMetrics;
+    
+        if (!chartWidth || mouseX < padding.left || mouseX > padding.left + chartWidth || mouseY < padding.top || mouseY > padding.top + chartHeight) {
+          tooltip.style.display = 'none';
+          return;
+        }
+    
+        // Map mouse position to the closest data point index for lines
+        const slotWidth = chartWidth / (bucketsCount - 1);
+        const bucketIndex = Math.round((mouseX - padding.left) / slotWidth);
+        const b = currentChartBuckets[bucketIndex];
+    
+        if (!b) {
+          tooltip.style.display = 'none';
+          return;
+        }
+    
+        const blockRatio = Math.round(b.ratio);
+        const timeStr = new Date(b.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    
+        tooltip.innerHTML = `
+          <div style="font-weight:600; color:#38bdf8; margin-bottom:2px;">Time: ${timeStr}</div>
+          <div>Total Queries: <b>${b.total}</b></div>
+          <div style="color:#4ade80;">Allowed: ${b.allowed}</div>
+          <div style="color:#f87171;">Blocked: ${b.blocked}</div>
+          <div style="color:#38bdf8; margin-top:2px; border-top:1px solid #334155; padding-top:2px;">Ratio: <b>${blockRatio}%</b></div>
+        `;
+        
+        tooltip.style.display = 'block';
+        const tooltipWidth = 160;
+        if (mouseX + tooltipWidth > rect.width) {
+          tooltip.style.left = (mouseX - tooltipWidth - 10) + 'px';
+        } else {
+          tooltip.style.left = (mouseX + 15) + 'px';
+        }
+        tooltip.style.top = (mouseY - 40) + 'px';
+      });
+    
+      canvas.addEventListener('mouseleave', () => {
+        tooltip.style.display = 'none';
+      });*/
+      
+      // tooltip for bucket chart
       const canvas = document.getElementById('analytics-canvas');
       const tooltip = document.getElementById('chart-tooltip');
       if (!canvas || !tooltip) return;
@@ -1720,59 +1772,19 @@
       canvas.addEventListener('mouseleave', () => {
         tooltip.style.display = 'none';
       });
-    });
 
-    /*document.addEventListener('DOMContentLoaded', () => {
-      const canvas = document.getElementById('analytics-canvas');
-      const tooltip = document.getElementById('chart-tooltip');
-      if (!canvas || !tooltip) return;
+      // wakeLock
+      const wakeLockIcon = document.getElementById("wakeLockIcon");
+      if (wakeLockIcon) {
+        wakeLockIcon.addEventListener("click", requestWakeLock);
+      }
+    });
     
-      canvas.addEventListener('mousemove', (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-        const { padding, chartWidth, chartHeight, bucketsCount } = currentChartMetrics;
-    
-        if (!chartWidth || mouseX < padding.left || mouseX > padding.left + chartWidth || mouseY < padding.top || mouseY > padding.top + chartHeight) {
-          tooltip.style.display = 'none';
-          return;
-        }
-    
-        // Map mouse position to the closest data point index for lines
-        const slotWidth = chartWidth / (bucketsCount - 1);
-        const bucketIndex = Math.round((mouseX - padding.left) / slotWidth);
-        const b = currentChartBuckets[bucketIndex];
-    
-        if (!b) {
-          tooltip.style.display = 'none';
-          return;
-        }
-    
-        const blockRatio = Math.round(b.ratio);
-        const timeStr = new Date(b.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    
-        tooltip.innerHTML = `
-          <div style="font-weight:600; color:#38bdf8; margin-bottom:2px;">Time: ${timeStr}</div>
-          <div>Total Queries: <b>${b.total}</b></div>
-          <div style="color:#4ade80;">Allowed: ${b.allowed}</div>
-          <div style="color:#f87171;">Blocked: ${b.blocked}</div>
-          <div style="color:#38bdf8; margin-top:2px; border-top:1px solid #334155; padding-top:2px;">Ratio: <b>${blockRatio}%</b></div>
-        `;
-        
-        tooltip.style.display = 'block';
-        const tooltipWidth = 160;
-        if (mouseX + tooltipWidth > rect.width) {
-          tooltip.style.left = (mouseX - tooltipWidth - 10) + 'px';
-        } else {
-          tooltip.style.left = (mouseX + 15) + 'px';
-        }
-        tooltip.style.top = (mouseY - 40) + 'px';
-      });
-    
-      canvas.addEventListener('mouseleave', () => {
-        tooltip.style.display = 'none';
-      });
-    });*/
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        setTimeout(() => { requestWakeLock(); }, 1000);
+      }
+    });
 
     let wakeLock = null;
     async function requestWakeLock() {
@@ -1800,23 +1812,9 @@
           console.warn(`Wake Lock failed: ${err.name} - ${err.message}`);
         }
       }
-    }
-    
-    document.addEventListener("DOMContentLoaded", () => {
-      const wakeLockIcon = document.getElementById("wakeLockIcon");
-      if (wakeLockIcon) {
-        wakeLockIcon.addEventListener("click", requestWakeLock);
-      }
-    });
-    
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") {
-        setTimeout(() => { requestWakeLock(); }, 1000);
-      }
-    });
-    
-    requestWakeLock();    
-
+    } 
+    requestWakeLock(); 
+  
     loadConfigToUI();
     STATE.mode = (STATE.config.profile && STATE.config.apiKey) ? 'api' : 'sim';
 
@@ -1830,6 +1828,19 @@
         startSimulation();
       }
     //});
+
+    // Fluid chart adjustment on window resize or tablet rotation with debounce
+    let resizeTimeout = null;
+    window.addEventListener('resize', () => {
+      if (resizeTimeout) clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        const canvas = document.getElementById('analytics-canvas');
+        if (canvas && canvas.offsetParent !== null && typeof renderAnalyticsChart === 'function') {
+          renderAnalyticsChart();
+        }
+      }, 150);
+    });
+
   </script>
 </body>
 </html>
