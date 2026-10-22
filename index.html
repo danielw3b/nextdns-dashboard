@@ -1346,22 +1346,18 @@
       const ctx = canvas.getContext('2d');
       
       const dpr = window.devicePixelRatio || 1;
-      
-      // Read current layout width safely without triggering flex loops
-      const rect = canvas.getBoundingClientRect();
-      const width = rect.width > 0 ? rect.width : (canvas.parentElement ? canvas.parentElement.clientWidth : 800);
+      const width = canvas.parentElement ? canvas.parentElement.clientWidth : 400;
       const height = 180;
       
       const targetWidth = Math.round(width * dpr);
       const targetHeight = Math.round(height * dpr);
-      
       if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
         canvas.width = targetWidth;
         canvas.height = targetHeight;
       }
-    
+      
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, width, height);
-      ctx.scale(dpr, dpr);
     
       // Use dedicated RAM chart buffer
       let activeLogs = STATE.chartLogs || [];
