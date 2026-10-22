@@ -625,6 +625,7 @@
       } catch(e) {}
     }
 
+    /*
     let db = null;
     const DB_NAME = 'NextDNSSentinelDB';
     const STORE_LOGS = 'logs';
@@ -711,7 +712,7 @@
           }
         };
       } catch (e) {}
-    }
+    }*/
 
     function showToast(title, msg, type = 'warn') {
       const container = document.getElementById('toast-container');
@@ -739,45 +740,6 @@
         gSel.appendChild(opt);
       }
     }
-
-    /*function handleIncomingLog(log) {
-      // Only persist logs in DB if running in real API mode
-      if (STATE.mode === 'api') saveLogToDB(log);
-      
-      STATE.logs.unshift(log);
-      STATE.totalQueriesCounter++;
-      if (STATE.logs.length > 500) STATE.logs.pop();
-      if (log.device) registerDevice(log.device);
-
-      const d = log.domain.toLowerCase();
-      if (!STATE.hits[d]) STATE.hits[d] = { count: 0, lastSeen: Date.now() };
-      STATE.hits[d].count++;
-      STATE.hits[d].lastSeen = Date.now();
-      
-      if (STATE.mode === 'api') saveHitToDB(d, STATE.hits[d].count, STATE.hits[d].lastSeen);
-
-      if (STATE.config.autoBlock && STATE.hits[d].count >= STATE.config.threshold) {
-        const isDeniedAlready = STATE.denylist.some(r => r.domain.toLowerCase() === d);
-        const isSys = STATE.config.protectSystem && isProtected(d);
-        if (!isDeniedAlready && !isSys) {
-          STATE.denylist.unshift({ id: String(Date.now()), domain: d, category: 'Auto-Block', active: true, hits: STATE.hits[d].count });
-          saveState();
-          showToast('🚫 Guard Denied', `Blocked <code>${safeText(d)}</code>`, 'danger');
-        }
-      }
-
-      if (!log.clientIp) log.clientIp = '95.229.184.162';
-
-      if (!renderScheduled) {
-        renderScheduled = true;
-        requestAnimationFrame(() => {
-          renderScheduled = false;
-          renderFilteredLiveLogs();
-        });
-      }
-      updateAnalyticsKPIs();
-      renderHitsTable();
-    }*/
 
     function handleIncomingLog(log) {
       // Save log to DB if running in real API mode (IndexedDB can be muted later if needed)
@@ -927,21 +889,26 @@
           const clientObj = item.client || {};
           const deviceName = clientObj.name || item.deviceName || item.device?.name || (typeof clientObj === 'string' ? clientObj : 'NextDNS Device');
           const ipVal = typeof clientObj === 'string' ? clientObj : (clientObj.ip || item.clientIp || '95.229.184.162');
+          const statusVal = item.status || 'allowed';
+          const timeVal = item.timestamp ? new Date(item.timestamp) : new Date();
+    
+          // Create a deterministic unique ID to prevent random fallback duplication
+          const uniqueId = item.id || `${timeVal.getTime()}_${item.domain || 'unknown'}_${deviceName}_${statusVal}`;
     
           const logObj = {
-            id: item.id || `log-${Math.random()}`,
-            time: item.timestamp ? new Date(item.timestamp) : new Date(),
+            id: uniqueId,
+            time: timeVal,
             domain: item.domain || 'unknown',
             device: deviceName,
             clientIp: ipVal,
-            status: item.status || 'allowed',
+            status: statusVal,
             reasons: (item.reasons || []).map(r => typeof r === 'string' ? r : r.name),
             proto: item.protocol || 'DoH',
             type: item.root?.queryType || 'A',
             latency: STATE.currentLatency
           };
     
-          // Strict check: Has this specific log ID already been processed in this session?
+          // Strict check: Has this exact log already been processed in this session?
           const exists = STATE.sessionLogs.some(l => l.id === logObj.id);
     
           if (!exists) {
@@ -1004,54 +971,15 @@
       return { isp: 'Broadband WAN Gateway', location: '🇪🇺 Europe / Member Node' };
     }
 
-    /*function updateAnalyticsKPIs() {
-      const activeLogs = STATE.selectedDevice === 'all' ? STATE.logs : STATE.logs.filter(l => l.device === STATE.selectedDevice);
-      const total = STATE.selectedDevice === 'all' ? Math.max(STATE.totalQueriesCounter, STATE.logs.length) : activeLogs.length;
-      const blocked = activeLogs.filter(l => String(l.status).toLowerCase() === 'blocked').length;
-      const allowed = Math.max(0, total - blocked);
-      const rate = total > 0 ? Math.round((blocked / total) * 100) : 0;
-      
-      const nowMs = Date.now();
-      const qpmCount = activeLogs.filter(l => {
-       const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
-       return t >= (nowMs - 60000) && t <= nowMs;
-      }).length;
-      
-      // Use the real measured HTTP network latency, fallback to '--' if not yet measured
-      const avgLatency = (typeof STATE.currentLatency === 'number' && !isNaN(STATE.currentLatency)) 
-       ? STATE.currentLatency 
-       : '--';
-      
-      document.getElementById('kpi-total').textContent = total;
-      document.getElementById('kpi-blocked').textContent = blocked;
-      document.getElementById('kpi-allowed').textContent = allowed;
-      document.getElementById('kpi-rate').textContent = `${rate}% (${STATE.selectedDevice === 'all' ? 'All' : STATE.selectedDevice})`;
-      document.getElementById('kpi-qpm').textContent = `${qpmCount} q/min`;
-      document.getElementById('kpi-latency').textContent = avgLatency === '--' ? '-- ms' : `${avgLatency} ms`;*/
-
     function updateAnalyticsKPIs() {
-      // Use our clean 60-minute RAM chart buffer instead of the limited ring buffer
-      /*const chartLogs = STATE.chartLogs || [];
-      const activeLogs = STATE.selectedDevice === 'all' 
-       ? chartLogs 
-       : chartLogs.filter(l => l.device === STATE.selectedDevice);
-      
-      // If the global counter is to be used in its entirety, while "blocked" and "allowed" are derived from the buffer—either proportionally or in absolute terms:
-      const total = STATE.selectedDevice === 'all' ? Math.max(STATE.totalQueriesCounter, chartLogs.length) : activeLogs.length;
-      const blocked = activeLogs.filter(l => String(l.status).toLowerCase() === 'blocked').length;
-      
-      // If 'total'—based on the global counter—exceeds the number of logs remaining in the buffer, 
-      // we adjust the 'allowed' portion accordingly:
-      const allowed = Math.max(0, total - blocked);
-      const rate = total > 0 ? Math.round((blocked / total) * 100) : 0;*/
-
       // Use sessionLogs for lifetime metrics since app start, with device filter
       const sessionLogs = STATE.sessionLogs || [];
       const activeLogs = STATE.selectedDevice === 'all'
         ? sessionLogs
         : sessionLogs.filter(l => l.device === STATE.selectedDevice);
     
-      const total = activeLogs.length;
+      //const total = activeLogs.length;
+      const total = STATE.totalQueriesCounter;
       const blocked = activeLogs.filter(l => String(l.status).toLowerCase() === 'blocked').length;
       const allowed = total - blocked;
       const rate = total > 0 ? Math.round((blocked / total) * 100) : 0;
@@ -1068,7 +996,7 @@
       
       // Update DOM KPI elements
       document.getElementById('kpi-total').textContent = total;
-      document.getElementById('kpi-blocked').textContent = blocked; // Zeigt nun korrekt die Block-Anfragen an!
+      document.getElementById('kpi-blocked').textContent = blocked;
       document.getElementById('kpi-allowed').textContent = allowed;
       document.getElementById('kpi-rate').textContent = `${rate}% (${STATE.selectedDevice === 'all' ? 'All' : STATE.selectedDevice})`;
       document.getElementById('kpi-qpm').textContent = `${qpmCount} q/min`;
