@@ -1800,7 +1800,7 @@
     loadConfigToUI();
     STATE.mode = (STATE.config.profile && STATE.config.apiKey) ? 'api' : 'sim';
 
-    initDB().then(() => {
+    //initDB().then(() => {
       if (STATE.mode === 'api') {
         document.getElementById('stream-status').textContent = 'Live';
         fetchNextDNSLogs();
@@ -1809,7 +1809,7 @@
         document.getElementById('stream-status').textContent = 'Demo';
         startSimulation();
       }
-    });
+    //});
   </script>
 </body>
 </html>
