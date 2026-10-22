@@ -1743,14 +1743,6 @@
         tooltip.style.display = 'none';
       });*/
       
-      // tooltip for bucket chart
-      /*const canvas = document.getElementById('analytics-canvas');
-      const tooltip = document.getElementById('chart-tooltip');
-      if (!canvas || !tooltip) return;
-
-      // Track currently active tooltip index for live updates during polling
-      let activeTooltipIndex = null;*/
-      
       // Inside mouse/touch interaction listener:
       /*canvas.addEventListener('mousemove', (e) => {
         const rect = canvas.getBoundingClientRect();
@@ -1838,8 +1830,17 @@
         tooltip.style.top = (mouseY - 40) + 'px';
       }
 
+
+      // tooltip for bucket chart
+      //const canvas = document.getElementById('analytics-canvas');
+      //const tooltip = document.getElementById('chart-tooltip');
+      //if (!canvas || !tooltip) return;
+
+      // Track currently active tooltip index for live updates during polling
+      let activeTooltipIndex = null;
       // Central helper for both mouse and touch interactions
       function handleChartInteraction(clientX, clientY, rect) {
+        const canvas = document.getElementById('analytics-canvas');
         const mouseX = clientX - rect.left;
         const mouseY = clientY - rect.top;
         const { padding, chartWidth, chartHeight, bucketsCount } = currentChartMetrics;
