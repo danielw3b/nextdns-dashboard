@@ -1328,6 +1328,9 @@
     let currentChartBuckets = [];
     let currentChartMetrics = {};
     let activeTooltipIndex = null;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+    let lastContainerWidth = 400;
     
     // Renders the 60-minute analytics chart using the dedicated RAM chart buffer,
     // 12 fixed 5-minute buckets, stacked bars, and a blue ratio trend line.
@@ -1492,19 +1495,9 @@
       if (activeTooltipIndex !== null && currentChartBuckets[activeTooltipIndex]) {
         const tooltip = document.getElementById('chart-tooltip');
         if (tooltip && tooltip.style.display === 'block') {
-          // Use estimated or stored mouse coordinates if needed, or simply update innerHTML
-          const b = currentChartBuckets[activeTooltipIndex];
-          const blockRatio = b.total > 0 ? Math.round((b.blocked / b.total) * 100) : 0;
-          const timeStr = new Date(b.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          tooltip.innerHTML = `
-            <div style="font-weight:600; color:#38bdf8; margin-bottom:2px;">Time Slot: ${timeStr}</div>
-            <div>Total Queries: <b>${b.total}</b></div>
-            <div style="color:#4ade80;">Allowed: ${b.allowed}</div>
-            <div style="color:#f87171;">Blocked: ${b.blocked}</div>
-            <div style="color:#4ade80; margin-top:2px; border-top:1px solid #334155; padding-top:2px;">Block Ratio: <b>${blockRatio}%</b></div>
-          `;
+          updateTooltipContent(activeTooltipIndex, lastMouseX, lastMouseY, lastContainerWidth);
         }
-      }    
+      }   
     }
 
     function renderHitsTable() {
@@ -1765,7 +1758,12 @@
       
         const slotWidth = chartWidth / bucketsCount;
         const bucketIndex = Math.floor((mouseX - padding.left) / slotWidth);
-        activeTooltipIndex = bucketIndex; // Save active index
+        
+        // Track state for periodic updates
+        activeTooltipIndex = bucketIndex;
+        lastMouseX = mouseX;
+        lastMouseY = mouseY;
+        lastContainerWidth = rect.width;
         
         updateTooltipContent(bucketIndex, mouseX, mouseY, rect.width);
       });
@@ -1858,16 +1856,12 @@
       }
     //});
 
-    // Fluid chart adjustment on window resize or tablet rotation with debounce
-    let resizeTimeout = null;
+    // window resize or tablet rotation
     window.addEventListener('resize', () => {
-      if (resizeTimeout) clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(() => {
-        const canvas = document.getElementById('analytics-canvas');
-        if (canvas && canvas.offsetParent !== null && typeof renderAnalyticsChart === 'function') {
-          renderAnalyticsChart();
-        }
-      }, 150);
+      const canvas = document.getElementById('analytics-canvas');
+      if (canvas && canvas.offsetParent !== null && typeof renderAnalyticsChart === 'function') {
+        renderAnalyticsChart();
+      }
     });
 
   </script>
