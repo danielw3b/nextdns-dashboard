@@ -1631,7 +1631,7 @@
       document.getElementById('stream-status').textContent = STATE.isStreaming ? (STATE.mode === 'api' ? 'Live' : 'Demo') : 'Paused';
     };
 
-    document.getElementById('btn-add-deny').onclick = () => {
+    /*document.getElementById('btn-add-deny').onclick = () => {
       const inp = document.getElementById('new-deny-domain');
       const domain = inp.value.trim().toLowerCase();
       if (!domain) return;
@@ -1639,7 +1639,7 @@
       saveState();
       inp.value = '';
       showToast('Rule Added', `Blocked ${safeText(domain)}`, 'danger');
-    };
+    };*/
 
     document.getElementById('btn-save-cfg').onclick = () => {
       const newProfile = document.getElementById('cfg-profile').value.trim();
