@@ -1284,7 +1284,7 @@
       
       const dpr = window.devicePixelRatio || 1;
       
-      // Robust width detection preventing collapse during tab switches or resizing
+      // Robust width detection preventing collapse or overflow during resizing
       const parentWidth = canvas.parentElement ? (canvas.parentElement.clientWidth || canvas.parentElement.getBoundingClientRect().width) : 0;
       const width = parentWidth > 0 ? parentWidth : (canvas.clientWidth || 800);
       const height = 180;
@@ -1300,7 +1300,7 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, width, height);
     
-      // Use dedicated chart buffer or fallback, filtered by active device
+      // Use dedicated chart buffer filtered by active device
       let activeLogs = STATE.chartLogs || STATE.logs || [];
       if (STATE.selectedDevice !== 'all') {
         activeLogs = activeLogs.filter(l => l.device === STATE.selectedDevice);
@@ -1355,7 +1355,7 @@
       const chartHeight = height - padding.top - padding.bottom;
       currentChartMetrics = { padding, chartWidth, chartHeight, maxVal, bucketsCount };
     
-      // Draw background grid & Left Y-axis (Absolute queries)
+      // Draw background grid & Left Y-axis (Absolute queries in Blue #38bdf8)
       for (let i = 0; i <= 4; i++) {
         const y = padding.top + (chartHeight / 4) * i;
         ctx.strokeStyle = '#1e293b';
@@ -1371,7 +1371,7 @@
         ctx.fillText(Math.round(maxVal * (1 - i / 4)), padding.left - 6, y + 3);
       }
     
-      // Right Y-axis (Ratio %)
+      // Right Y-axis (Ratio % in Green #4ade80)
       for (let i = 0; i <= 4; i++) {
         const y = padding.top + (chartHeight / 4) * i;
         ctx.fillStyle = '#4ade80';
@@ -1383,7 +1383,7 @@
       const slotWidth = chartWidth / bucketsCount;
       const barWidth = Math.max(2, Math.min(6, slotWidth - 4));
     
-      // Draw stacked bars (Blocked at bottom, Allowed on top)
+      // Draw stacked bars (Blocked at bottom in Red, Allowed on top in Blue)
       buckets.forEach((b, i) => {
         const x = padding.left + (i * slotWidth) + ((slotWidth - barWidth) / 2);
         const allowedH = (b.allowed / maxVal) * chartHeight;
@@ -1399,23 +1399,61 @@
         }
       });
     
-      // Draw X-axis time labels
+      // Draw Block Ratio Trend Line (Green #4ade80 matching right axis)
+      const getX = (index) => padding.left + (index * slotWidth) + (slotWidth / 2);
+      ctx.strokeStyle = '#4ade80';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      let hasStartedLine = false;
+      buckets.forEach((b, i) => {
+        const x = getX(i);
+        const ratio = b.total > 0 ? (b.blocked / b.total) : 0;
+        const y = padding.top + chartHeight - (ratio * chartHeight);
+        if (!hasStartedLine) {
+          ctx.moveTo(x, y);
+          hasStartedLine = true;
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+      ctx.stroke();
+    
+      // Draw Trend Line Data Points
+      buckets.forEach((b, i) => {
+        const x = getX(i);
+        const ratio = b.total > 0 ? (b.blocked / b.total) : 0;
+        const y = padding.top + chartHeight - (ratio * chartHeight);
+        ctx.fillStyle = '#4ade80';
+        ctx.beginPath();
+        ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    
+      // Draw X-axis time labels (adjusted for 30 buckets)
       ctx.fillStyle = '#64748b';
       ctx.font = '9px monospace';
       ctx.textAlign = 'center';
       const labelIndices = [0, 7, 15, 22, 29];
       labelIndices.forEach(i => {
-        const x = padding.left + (i * slotWidth) + (slotWidth / 2);
+        const x = getX(i);
         const minutesAgo = Math.round((bucketsCount - 1 - i) * (60 / bucketsCount));
         const label = minutesAgo === 0 ? 'Now' : `-${minutesAgo}m`;
         ctx.fillText(label, x, height - 8);
       });
     
-      // Auto-refresh active tooltip during background polling updates
-      if (activeTooltipIndex !== null && currentChartBuckets[activeTooltipIndex]) {
+      // Auto-refresh active tooltip dynamically using fresh chart metrics during polling updates
+      if (activeTooltipIndex !== null) {
         const tooltip = document.getElementById('chart-tooltip');
         if (tooltip && tooltip.style.display === 'block') {
-          updateTooltipContent(activeTooltipIndex, lastMouseX, lastMouseY, lastContainerWidth);
+          const { padding, chartWidth, bucketsCount } = currentChartMetrics;
+          if (chartWidth > 0 && lastMouseX >= padding.left && lastMouseX <= padding.left + chartWidth) {
+            const slotWidth = chartWidth / bucketsCount;
+            const freshIndex = Math.floor((lastMouseX - padding.left) / slotWidth);
+            if (freshIndex >= 0 && freshIndex < bucketsCount && currentChartBuckets[freshIndex]) {
+              activeTooltipIndex = freshIndex;
+              updateTooltipContent(freshIndex, lastMouseX, lastMouseY, lastContainerWidth);
+            }
+          }
         }
       }
     }
