@@ -1505,7 +1505,6 @@
       }
     }*/
 
-    // Updated analytics chart with higher resolution (e.g. 30 buckets = 2-min intervals)
     function renderAnalyticsChart() {
       const canvas = document.getElementById('analytics-canvas');
       if (!canvas) return;
@@ -1525,13 +1524,9 @@
       ctx.clearRect(0, 0, width, height);
       ctx.scale(dpr, dpr);
     
-      let activeLogs = STATE.chartLogs || [];
-      if (STATE.selectedDevice !== 'all') {
-        activeLogs = activeLogs.filter(l => l.device === STATE.selectedDevice);
-      }
-    
-      // Idea A & B implementation: 30 buckets (2-min intervals) for finer resolution
-      const bucketsCount = 30;
+      // Use 60-min rolling chart buffer filtered by selected device
+      const activeLogs = STATE.selectedDevice === 'all' ? STATE.chartLogs : STATE.chartLogs.filter(l => l.device === STATE.selectedDevice);
+      const bucketsCount = 12;
       const now = Date.now();
       const windowMs = 60 * 60 * 1000;
       const bucketSizeMs = windowMs / bucketsCount;
@@ -1542,21 +1537,18 @@
         startTime: startTime + (idx * bucketSizeMs),
         allowed: 0,
         blocked: 0,
-        total: 0,
-        ratio: 0
+        total: 0
       }));
     
       for (const l of activeLogs) {
         const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
-        if (isNaN(t) || t < startTime || t > now) continue;
-    
         const diff = t - startTime;
+        if (diff < 0 || diff > windowMs) continue;
         let idx = Math.floor(diff / bucketSizeMs);
         if (idx < 0) idx = 0;
         if (idx >= bucketsCount) idx = bucketsCount - 1;
     
-        const status = String(l.status || 'allowed').toLowerCase();
-        if (status === 'blocked') {
+        if (String(l.status || 'allowed').toLowerCase() === 'blocked') {
           buckets[idx].blocked++;
         } else {
           buckets[idx].allowed++;
@@ -1564,19 +1556,18 @@
         buckets[idx].total++;
       }
     
-      buckets.forEach(b => {
-        b.ratio = b.total > 0 ? (b.blocked / b.total) * 100 : 0;
-      });
-    
       currentChartBuckets = buckets;
-      const maxVal = Math.max(1, ...buckets.map(b => Math.max(b.allowed, b.blocked, b.total)));
+      
+      // Ensure maxVal is at least 4 to prevent ugly duplicate integer steps on low traffic
+      const rawMaxVal = Math.max(0, ...buckets.map(b => Math.max(b.allowed, b.blocked, b.total)));
+      const maxVal = Math.max(4, rawMaxVal);
+    
       const padding = { top: 15, right: 42, bottom: 28, left: 40 };
       const chartWidth = width - padding.left - padding.right;
       const chartHeight = height - padding.top - padding.bottom;
-      
       currentChartMetrics = { padding, chartWidth, chartHeight, maxVal, bucketsCount };
     
-      // Background Grid
+      // Background Grid & Left Y-Axis (Queries) with unique steps
       for (let i = 0; i <= 4; i++) {
         const y = padding.top + (chartHeight / 4) * i;
         ctx.strokeStyle = '#1e293b';
@@ -1586,54 +1577,82 @@
         ctx.lineTo(width - padding.right, y);
         ctx.stroke();
     
-        ctx.fillStyle = '#94a3b8';
+        ctx.fillStyle = '#38bdf8';
         ctx.font = '9px monospace';
         ctx.textAlign = 'right';
-        ctx.fillText(Math.round(maxVal * (1 - i / 4)), padding.left - 6, y + 3);
+        const val = Math.round(maxVal * (1 - i / 4));
+        ctx.fillText(val, padding.left - 6, y + 3);
+      }
     
-        ctx.fillStyle = '#38bdf8';
+      // Right Y-Axis (Block Ratio %)
+      for (let i = 0; i <= 4; i++) {
+        const y = padding.top + (chartHeight / 4) * i;
+        ctx.fillStyle = '#4ade80';
+        ctx.font = '9px monospace';
         ctx.textAlign = 'left';
-        ctx.fillText(Math.round(100 * (1 - i / 4)) + '%', width - padding.right + 6, y + 3);
+        const pctLabel = Math.round(100 * (1 - i / 4)) + '%';
+        ctx.fillText(pctLabel, width - padding.right + 6, y + 3);
       }
     
       const slotWidth = chartWidth / bucketsCount;
-      const getX = (index) => padding.left + (index * slotWidth) + (slotWidth / 2);
+      const barWidth = Math.max(3, Math.min(8, slotWidth - 10));
     
-      // Draw Allowed Line (Green) & Blocked Line (Red) instead of crammed bars
-      // Allowed trend
-      ctx.strokeStyle = 'rgba(74, 222, 128, 0.7)';
+      // Draw stacked bars (Allowed / Blocked)
+      buckets.forEach((b, i) => {
+        const x = padding.left + (i * slotWidth) + ((slotWidth - barWidth) / 2);
+        const allowedH = (b.allowed / maxVal) * chartHeight;
+        const blockedH = (b.blocked / maxVal) * chartHeight;
+    
+        ctx.fillStyle = 'rgba(248, 113, 113, 0.75)';
+        ctx.fillRect(x, padding.top + chartHeight - blockedH, barWidth, blockedH);
+        
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.75)';
+        ctx.fillRect(x, padding.top + chartHeight - blockedH - allowedH, barWidth, allowedH);
+      });
+    
+      // Draw Block Ratio Trend Line (Green)
+      ctx.strokeStyle = '#4ade80';
       ctx.lineWidth = 2;
       ctx.beginPath();
+      let hasStartedLine = false;
+    
       buckets.forEach((b, i) => {
-        const x = getX(i);
-        const y = padding.top + chartHeight - ((b.allowed / maxVal) * chartHeight);
-        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        const x = padding.left + (i * slotWidth) + (slotWidth / 2);
+        const ratio = b.total > 0 ? (b.blocked / b.total) : 0;
+        const y = padding.top + chartHeight - (ratio * chartHeight);
+    
+        if (!hasStartedLine) {
+          ctx.moveTo(x, y);
+          hasStartedLine = true;
+        } else {
+          ctx.lineTo(x, y);
+        }
       });
       ctx.stroke();
     
-      // Blocked trend
-      ctx.strokeStyle = 'rgba(248, 113, 113, 0.9)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
+      // Draw Trend Line Data Points
       buckets.forEach((b, i) => {
-        const x = getX(i);
-        const y = padding.top + chartHeight - ((b.blocked / maxVal) * chartHeight);
-        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-      });
-      ctx.stroke();
+        const x = padding.left + (i * slotWidth) + (slotWidth / 2);
+        const ratio = b.total > 0 ? (b.blocked / b.total) : 0;
+        const y = padding.top + chartHeight - (ratio * chartHeight);
     
-      // X-Axis Labels
+        ctx.fillStyle = '#4ade80';
+        ctx.beginPath();
+        ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    
+      // Draw X-Axis Time Labels
       ctx.fillStyle = '#64748b';
       ctx.font = '9px monospace';
       ctx.textAlign = 'center';
-      const labelIndices = [0, 7, 15, 22, 29];
+      const labelIndices = [0, 3, 6, 9, 11];
       labelIndices.forEach(i => {
-        const x = getX(i);
-        const minutesAgo = Math.round((bucketsCount - 1 - i) * (60 / bucketsCount));
+        const x = padding.left + (i * slotWidth) + (slotWidth / 2);
+        const minutesAgo = (bucketsCount - i) * 5;
         const label = minutesAgo === 0 ? 'Now' : `-${minutesAgo}m`;
         ctx.fillText(label, x, height - 8);
       });
-      
       // Auto-refresh active tooltip during background polling updates
       if (activeTooltipIndex !== null && currentChartBuckets[activeTooltipIndex]) {
         const tooltip = document.getElementById('chart-tooltip');
