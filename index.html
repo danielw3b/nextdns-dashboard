@@ -1524,10 +1524,10 @@
       ctx.clearRect(0, 0, width, height);
       ctx.scale(dpr, dpr);
     
-      // Use 60-min rolling chart buffer filtered by selected device
+      // Use chartLogs (rolling 60-min window) filtered by selected device
       const activeLogs = STATE.selectedDevice === 'all' ? STATE.chartLogs : STATE.chartLogs.filter(l => l.device === STATE.selectedDevice);
       
-      // 30 buckets = 2-minute intervals for finer resolution
+      // 30 buckets = 2-minute intervals for fine-grained resolution
       const bucketsCount = 30;
       const now = Date.now();
       const windowMs = 60 * 60 * 1000;
@@ -1569,7 +1569,7 @@
       const chartHeight = height - padding.top - padding.bottom;
       currentChartMetrics = { padding, chartWidth, chartHeight, maxVal, bucketsCount };
     
-      // Background Grid & Left Y-Axis (Queries) with unique steps
+      // Background Grid & Left Y-Axis (Queries)
       for (let i = 0; i <= 4; i++) {
         const y = padding.top + (chartHeight / 4) * i;
         ctx.strokeStyle = '#1e293b';
@@ -1597,60 +1597,63 @@
       }
     
       const slotWidth = chartWidth / bucketsCount;
-      const barWidth = Math.max(2, Math.min(6, slotWidth - 4));
+      const getX = (index) => padding.left + (index * slotWidth) + (slotWidth / 2);
     
-      // Draw stacked bars (Allowed / Blocked)
-      buckets.forEach((b, i) => {
-        const x = padding.left + (i * slotWidth) + ((slotWidth - barWidth) / 2);
-        const allowedH = (b.allowed / maxVal) * chartHeight;
-        const blockedH = (b.blocked / maxVal) * chartHeight;
-    
-        ctx.fillStyle = 'rgba(248, 113, 113, 0.75)';
-        ctx.fillRect(x, padding.top + chartHeight - blockedH, barWidth, blockedH);
-        
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.75)';
-        ctx.fillRect(x, padding.top + chartHeight - blockedH - allowedH, barWidth, allowedH);
-      });
-    
-      // Draw Block Ratio Trend Line (Blue #38bdf8 as requested)
-      ctx.strokeStyle = '#38bdf8';
+      // 1. Draw Allowed Line (Green)
+      ctx.strokeStyle = 'rgba(74, 222, 128, 0.8)';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      let hasStartedLine = false;
-    
+      let hasStartedAllowed = false;
       buckets.forEach((b, i) => {
-        const x = padding.left + (i * slotWidth) + (slotWidth / 2);
-        const ratio = b.total > 0 ? (b.blocked / b.total) : 0;
-        const y = padding.top + chartHeight - (ratio * chartHeight);
-    
-        if (!hasStartedLine) {
-          ctx.moveTo(x, y);
-          hasStartedLine = true;
-        } else {
-          ctx.lineTo(x, y);
-        }
+        const x = getX(i);
+        const y = padding.top + chartHeight - ((b.allowed / maxVal) * chartHeight);
+        if (!hasStartedAllowed) { ctx.moveTo(x, y); hasStartedAllowed = true; } else { ctx.lineTo(x, y); }
       });
       ctx.stroke();
     
-      // Draw Trend Line Data Points (Blue #38bdf8)
+      // 2. Draw Blocked Line (Red/Coral)
+      ctx.strokeStyle = 'rgba(248, 113, 113, 0.9)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      let hasStartedBlocked = false;
       buckets.forEach((b, i) => {
-        const x = padding.left + (i * slotWidth) + (slotWidth / 2);
+        const x = getX(i);
+        const y = padding.top + chartHeight - ((b.blocked / maxVal) * chartHeight);
+        if (!hasStartedBlocked) { ctx.moveTo(x, y); hasStartedBlocked = true; } else { ctx.lineTo(x, y); }
+      });
+      ctx.stroke();
+    
+      // 3. Draw Block Ratio Trend Line (Blue #38bdf8)
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      let hasStartedRatio = false;
+      buckets.forEach((b, i) => {
+        const x = getX(i);
         const ratio = b.total > 0 ? (b.blocked / b.total) : 0;
         const y = padding.top + chartHeight - (ratio * chartHeight);
+        if (!hasStartedRatio) { ctx.moveTo(x, y); hasStartedRatio = true; } else { ctx.lineTo(x, y); }
+      });
+      ctx.stroke();
     
+      // Draw Ratio Data Points (Blue #38bdf8)
+      buckets.forEach((b, i) => {
+        const x = getX(i);
+        const ratio = b.total > 0 ? (b.blocked / b.total) : 0;
+        const y = padding.top + chartHeight - (ratio * chartHeight);
         ctx.fillStyle = '#38bdf8';
         ctx.beginPath();
-        ctx.arc(x, y, 2, 0, Math.PI * 2);
+        ctx.arc(x, y, 2.5, 0, Math.PI * 2);
         ctx.fill();
       });
     
-      // Draw X-Axis Time Labels (adjusted for 30 buckets)
+      // Draw X-Axis Time Labels
       ctx.fillStyle = '#64748b';
       ctx.font = '9px monospace';
       ctx.textAlign = 'center';
       const labelIndices = [0, 7, 15, 22, 29];
       labelIndices.forEach(i => {
-        const x = padding.left + (i * slotWidth) + (slotWidth / 2);
+        const x = getX(i);
         const minutesAgo = Math.round((bucketsCount - 1 - i) * (60 / bucketsCount));
         const label = minutesAgo === 0 ? 'Now' : `-${minutesAgo}m`;
         ctx.fillText(label, x, height - 8);
