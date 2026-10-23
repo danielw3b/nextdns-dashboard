@@ -1460,7 +1460,7 @@
     
 
     // Helper function to render tooltip content dynamically
-    function updateTooltipContent(bucketIndex, mouseX, mouseY, containerWidth) {
+    /*function updateTooltipContent(bucketIndex, mouseX, mouseY, containerWidth) {
       const tooltip = document.getElementById('chart-tooltip');
       const b = currentChartBuckets[bucketIndex];
       if (!tooltip || !b) return;
@@ -1484,7 +1484,7 @@
         tooltip.style.left = (mouseX + 15) + 'px';
       }
       tooltip.style.top = (mouseY - 40) + 'px';
-    }
+    }*/
 
     function renderHitsTable() {
       const tbody = document.getElementById('autoblock-hits-body');
@@ -1778,7 +1778,7 @@
           <div>Total Queries: <b>${b.total}</b></div>
           <div style="color:#4ade80;">Allowed: ${b.allowed}</div>
           <div style="color:#f87171;">Blocked: ${b.blocked}</div>
-          <div style="color:#4ade80; margin-top:2px; border-top:1px solid #334155; padding-top:2px;">Block Ratio: <b>${blockRatio}%</b></div>
+          <div style="color:#38bdf8; margin-top:2px; border-top:1px solid #334155; padding-top:2px;">Block Ratio: <b>${blockRatio}%</b></div>
         `;
         
         tooltip.style.display = 'block';
