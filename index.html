@@ -1338,9 +1338,8 @@
     let lastMouseY = 0;
     let lastContainerWidth = 400;
     
-    // Renders the 60-minute analytics chart using the dedicated RAM chart buffer,
-    // 12 fixed 5-minute buckets, stacked bars, and a blue ratio trend line.
-    function renderAnalyticsChart() {
+    // 60-minute analytics: 12 fixed 5-minute buckets, stacked bars, and a blue ratio trend line.
+    /*function renderAnalyticsChart() {
       const canvas = document.getElementById('analytics-canvas');
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
@@ -1504,7 +1503,146 @@
           updateTooltipContent(activeTooltipIndex, lastMouseX, lastMouseY, lastContainerWidth);
         }
       }
+    }*/
+
+    // Updated analytics chart with higher resolution (e.g. 30 buckets = 2-min intervals)
+    function renderAnalyticsChart() {
+      const canvas = document.getElementById('analytics-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      
+      const dpr = window.devicePixelRatio || 1;
+      const width = canvas.parentElement.clientWidth || 400;
+      const height = 180;
+      
+      if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+      }
+    
+      ctx.clearRect(0, 0, width, height);
+      ctx.scale(dpr, dpr);
+    
+      let activeLogs = STATE.chartLogs || [];
+      if (STATE.selectedDevice !== 'all') {
+        activeLogs = activeLogs.filter(l => l.device === STATE.selectedDevice);
+      }
+    
+      // Idea A & B implementation: 30 buckets (2-min intervals) for finer resolution
+      const bucketsCount = 30;
+      const now = Date.now();
+      const windowMs = 60 * 60 * 1000;
+      const bucketSizeMs = windowMs / bucketsCount;
+      const startTime = now - windowMs;
+    
+      const buckets = Array.from({ length: bucketsCount }, (_, idx) => ({
+        index: idx,
+        startTime: startTime + (idx * bucketSizeMs),
+        allowed: 0,
+        blocked: 0,
+        total: 0,
+        ratio: 0
+      }));
+    
+      for (const l of activeLogs) {
+        const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
+        if (isNaN(t) || t < startTime || t > now) continue;
+    
+        const diff = t - startTime;
+        let idx = Math.floor(diff / bucketSizeMs);
+        if (idx < 0) idx = 0;
+        if (idx >= bucketsCount) idx = bucketsCount - 1;
+    
+        const status = String(l.status || 'allowed').toLowerCase();
+        if (status === 'blocked') {
+          buckets[idx].blocked++;
+        } else {
+          buckets[idx].allowed++;
+        }
+        buckets[idx].total++;
+      }
+    
+      buckets.forEach(b => {
+        b.ratio = b.total > 0 ? (b.blocked / b.total) * 100 : 0;
+      });
+    
+      currentChartBuckets = buckets;
+      const maxVal = Math.max(1, ...buckets.map(b => Math.max(b.allowed, b.blocked, b.total)));
+      const padding = { top: 15, right: 42, bottom: 28, left: 40 };
+      const chartWidth = width - padding.left - padding.right;
+      const chartHeight = height - padding.top - padding.bottom;
+      
+      currentChartMetrics = { padding, chartWidth, chartHeight, maxVal, bucketsCount };
+    
+      // Background Grid
+      for (let i = 0; i <= 4; i++) {
+        const y = padding.top + (chartHeight / 4) * i;
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(width - padding.right, y);
+        ctx.stroke();
+    
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '9px monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText(Math.round(maxVal * (1 - i / 4)), padding.left - 6, y + 3);
+    
+        ctx.fillStyle = '#38bdf8';
+        ctx.textAlign = 'left';
+        ctx.fillText(Math.round(100 * (1 - i / 4)) + '%', width - padding.right + 6, y + 3);
+      }
+    
+      const slotWidth = chartWidth / bucketsCount;
+      const getX = (index) => padding.left + (index * slotWidth) + (slotWidth / 2);
+    
+      // Draw Allowed Line (Green) & Blocked Line (Red) instead of crammed bars
+      // Allowed trend
+      ctx.strokeStyle = 'rgba(74, 222, 128, 0.7)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      buckets.forEach((b, i) => {
+        const x = getX(i);
+        const y = padding.top + chartHeight - ((b.allowed / maxVal) * chartHeight);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    
+      // Blocked trend
+      ctx.strokeStyle = 'rgba(248, 113, 113, 0.9)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      buckets.forEach((b, i) => {
+        const x = getX(i);
+        const y = padding.top + chartHeight - ((b.blocked / maxVal) * chartHeight);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    
+      // X-Axis Labels
+      ctx.fillStyle = '#64748b';
+      ctx.font = '9px monospace';
+      ctx.textAlign = 'center';
+      const labelIndices = [0, 7, 15, 22, 29];
+      labelIndices.forEach(i => {
+        const x = getX(i);
+        const minutesAgo = Math.round((bucketsCount - 1 - i) * (60 / bucketsCount));
+        const label = minutesAgo === 0 ? 'Now' : `-${minutesAgo}m`;
+        ctx.fillText(label, x, height - 8);
+      });
+      
+      // Auto-refresh active tooltip during background polling updates
+      if (activeTooltipIndex !== null && currentChartBuckets[activeTooltipIndex]) {
+        const tooltip = document.getElementById('chart-tooltip');
+        if (tooltip && tooltip.style.display === 'block') {
+          updateTooltipContent(activeTooltipIndex, lastMouseX, lastMouseY, lastContainerWidth);
+        }
+      }
     }
+    
 
     // Helper function to render tooltip content dynamically
     function updateTooltipContent(bucketIndex, mouseX, mouseY, containerWidth) {
@@ -1576,6 +1714,73 @@
       showToast('Blocked', `Added ${safeText(domain)}`, 'danger');
     };
 
+    // Export session logs and header KPIs to a CSV file
+    function exportLiveLogsToCSV() {
+      const sessionLogs = STATE.sessionLogs || [];
+      if (sessionLogs.length === 0) {
+        showToast('⚠️ Export', 'No logs available for export.', 'warning');
+        return;
+      }
+    
+      // Current date for title and filename
+      const currentDate = new Date().toISOString().slice(0, 10);
+      
+      // Read first three KPI values from header elements (with fallbacks)
+      const totalVal = document.getElementById('kpi-total')?.innerText || '0';
+      const blockedVal = document.getElementById('kpi-blocked')?.innerText || '0';
+      const allowedVal = document.getElementById('kpi-allowed')?.innerText || '0';
+    
+      // Build CSV content with UTF-8 BOM for Excel compatibility
+      let csvContent = '\uFEFF';
+      csvContent += `"# NextDNS Sentinel CSV Export - ${currentDate}"\n`;
+      csvContent += `"Total Queries","Blocked","Allowed"\n`;
+      csvContent += `"${totalVal}","${blockedVal}","${allowedVal}"\n\n`;
+    
+      // CSV column headers matching the Live Log table structure
+      csvContent += `"Time","Status","Domain","Device","Client IP","Type","Protocol","Latency (ms)","Reasons"\n`;
+    
+      // Append each entry from sessionLogs safely
+      sessionLogs.forEach(log => {
+        const timeStr = log.time instanceof Date ? log.time.toISOString() : new Date(log.time || Date.now()).toISOString();
+        const status = log.status || 'allowed';
+        const domain = (log.domain || '').replace(/"/g, '""');
+        const device = (log.device || '').replace(/"/g, '""');
+        const clientIp = log.clientIp || '';
+        const type = log.type || 'A';
+        const proto = log.proto || 'DoH';
+        const latency = log.latency || 0;
+        const reasons = Array.isArray(log.reasons) ? log.reasons.join(', ').replace(/"/g, '""') : '';
+    
+        csvContent += `"${timeStr}","${status}","${domain}","${device}","${clientIp}","${type}","${proto}","${latency}","${reasons}"\n`;
+      });
+    
+      // Trigger browser download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `nextdns-sentinel-logs-${currentDate}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    
+      showToast('📥 Export', 'CSV export completed successfully.', 'success');
+    }
+    
+    // Bind to button element
+    document.getElementById('btn-export-live')?.addEventListener('click', exportLiveLogsToCSV);
+    
+    // Clear live log stream table and buffer
+    function clearLiveLogs() {
+      STATE.logs = [];
+      renderFilteredLiveLogs();
+      showToast('🧹 Cleared', 'Live log stream has been cleared.', 'info');
+    }
+    
+    // Bind to clear button element
+    document.getElementById('btn-clear-logs')?.addEventListener('click', clearLiveLogs);
+    
     // Export configuration and denylist as a JSON file
     function backupConfigJSON() {
       const data = {
