@@ -374,7 +374,7 @@
         </div>
       </div>
 
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+      <!--<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
         <div class="card" style="margin-bottom:0;">
           <div class="card-title">Top Blocked Domains</div>
           <div id="analytics-top-blocked" style="font-size: 0.75rem;"></div>
@@ -391,7 +391,32 @@
           <div class="card-title">DNS Security & Query Types</div>
           <div id="analytics-types" style="font-size: 0.75rem;"></div>
         </div>
+      </div>-->
+
+      <!-- Grid wrapping layout: Displays as 2x2 blocks on large displays, fluidly stacks 1x4 vertically on mobile viewports -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 1rem; margin-bottom: 1rem;">
+        
+        <div class="card" style="margin-bottom:0;">
+          <div class="card-title">Top Blocked Domains</div>
+          <div id="analytics-top-blocked" style="font-size: 0.75rem;"></div>
+        </div>
+        
+        <div class="card" style="margin-bottom:0;">
+          <div class="card-title">Top Allowed Clean Traffic</div>
+          <div id="analytics-top-allowed" style="font-size: 0.75rem;"></div>
+        </div>
+        
+        <div class="card" style="margin-bottom:0;">
+          <div class="card-title">Device Breakdown</div>
+          <div id="analytics-devices" style="font-size: 0.75rem;"></div>
+        </div>
+        
+        <div class="card" style="margin-bottom:0;">
+          <div class="card-title">DNS Security & Query Types</div>
+          <div id="analytics-types" style="font-size: 0.75rem;"></div>
+        </div>
       </div>
+      
 
       <div class="card" style="margin-bottom:0;">
         <div class="card-title">IPs (IP addresses making the queries)</div>
