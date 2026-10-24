@@ -1007,6 +1007,7 @@
       if (gSel) gSel.value = dev;
       renderFilteredLiveLogs();
       updateAnalyticsKPIs();
+      renderHitsTable();
       showToast('Device Filter', `Filtered to ${safeText(dev)}`, 'warn');
     };
 
