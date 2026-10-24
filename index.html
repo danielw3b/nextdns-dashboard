@@ -1175,7 +1175,7 @@
               <div style="display:flex; justify-content:space-between; font-family:monospace; font-size: 0.72rem; margin-bottom: 2px;">
                 <div>
                   <span style="color:#38bdf8; font-weight:600; font-size:0.8rem;">${safeText(ip)}</span>
-                  <div style="color:var(--muted); font-size: 0.68rem; margin-top: 1px;">📡 ${safeText(info.isp)} &nbsp;|&nbsp; ${safeText(info.location)}</div>
+                  <div style="color:var(--muted); font-size: 0.68rem; margin-top: 1px;">${safeText(info.isp)} &nbsp;|&nbsp; ${safeText(info.location)}</div>
                 </div>
                 <span style="color:var(--text); font-weight: bold; font-family: monospace;">${c} (${total > 0 ? Math.round((c/total)*100) : 0}%)</span>
               </div>
