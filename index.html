@@ -374,25 +374,6 @@
         </div>
       </div>
 
-      <!--<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
-        <div class="card" style="margin-bottom:0;">
-          <div class="card-title">Top Blocked Domains</div>
-          <div id="analytics-top-blocked" style="font-size: 0.75rem;"></div>
-        </div>
-        <div class="card" style="margin-bottom:0;">
-          <div class="card-title">Top Allowed Clean Traffic</div>
-          <div id="analytics-top-allowed" style="font-size: 0.75rem;"></div>
-        </div>
-        <div class="card" style="margin-bottom:0;">
-          <div class="card-title">Device Breakdown</div>
-          <div id="analytics-devices" style="font-size: 0.75rem;"></div>
-        </div>
-        <div class="card" style="margin-bottom:0;">
-          <div class="card-title">DNS Security & Query Types</div>
-          <div id="analytics-types" style="font-size: 0.75rem;"></div>
-        </div>
-      </div>-->
-
       <!-- Grid wrapping layout: Displays as 2x2 blocks on large displays, fluidly stacks 1x4 vertically on mobile viewports -->
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 1rem; margin-bottom: 1rem;">
         
@@ -658,95 +639,6 @@
       } catch(e) {}
     }
 
-    /*
-    let db = null;
-    const DB_NAME = 'NextDNSSentinelDB';
-    const STORE_LOGS = 'logs';
-    const STORE_HITS = 'hits';
-
-    // Initialize IndexedDB for persistent storage in API mode
-    async function initDB() {
-      return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, 2);
-        request.onerror = () => reject(request.error);
-        request.onsuccess = (event) => {
-          db = event.target.result;
-          if (STATE.mode === 'api') loadDataFromDB();
-          resolve(db);
-        };
-        request.onupgradeneeded = (event) => {
-          const database = event.target.result;
-          if (!database.objectStoreNames.contains(STORE_LOGS)) {
-            const store = database.createObjectStore(STORE_LOGS, { keyPath: 'id' });
-            store.createIndex('time', 'time', { unique: false });
-          }
-          if (!database.objectStoreNames.contains(STORE_HITS)) {
-            database.createObjectStore(STORE_HITS, { keyPath: 'domain' });
-          }
-        };
-      });
-    }
-
-    // Clear database when switching from simulation to live API mode
-    function clearDatabase() {
-      if (!db) return;
-      try {
-        const tx = db.transaction([STORE_LOGS, STORE_HITS], 'readwrite');
-        tx.objectStore(STORE_LOGS).clear();
-        tx.objectStore(STORE_HITS).clear();
-      } catch (e) {}
-    }
-
-    function saveLogToDB(log) {
-      if (!db || STATE.mode !== 'api') return;
-      try {
-        const tx = db.transaction(STORE_LOGS, 'readwrite');
-        tx.objectStore(STORE_LOGS).put({ ...log, time: log.time instanceof Date ? log.time.getTime() : log.time });
-      } catch (e) {}
-    }
-
-    function saveHitToDB(domain, count, lastSeen) {
-      if (!db || STATE.mode !== 'api') return;
-      try {
-        const tx = db.transaction(STORE_HITS, 'readwrite');
-        tx.objectStore(STORE_HITS).put({ domain, count, lastSeen });
-      } catch (e) {}
-    }
-
-    function loadDataFromDB() {
-      if (!db || STATE.mode !== 'api') return;
-      try {
-        const txHits = db.transaction(STORE_HITS, 'readonly');
-        const reqHits = txHits.objectStore(STORE_HITS).getAll();
-        reqHits.onsuccess = () => {
-          if (reqHits.result) {
-            reqHits.result.forEach(h => { STATE.hits[h.domain] = { count: h.count, lastSeen: h.lastSeen }; });
-            renderHitsTable();
-          }
-        };
-
-        const txLogs = db.transaction(STORE_LOGS, 'readonly');
-        const index = txLogs.objectStore(STORE_LOGS).index('time');
-        const request = index.openCursor(null, 'prev');
-        const loaded = [];
-
-        request.onsuccess = (event) => {
-          const cursor = event.target.result;
-          if (cursor && loaded.length < 500) {
-            loaded.push({ ...cursor.value, time: new Date(cursor.value.time) });
-            cursor.continue();
-          } else if (loaded.length > 0) {
-            STATE.logs = loaded;
-            STATE.totalQueriesCounter = Math.max(STATE.totalQueriesCounter, loaded.length);
-            loaded.forEach(l => { if (l.device) registerDevice(l.device); });
-            renderFilteredLiveLogs();
-            updateAnalyticsKPIs();
-            renderHitsTable();
-          }
-        };
-      } catch (e) {}
-    }*/
-
     function showToast(title, msg, type = 'warn') {
       const container = document.getElementById('toast-container');
       const div = document.createElement('div');
@@ -773,45 +665,6 @@
         gSel.appendChild(opt);
       }
     }
-
-    /*function handleIncomingLog(log) {
-      // Save log to DB if running in real API mode (IndexedDB can be muted later if needed)
-      //if (STATE.mode === 'api' && typeof saveLogToDB === 'function') saveLogToDB(log);
-      
-      STATE.logs.unshift(log);
-      STATE.totalQueriesCounter++;
-      if (STATE.logs.length > 500) STATE.logs.pop();
-      if (log.device) registerDevice(log.device);
-    
-      const d = log.domain.toLowerCase();
-      if (!STATE.hits[d]) STATE.hits[d] = { count: 0, lastSeen: Date.now() };
-      STATE.hits[d].count++;
-      STATE.hits[d].lastSeen = Date.now();
-      
-      //if (STATE.mode === 'api' && typeof saveHitToDB === 'function') saveHitToDB(d, STATE.hits[d].count, STATE.hits[d].lastSeen);
-    
-      if (STATE.config.autoBlock && STATE.hits[d].count >= STATE.config.threshold) {
-        const isDeniedAlready = STATE.denylist.some(r => r.domain.toLowerCase() === d);
-        const isSys = STATE.config.protectSystem && isProtected(d);
-        if (!isDeniedAlready && !isSys) {
-          STATE.denylist.unshift({ id: String(Date.now()), domain: d, category: 'Auto-Block', active: true, hits: STATE.hits[d].count });
-          saveState();
-          showToast('🚫 Guard Denied', `Blocked <code>${safeText(d)}</code>`, 'danger');
-        }
-      }
-    
-      if (!log.clientIp) log.clientIp = '95.229.184.162';
-    
-      if (!renderScheduled) {
-        renderScheduled = true;
-        requestAnimationFrame(() => {
-          renderScheduled = false;
-          renderFilteredLiveLogs();
-        });
-      }
-      updateAnalyticsKPIs();
-      renderHitsTable();
-    }*/
 
     // Central ingestion function for both simulation and API logs
     function handleIncomingLog(log) {
@@ -1106,7 +959,6 @@
       }
     }
 
-
     function updateAnalyticsKPIs() {
       // Use sessionLogs for lifetime metrics since app start, with device filter
       const sessionLogs = STATE.sessionLogs || [];
@@ -1400,8 +1252,7 @@
           }
         }
       }
-    }
-    
+    }    
 
     // Helper function to render tooltip content dynamically
     function updateTooltipContent(bucketIndex, mouseX, mouseY, containerWidth) {
@@ -1801,16 +1652,14 @@
     loadConfigToUI();
     STATE.mode = (STATE.config.profile && STATE.config.apiKey) ? 'api' : 'sim';
 
-    //initDB().then(() => {
-      if (STATE.mode === 'api') {
-        document.getElementById('stream-status').textContent = 'Live';
-        fetchNextDNSLogs();
-        apiPollTimer = setInterval(fetchNextDNSLogs, 10000);
-      } else {
-        document.getElementById('stream-status').textContent = 'Demo';
-        startSimulation();
-      }
-    //});
+    if (STATE.mode === 'api') {
+      document.getElementById('stream-status').textContent = 'Live';
+      fetchNextDNSLogs();
+      apiPollTimer = setInterval(fetchNextDNSLogs, 10000);
+    } else {
+      document.getElementById('stream-status').textContent = 'Demo';
+      startSimulation();
+    }
 
     // window resize or tablet rotation
     window.addEventListener('resize', () => {
