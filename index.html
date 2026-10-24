@@ -360,7 +360,7 @@
 
       <div class="card" style="margin-bottom: 1.25rem;">
         <div class="card-title">
-          <span>last 60-Minute</span>
+          <span>Last 60-Minutes</span>
           <span style="font-size: 0.7rem; color: var(--muted);" id="analytics-chart-subtitle"></span>
         </div>
         <div style="position: relative; height: 180px; width: 100%;">
@@ -1172,7 +1172,7 @@
           const info = getNextDNSIPDetails(ip);
           return `
             <div style="margin-bottom:10px;">
-              <div style="display:flex; justify-content:space-between; font-family:monospace; font-size: 0.72rem; margin-bottom: 2px;">
+              <div style="display:flex; justify-content:space-between; /*font-family:monospace;*/ font-size: 0.72rem; margin-bottom: 2px;">
                 <div>
                   <span style="color:#38bdf8; font-weight:600; font-size:0.8rem;">${safeText(ip)}</span>
                   <div style="color:var(--muted); font-size: 0.68rem; margin-top: 1px;">${safeText(info.isp)} | ${safeText(info.location)}</div>
