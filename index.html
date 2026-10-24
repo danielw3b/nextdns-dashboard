@@ -876,15 +876,16 @@
     }*/
 
 
-     // Local memory cache to prevent infinite parallel network loops
+    // Local memory cache to prevent infinite parallel network loops
     const IP_CACHE = {};
-    
-    // Resolves IP via ://freeipapi.com (HTTPS safe for Cloudflare Pages).
+
+    // Resolves IP via free.freeipapi.com (HTTPS safe for Cloudflare Pages).
     // Stores data locally to ensure UI rendering remains synchronous.
     function getNextDNSIPDetails(ip) {
+      if (!ip) return { isp: '🛜 Unknown IP', location: 'Unknown' };
       if (IP_CACHE[ip]) return IP_CACHE[ip];
     
-      // Local hardcoded fallbacks for instantaneous initial rendering
+      // Local hardcoded fallbacks for instantaneous rendering
       if (ip.includes('95.229.184.162')) {
         return { isp: '🛜 Telecom Italia S.p.A.', location: '🇮🇹 Santa Croce Camerina, Italy' };
       }
@@ -899,6 +900,7 @@
         return { isp: '🛜 Resolving Network...', location: '🔍 Fetching...' };
       }
     
+      // Mark as pending to block duplicate overlapping requests
       IP_CACHE[ip] = null;
       fetchIPGeodeticData(ip);
     
@@ -906,6 +908,7 @@
     }
     
     // Performs background network request to populate cache.
+    // Uses encodeURIComponent to cleanly handle IPv6 addresses.
     async function fetchIPGeodeticData(ip) {
       const getFlagEmoji = (code) => {
         if (!code) return '🌐';
@@ -913,7 +916,10 @@
       };
     
       try {
-        const response = await fetch(`https://freeipapi.com/api/v1/json/${ip}`);
+        // Encodes the IP parameter to safely pass IPv6 colons without breaking HTTP routes
+        const cleanIp = encodeURIComponent(ip.trim());
+        const response = await fetch(`https://freeipapi.com{cleanIp}`);
+        
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
     
         const data = await response.json();
@@ -921,7 +927,7 @@
         const city = data.cityName || '';
         const country = data.countryName || 'Unknown';
     
-        // Default connection type: Wi-Fi / Fixed Broadband
+        // Default icon: 🛜 for Wi-Fi / Fixed line networks
         let networkIcon = '🛜'; 
         const ispName = (data.dataProvider || '').toLowerCase();
         const isMobile = data.isMobile || 
@@ -931,7 +937,7 @@
                          ispName.includes('telekom') || 
                          ispName.includes('telefonica');
     
-        // Switch to cellular signal bars if mobile carrier is detected
+        // Switch icon: 📶 for Mobile / Cellular data lines
         if (isMobile) {
           networkIcon = '📶'; 
         }
@@ -941,7 +947,7 @@
           location: city ? `${flag} ${city}, ${country}` : `${flag} ${country}`
         };
     
-        // Trigger non-blocking dashboard re-render with fresh cache data
+        // Re-trigger the layout rendering cycle safely using debounce flag
         if (!window._renderIpsScheduled) {
           window._renderIpsScheduled = true;
           setTimeout(() => {
@@ -951,7 +957,8 @@
         }
     
       } catch (error) {
-        console.error('IP background resolution failed:', error);
+        console.error(`IP background resolution failed for ${ip}:`, error);
+        // Silent error fallback to prevent broken promises from halting the UI engine
         IP_CACHE[ip] = { 
           isp: '🌐 Network Error', 
           location: 'Unknown (Offline)' 
