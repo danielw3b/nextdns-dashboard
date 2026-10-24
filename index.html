@@ -998,57 +998,57 @@
 
 
     /**
-     * Resolves an IP address using freeipapi.com (Supports HTTPS natively).
-     * Safe for direct use in frontend environments like Cloudflare Pages.
+     * Resolves IP via ://freeipapi.com (HTTPS safe for Cloudflare Pages).
+     * Switches connection icons between Wi-Fi and Mobile tower symbols.
      * 
-     * @param {string} ip - The IPv4 or IPv6 address to resolve.
-     * @returns {Promise<{isp: string, location: string}>} Resolved network details.
+     * @param {string} ip
+     * @returns {Promise<{isp: string, location: string}>}
      */
     async function getNextDNSIPDetails(ip) {
-      // Helper function to generate a flag emoji from an ISO country code
-      const getFlagEmoji = (countryCode) => {
-        if (!countryCode) return '🌐';
-        const codePoints = countryCode
-          .toUpperCase()
-          .split('')
-          .map(char => 127397 + char.charCodeAt(0));
-        return String.fromCodePoint(...codePoints);
+      // Convert ISO country code to flag emoji
+      const getFlagEmoji = (code) => {
+        if (!code) return '🌐';
+        return String.fromCodePoint(...code.toUpperCase().split('').map(c => 127397 + c.charCodeAt(0)));
       };
     
       try {
-        // Perform the secure HTTPS request to the freeipapi.com endpoint
-        const response = await fetch(`https://freeipapi.com{ip}`);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
+        // FIXED: Using the mandatory official 'free.' subdomain endpoint
+        const response = await fetch(`https://://freeipapi.com/api/v1/json/${ip}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
     
         const data = await response.json();
-    
-        // Generate flag emoji and construct a human-readable location string
         const flag = getFlagEmoji(data.countryCode);
+        const city = data.cityName || '';
+        const country = data.countryName || 'Unknown';
+    
+        // NextDNS styling: 📶 for Wi-Fi/Broadband, 📡 for Mobile towers
+        let networkIcon = '📶'; 
         
-        // Fallback logic if individual properties are missing
-        const cityName = data.cityName || '';
-        const countryName = data.countryName || 'Unknown';
-        const locationString = cityName ? `${flag} ${cityName}, ${countryName}` : `${flag} ${countryName}`;
+        const ispName = (data.dataProvider || '').toLowerCase();
+        const isMobile = data.isMobile || 
+                         ispName.includes('mobile') || 
+                         ispName.includes('cellular') || 
+                         ispName.includes('vodafone') || 
+                         ispName.includes('telekom') || 
+                         ispName.includes('telefonica');
+    
+        if (isMobile) {
+          networkIcon = '📡'; 
+        }
     
         return {
-          // freeipapi.com provides 'dataProvider' as the ISP field
-          isp: data.dataProvider || 'Broadband WAN Gateway',
-          location: locationString
+          isp: `${networkIcon} ${data.dataProvider || 'Broadband WAN Gateway'}`,
+          location: city ? `${flag} ${city}, ${country}` : `${flag} ${country}`
         };
-    
       } catch (error) {
-        console.error('Failed to resolve IP details via HTTPS API:', error);
-        
-        // Graceful fallback for network issues or rate-limiting
+        console.error('IP resolution failed:', error);
         return { 
-          isp: 'Network Error / Gateway', 
+          isp: '🌐 Network Error / Gateway', 
           location: 'Unknown (Offline)' 
         };
       }
     }
+
     
 
     function updateAnalyticsKPIs() {
