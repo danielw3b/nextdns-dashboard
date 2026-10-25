@@ -918,7 +918,7 @@
       try {
         // Encodes the IP parameter to safely pass IPv6 colons without breaking HTTP routes
         const cleanIp = encodeURIComponent(ip.trim());
-        const response = await fetch(`https://freeipapi.com{cleanIp}`);
+        const response = await fetch(`https://freeipapi.com/api/v1/json/${cleanIp}`);
         
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
     
