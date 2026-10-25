@@ -864,6 +864,47 @@
       showToast('Device Filter', `Filtered to ${safeText(dev)}`, 'warn');
     };
 
+    // Array containing common European mobile cellular carrier keywords
+    const EUROPEAN_MOBILE_CARRIERS = [
+      'vodafone',       // Active across UK, DE, IT, ES, IE, etc.
+      'telekom',        // Deutsche Telekom, Magenta (AT), T-Mobile (PL, CZ)
+      't-mobile',       // Historical and active brand variants
+      'telefonica',     // Parent company of O2 and Movistar
+      'o2 ',            // Space prevents accidental partial word matches
+      'movistar',       // Spain (Telefónica)
+      'orange',         // France, Spain, Poland, Romania, Belgium
+      'sfr',            // France (Altice)
+      'bouygues',       // France
+      'iliad',          // Parent of Free (FR) and Iliad/iliad (IT)
+      'free mobile',    // France
+      'ee ',            // EE / Everything Everywhere (UK)
+      'three ',         // Hutchison 3G (UK, IE, AT, DK, SE)
+      'hutchison',      // Parent company of Three network
+      'wind tre',       // Italy
+      'kpn',            // Netherlands
+      'proximus',       // Belgium
+      'base nv',        // Belgium
+      'telenet',        // Belgium
+      'swisscom',       // Switzerland
+      'salt mobile',    // Switzerland
+      'sunrise ',       // Switzerland
+      'a1 bulgaria',    // Austria / A1 Telekom Austria Group (EE Europe)
+      'bouygues',       // France
+      'telenor',        // Scandinavia (Norway, Sweden, Denmark)
+      'telia',          // Sweden, Finland, Denmark, Baltics
+      'tele2',          // Sweden, Baltics
+      'comviq',         // Sweden
+      'play mobile',    // Poland (P4)
+      'plus gsm',       // Poland (Polkomtel)
+      'tim ',           // Telecom Italia Mobile (IT)
+      'digi mobil',     // Romania, Italy, Spain
+      'eir ',           // Ireland (formerly Eircom mobile)
+      'nos ',           // Portugal
+      'meo ',           // Portugal
+      'bouygues'        // France
+    ];
+
+    
     // Local memory cache to prevent infinite parallel network loops
     const IP_CACHE = {};
 
@@ -927,13 +968,25 @@
     
         // Default icon: ᯤ🛜 for Wi-Fi / Fixed line networks
         let networkIcon = 'ᯤ'; 
+        
         const ispNameLower = rawIsp.toLowerCase();
-        const isMobile = ispNameLower.includes('mobile') || 
+        /*const isMobile = ispNameLower.includes('mobile') || 
                          ispNameLower.includes('cellular') ||
                          ispNameLower.includes('vodafone') || 
-                         ispNameLower.includes('telefonica') || 
+                         ispNameLower.includes('telefonica') ||
+                         ispNameLower.includes('o2') || 
                          ispNameLower.includes('t-mobile');
-    
+        */
+        //const ispNameLower = (data.org || data.asn || '').toLowerCase();
+        
+        // Check universal indicators first
+        const isMobile = ispNameLower.includes('mobile') || ispNameLower.includes('cellular');
+        
+        // Loop through the carrier array dynamically if universal match isn't found
+        if (!isMobile) {
+          isMobile = EUROPEAN_MOBILE_CARRIERS.some(carrier => ispNameLower.includes(carrier));
+        }
+        
         // Switch icon: 📶 for Mobile / Cellular data lines
         if (isMobile) {
           networkIcon = '📶'; 
