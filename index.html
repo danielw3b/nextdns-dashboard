@@ -969,7 +969,7 @@
         // Default icon: ᯤ🛜 for Wi-Fi / Fixed line networks
         let networkIcon = 'ᯤ'; 
         
-        //const ispNameLower = rawIsp.toLowerCase();
+        const ispNameLower = rawIsp.toLowerCase();
         /*const isMobile = ispNameLower.includes('mobile') || 
                          ispNameLower.includes('cellular') ||
                          ispNameLower.includes('vodafone') || 
@@ -977,10 +977,10 @@
                          ispNameLower.includes('o2') || 
                          ispNameLower.includes('t-mobile');
         */
-        let ispNameLower = (data.org || data.asn || '').toLowerCase();
+        //const ispNameLower = (data.org || data.asn || '').toLowerCase();
         
         // Check universal indicators first
-        const isMobile = ispNameLower.includes('mobile') || ispNameLower.includes('cellular');
+        let isMobile = ispNameLower.includes('mobile') || ispNameLower.includes('cellular');
         
         // Loop through the carrier array dynamically if universal match isn't found
         if (!isMobile) {
