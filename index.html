@@ -924,102 +924,112 @@
     
       return { isp: 'ᯤ Resolving Network...', location: '🔍 Fetching...' };
     }
+
+
+    // Queue management variables to smooth out rapid parallel API lookups
+    let ipRequestQueue = [];
+    let isQueueProcessing = false;
     
     // Performs background network request to populate cache.
     // Uses encodeURIComponent to cleanly handle IPv6 addresses.
     async function fetchIPGeodeticData(ip) {
+      // Push the target lookups task into the structural line queue array
+      ipRequestQueue.push(ip);
+      
+      if (isQueueProcessing) return; // Wait if the execution engine is already processing
+      isQueueProcessing = true;
+    
       const getFlagEmoji = (code) => {
         if (!code) return '🌐';
         return String.fromCodePoint(...code.toUpperCase().split('').map(c => 127397 + c.charCodeAt(0)));
       };
     
-      // Dynamically extract the first word and append trailing dots if truncated
       const cleanProviderName = (name) => {
         if (!name) return 'Broadband WAN Gateway';
-        
         const trimmedName = name.trim();
         const firstSpaceIndex = trimmedName.indexOf(' ');
-        
-        // If there is no space, the name is already a single word
-        if (firstSpaceIndex === -1) {
-          return trimmedName;
-        }
-        
-        // Slice exactly up to the first space and attach ellipsis
+        if (firstSpaceIndex === -1) return trimmedName;
         return trimmedName.substring(0, firstSpaceIndex) + '...';
       };
     
-      try {
-        const cleanIp = encodeURIComponent(ip.trim());
-        const response = await fetch(`https://ipapi.co/${cleanIp}/json/`);
-        
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    
-        const data = await response.json();
-        if (data.error) throw new Error(data.reason || 'API error block');
-    
-        const flag = getFlagEmoji(data.country_code);
-        const city = data.city || '';
-        const country = data.country_name || 'Unknown';
-        
-        // Extract raw string and run it through the dynamic trailing ellipsis filter
-        const rawIsp = data.org || data.asn || 'Broadband WAN Gateway';
-        const shortenedIsp = cleanProviderName(rawIsp);
-    
-        // Default icon: ᯤ🛜 for Wi-Fi / Fixed line networks
-        let networkIcon = 'ᯤ'; 
-        
-        const ispNameLower = rawIsp.toLowerCase();
-        /*const isMobile = ispNameLower.includes('mobile') || 
-                         ispNameLower.includes('cellular') ||
-                         ispNameLower.includes('vodafone') || 
-                         ispNameLower.includes('telefonica') ||
-                         ispNameLower.includes('o2') || 
-                         ispNameLower.includes('t-mobile');
-        */
-        //const ispNameLower = (data.org || data.asn || '').toLowerCase();
-        
-        // Check universal indicators first
-        let isMobile = ispNameLower.includes('mobile') || ispNameLower.includes('cellular');
-        
-        // Loop through the carrier array dynamically if universal match isn't found
-        /*if (!isMobile) {
-          isMobile = EUROPEAN_MOBILE_CARRIERS.some(carrier => ispNameLower.includes(carrier));
-        }*/
-
-        if (!isMobile) {
-          isMobile = EUROPEAN_MOBILE_CARRIERS.some(carrier => {
-            // Dynamically build a RegExp with full word boundaries (\b) and case-insensitive flag (i)
-            const regex = new RegExp(`\\b${carrier.trim()}\\b`, 'i');
-            return regex.test(ispNameLower);
-          });
-        }
-        
-        // Switch icon: 📶 for Mobile / Cellular data lines
-        if (isMobile) {
-          networkIcon = '📶'; 
+      // Safe inner worker to loop sequentially through the queue stack
+      async function processNextQueueItem() {
+        if (ipRequestQueue.length === 0) {
+          isQueueProcessing = false; // Queue fully cleared, power down engine
+          return;
         }
     
-        IP_CACHE[ip] = {
-          isp: `${networkIcon} ${shortenedIsp}`,
-          location: city ? `${flag} ${city}, ${country}` : `${flag} ${country}`
-        };
+        const currentIp = ipRequestQueue.shift();
     
-        if (!window._renderIpsScheduled) {
-          window._renderIpsScheduled = true;
-          setTimeout(() => {
-            window._renderIpsScheduled = false;
-            if (typeof updateAnalyticsKPIs === 'function') updateAnalyticsKPIs();
-          }, 150);
+        try {
+          const cleanIp = encodeURIComponent(currentIp.trim());
+          const response = await fetch(`https://ipapi.co{cleanIp}/json/`);
+          
+          // If we encounter a 429 block, put the IP right back in front of the line
+          if (response.status === 429) {
+            ipRequestQueue.unshift(currentIp);
+            console.warn(`API rate limited (429). Cooling down line operations for 2 seconds...`);
+            setTimeout(processNextQueueItem, 2000); // 2 second backup recovery delay
+            return;
+          }
+    
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    
+          const data = await response.json();
+          if (data.error) throw new Error(data.reason || 'API error block');
+    
+          const flag = getFlagEmoji(data.country_code);
+          const city = data.city || '';
+          const country = data.country_name || 'Unknown';
+          
+          const rawIsp = data.org || data.asn || 'Broadband WAN Gateway';
+          const shortenedIsp = cleanProviderName(rawIsp);
+    
+          let networkIcon = 'ᯤ'; 
+          const ispNameLower = rawIsp.toLowerCase();
+          
+          let isMobile = ispNameLower.includes('mobile') || ispNameLower.includes('cellular');
+    
+          if (!isMobile && typeof EUROPEAN_MOBILE_CARRIERS !== 'undefined') {
+            isMobile = EUROPEAN_MOBILE_CARRIERS.some(carrier => {
+              const regex = new RegExp(`\\b${carrier.trim()}\\b`, 'i');
+              return regex.test(ispNameLower);
+            });
+          }
+    
+          if (isMobile) {
+            networkIcon = '📶'; 
+          }
+    
+          // Populate fresh data safely into memory state
+          IP_CACHE[currentIp] = {
+            isp: `${networkIcon} ${shortenedIsp}`,
+            location: city ? `${flag} ${city}, ${country}` : `${flag} ${country}`
+          };
+    
+          // Trigger redraw sequence
+          if (!window._renderIpsScheduled) {
+            window._renderIpsScheduled = true;
+            setTimeout(() => {
+              window._renderIpsScheduled = false;
+              if (typeof updateAnalyticsKPIs === 'function') updateAnalyticsKPIs();
+            }, 150);
+          }
+    
+        } catch (error) {
+          console.error(`IP background resolution failed for ${currentIp}:`, error);
+          IP_CACHE[currentIp] = { 
+            isp: '🌐 Network Error', 
+            location: 'Unknown (Offline)' 
+          };
         }
     
-      } catch (error) {
-        console.error(`IP background resolution failed for ${ip}:`, error);
-        IP_CACHE[ip] = { 
-          isp: '🌐 Network Error', 
-          location: 'Unknown (Offline)' 
-        };
+        // Smooth out requests by waiting 250 milliseconds before triggering the next API loop task
+        setTimeout(processNextQueueItem, 250);
       }
+    
+      // Kickstart execution track loop
+      processNextQueueItem();
     }
 
     function updateAnalyticsKPIs() {
