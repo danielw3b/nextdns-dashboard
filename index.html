@@ -885,17 +885,6 @@
       if (!ip) return { isp: '🛜 Unknown IP', location: 'Unknown' };
       if (IP_CACHE[ip]) return IP_CACHE[ip];
     
-      // Local hardcoded fallbacks for instantaneous rendering
-      /*if (ip.includes('95.229.184.162')) {
-        return { isp: '🛜 Telecom Italia S.p.A.', location: '🇮🇹 Santa Croce Camerina, Italy' };
-      }
-      if (ip.includes('176.6.5.196') || ip.includes('2a02:3030') || ip.includes('176.6.63.5') || ip.includes('2a02:3038') || ip.includes('2a02:3035')) {
-        return { isp: '📶 Telefonica Germany GmbH & Co.', location: '🇩🇪 Duesseldorf, Germany' };
-      }
-      if (ip.includes('2001:4dd0') || ip.includes('78.35') || ip.includes('2a0a:a547') || ip.includes('195.14')) {
-        return { isp: '🛜 NetCologne GmbH', location: '🇩🇪 Cologne, Germany' };
-      }*/
-    
       if (IP_CACHE[ip] === null) {
         return { isp: '🛜 Resolving Network...', location: '🔍 Fetching...' };
       }
@@ -916,27 +905,34 @@
       };
     
       try {
-        // Encodes the IP parameter to safely pass IPv6 colons without breaking HTTP routes
         const cleanIp = encodeURIComponent(ip.trim());
-        const response = await fetch(`https://free.freeipapi.com/api/v1/json/${cleanIp}`);
+        
+        // Switch to ipapi.co for full network data resolution over native secure HTTPS
+        const response = await fetch(`https://ipapi.co/${cleanIp}/json/`);
         
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
     
         const data = await response.json();
-        console.log(`IP: ${ip} -> Provider Name:`, data.dataProvider);
-        const flag = getFlagEmoji(data.countryCode);
-        const city = data.cityName || '';
-        const country = data.countryName || 'Unknown';
+        
+        // Check if the response contains an error block (e.g. rate limit or reserved IP)
+        if (data.error) throw new Error(data.reason || 'API error block');
     
-        // Default icon: 🛜 for Wi-Fi / Fixed line networks
-        let networkIcon = '🛜'; 
-        const ispName = (data.dataProvider || '').toLowerCase();
-        const isMobile = data.isMobile || 
-                         ispName.includes('mobile') || 
-                         ispName.includes('cellular') || 
-                         ispName.includes('vodafone') || 
-                         ispName.includes('telekom') || 
-                         ispName.includes('telefonica');
+        const flag = getFlagEmoji(data.country_code);
+        const city = data.city || '';
+        const country = data.country_name || 'Unknown';
+        
+        // Extract network provider from organization property block
+        const rawIsp = data.org || data.asn || 'Broadband WAN Gateway';
+    
+        // Default icon: 🛜ᯤ for Wi-Fi / Fixed line networks
+        let networkIcon = 'ᯤ'; 
+        const ispNameLower = rawIsp.toLowerCase();
+        const isMobile = ispNameLower.includes('mobile') || 
+                         ispNameLower.includes('cellular') || 
+                         ispNameLower.includes('vodafone') || 
+                         //ispNameLower.includes('telekom') || 
+                         ispNameLower.includes('telefonica') || 
+                         ispNameLower.includes('t-mobile');
     
         // Switch icon: 📶 for Mobile / Cellular data lines
         if (isMobile) {
@@ -944,7 +940,7 @@
         }
     
         IP_CACHE[ip] = {
-          isp: `${networkIcon} ${data.dataProvider || 'Broadband WAN Gateway'}`,
+          isp: `${networkIcon} ${rawIsp}`,
           location: city ? `${flag} ${city}, ${country}` : `${flag} ${country}`
         };
     
