@@ -864,22 +864,10 @@
       showToast('Device Filter', `Filtered to ${safeText(dev)}`, 'warn');
     };
 
-    /*function getNextDNSIPDetails(ip) {
-      if (ip.includes('95.229.184.162')) {
-        return { isp: 'Telecom Italia S.p.A.', location: '🇮🇹 Santa Croce Camerina, Italy' };
-      } else if (ip.includes('176.6.5.196') || ip.includes('2a02:3030') || ip.includes('176.6.63.5') || ip.includes('2a02:3038') || ip.includes('2a02:3035')) {
-        return { isp: 'Telefonica Germany GmbH & Co.', location: '🇩🇪 Duesseldorf, Germany' };
-      } else if (ip.includes('2001:4dd0') || ip.includes('78.35') || ip.includes('2a0a:a547') || ip.includes('195.14')) {
-        return { isp: 'NetCologne GmbH', location: '🇩🇪 Cologne, Germany' };
-      }
-      return { isp: 'Broadband WAN Gateway', location: '🇪🇺 Europe / Member Node' };
-    }*/
-
-
     // Local memory cache to prevent infinite parallel network loops
     const IP_CACHE = {};
 
-    // Resolves IP via free.freeipapi.com (HTTPS safe for Cloudflare Pages).
+    // Resolves IP via ipapi.co (HTTPS safe for Cloudflare Pages).
     // Stores data locally to ensure UI rendering remains synchronous.
     function getNextDNSIPDetails(ip) {
       if (!ip) return { isp: '🛜 Unknown IP', location: 'Unknown' };
@@ -941,11 +929,11 @@
         let networkIcon = 'ᯤ'; 
         const ispNameLower = rawIsp.toLowerCase();
         const isMobile = ispNameLower.includes('mobile') || 
-                         ispNameLower.includes('cellular') || 
-                         ispNameLower.includes('vodafone') || 
-                         ispNameLower.includes('telekom') || 
-                         ispNameLower.includes('telefonica') || 
-                         ispNameLower.includes('t-mobile');
+                         ispNameLower.includes('cellular');
+                         /ispNameLower.includes('vodafone') || 
+                         //ispNameLower.includes('telekom') || 
+                         //ispNameLower.includes('telefonica') || 
+                         //ispNameLower.includes('t-mobile');
     
         // Switch icon: 📶 for Mobile / Cellular data lines
         if (isMobile) {
