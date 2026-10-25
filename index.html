@@ -904,33 +904,46 @@
         return String.fromCodePoint(...code.toUpperCase().split('').map(c => 127397 + c.charCodeAt(0)));
       };
     
+      // Dynamically extract the first word and append trailing dots if truncated
+      const cleanProviderName = (name) => {
+        if (!name) return 'Broadband WAN Gateway';
+        
+        const trimmedName = name.trim();
+        const firstSpaceIndex = trimmedName.indexOf(' ');
+        
+        // If there is no space, the name is already a single word
+        if (firstSpaceIndex === -1) {
+          return trimmedName;
+        }
+        
+        // Slice exactly up to the first space and attach ellipsis
+        return trimmedName.substring(0, firstSpaceIndex) + '...';
+      };
+    
       try {
         const cleanIp = encodeURIComponent(ip.trim());
-        
-        // Switch to ipapi.co for full network data resolution over native secure HTTPS
-        const response = await fetch(`https://ipapi.co/${cleanIp}/json/`);
+        const response = await fetch(`https://ipapi.co{cleanIp}/json/`);
         
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
     
         const data = await response.json();
-        
-        // Check if the response contains an error block (e.g. rate limit or reserved IP)
         if (data.error) throw new Error(data.reason || 'API error block');
     
         const flag = getFlagEmoji(data.country_code);
         const city = data.city || '';
         const country = data.country_name || 'Unknown';
         
-        // Extract network provider from organization property block
+        // Extract raw string and run it through the dynamic trailing ellipsis filter
         const rawIsp = data.org || data.asn || 'Broadband WAN Gateway';
+        const shortenedIsp = cleanProviderName(rawIsp);
     
-        // Default icon: 🛜ᯤ for Wi-Fi / Fixed line networks
+        // Default icon: ᯤ🛜 for Wi-Fi / Fixed line networks
         let networkIcon = 'ᯤ'; 
         const ispNameLower = rawIsp.toLowerCase();
         const isMobile = ispNameLower.includes('mobile') || 
                          ispNameLower.includes('cellular') || 
                          ispNameLower.includes('vodafone') || 
-                         //ispNameLower.includes('telekom') || 
+                         ispNameLower.includes('telekom') || 
                          ispNameLower.includes('telefonica') || 
                          ispNameLower.includes('t-mobile');
     
@@ -940,11 +953,10 @@
         }
     
         IP_CACHE[ip] = {
-          isp: `${networkIcon} ${rawIsp}`,
+          isp: `${networkIcon} ${shortenedIsp}`,
           location: city ? `${flag} ${city}, ${country}` : `${flag} ${country}`
         };
     
-        // Re-trigger the layout rendering cycle safely using debounce flag
         if (!window._renderIpsScheduled) {
           window._renderIpsScheduled = true;
           setTimeout(() => {
@@ -955,7 +967,6 @@
     
       } catch (error) {
         console.error(`IP background resolution failed for ${ip}:`, error);
-        // Silent error fallback to prevent broken promises from halting the UI engine
         IP_CACHE[ip] = { 
           isp: '🌐 Network Error', 
           location: 'Unknown (Offline)' 
