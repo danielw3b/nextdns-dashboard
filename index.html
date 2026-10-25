@@ -929,11 +929,10 @@
         let networkIcon = 'ᯤ'; 
         const ispNameLower = rawIsp.toLowerCase();
         const isMobile = ispNameLower.includes('mobile') || 
-                         ispNameLower.includes('cellular');
-                         //ispNameLower.includes('vodafone') || 
-                         //ispNameLower.includes('telekom') || 
-                         //ispNameLower.includes('telefonica') || 
-                         //ispNameLower.includes('t-mobile');
+                         ispNameLower.includes('cellular') ||
+                         ispNameLower.includes('vodafone') || 
+                         ispNameLower.includes('telefonica') || 
+                         ispNameLower.includes('t-mobile');
     
         // Switch icon: 📶 for Mobile / Cellular data lines
         if (isMobile) {
