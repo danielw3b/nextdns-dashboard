@@ -911,18 +911,18 @@
     // Resolves IP via ipapi.co (HTTPS safe for Cloudflare Pages).
     // Stores data locally to ensure UI rendering remains synchronous.
     function getNextDNSIPDetails(ip) {
-      if (!ip) return { isp: '🛜 Unknown IP', location: 'Unknown' };
+      if (!ip) return { isp: 'ᯤ Unknown IP', location: 'Unknown' };
       if (IP_CACHE[ip]) return IP_CACHE[ip];
     
       if (IP_CACHE[ip] === null) {
-        return { isp: '🛜 Resolving Network...', location: '🔍 Fetching...' };
+        return { isp: 'ᯤ Resolving Network...', location: '🔍 Fetching...' };
       }
     
       // Mark as pending to block duplicate overlapping requests
       IP_CACHE[ip] = null;
       fetchIPGeodeticData(ip);
     
-      return { isp: '🛜 Resolving Network...', location: '🔍 Fetching...' };
+      return { isp: 'ᯤ Resolving Network...', location: '🔍 Fetching...' };
     }
     
     // Performs background network request to populate cache.
@@ -983,8 +983,16 @@
         let isMobile = ispNameLower.includes('mobile') || ispNameLower.includes('cellular');
         
         // Loop through the carrier array dynamically if universal match isn't found
-        if (!isMobile) {
+        /*if (!isMobile) {
           isMobile = EUROPEAN_MOBILE_CARRIERS.some(carrier => ispNameLower.includes(carrier));
+        }*/
+
+        if (!isMobile) {
+          isMobile = EUROPEAN_MOBILE_CARRIERS.some(carrier => {
+            // Dynamically build a RegExp with full word boundaries (\b) and case-insensitive flag (i)
+            const regex = new RegExp(`\\b${carrier.trim()}\\b`, 'i');
+            return regex.test(ispNameLower);
+          });
         }
         
         // Switch icon: 📶 for Mobile / Cellular data lines
