@@ -886,7 +886,7 @@
       if (IP_CACHE[ip]) return IP_CACHE[ip];
     
       // Local hardcoded fallbacks for instantaneous rendering
-      if (ip.includes('95.229.184.162')) {
+      /*if (ip.includes('95.229.184.162')) {
         return { isp: '🛜 Telecom Italia S.p.A.', location: '🇮🇹 Santa Croce Camerina, Italy' };
       }
       if (ip.includes('176.6.5.196') || ip.includes('2a02:3030') || ip.includes('176.6.63.5') || ip.includes('2a02:3038') || ip.includes('2a02:3035')) {
@@ -894,7 +894,7 @@
       }
       if (ip.includes('2001:4dd0') || ip.includes('78.35') || ip.includes('2a0a:a547') || ip.includes('195.14')) {
         return { isp: '🛜 NetCologne GmbH', location: '🇩🇪 Cologne, Germany' };
-      }
+      }*/
     
       if (IP_CACHE[ip] === null) {
         return { isp: '🛜 Resolving Network...', location: '🔍 Fetching...' };
