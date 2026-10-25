@@ -774,10 +774,10 @@
     function startSimulation() {
       if (simTimer) clearInterval(simTimer);
       const SIM_CLIENTS = [
-        { ip: '95.229.184.162', name: 'Samsung Galaxy' },
-        { ip: '176.6.5.196', name: 'Smart-TV' },
-        { ip: '2a02:3030:67a:a9a7:4cb9:91da:8b4c:74a1', name: 'Chromebook' },
-        { ip: '176.6.63.5', name: 'iPhone 16' }
+        { ip: '203.0.113.1', name: 'Samsung Galaxy' },
+        { ip: '198.51.100.1', name: 'Smart-TV' },
+        { ip: '2001:db8:85a3:0:0:8a2e:370:7334', name: 'Chromebook' },
+        { ip: '2001:db8::1', name: 'iPhone 16' }
       ];
       simTimer = setInterval(() => {
         if (!STATE.isStreaming || STATE.mode === 'api') return;
@@ -1075,7 +1075,7 @@
         else allowedMap[l.domain] = (allowedMap[l.domain] || 0) + 1;
         devMap[l.device] = (devMap[l.device] || 0) + 1;
         typeMap[l.type || 'A'] = (typeMap[l.type || 'A'] || 0) + 1;
-        ipMap[l.clientIp || '95.229.184.162'] = (ipMap[l.clientIp || '95.229.184.162'] || 0) + 1;
+        ipMap[l.clientIp || '198.51.100.1'] = (ipMap[l.clientIp || '198.51.100.1'] || 0) + 1;
       }
 
       const topB = Object.entries(blockedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
