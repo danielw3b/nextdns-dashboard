@@ -133,7 +133,7 @@
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 1.2rem;
+      padding: 0.9rem;
       margin-bottom: 1.25rem;
       box-shadow: 0 4px 12px rgba(0,0,0,0.25);
     }
@@ -172,6 +172,7 @@
       height: 180px !important;
       display: block;
     }
+    .truncate {min-width:0; overflow:hidden; white-space:nowrap;}
     
     .filter-bar {
       display: flex;
@@ -360,7 +361,7 @@
 
       <div class="card" style="margin-bottom: 1.25rem;">
         <div class="card-title">
-          <span>Last 60-Minutes</span>
+          <span>Last 60-MIN</span>
           <span style="font-size: 0.7rem; color: var(--muted);" id="analytics-chart-subtitle"></span>
         </div>
         <div style="position: relative; height: 180px; width: 100%;">
@@ -1081,7 +1082,7 @@
       const topB = Object.entries(blockedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
       document.getElementById('analytics-top-blocked').innerHTML = topB.length ? topB.map(([d, c]) => `
         <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-family:monospace;">
-          <span style="color:#fca5a5;">${safeText(d)}</span>
+          <span style="color:#fca5a5;" class="truncate">${safeText(d)}</span>
           <span style="color:var(--muted);">${c}</span>
         </div>
       `).join('') : '<div style="color:var(--muted);">No blocked queries.</div>';
@@ -1089,7 +1090,7 @@
       const topA = Object.entries(allowedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
       document.getElementById('analytics-top-allowed').innerHTML = topA.length ? topA.map(([d, c]) => `
         <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-family:monospace;">
-          <span style="color:#86efac;">${safeText(d)}</span>
+          <span style="color:#86efac;" class="truncate">${safeText(d)}</span>
           <span style="color:var(--muted);">${c}</span>
         </div>
       `).join('') : '<div style="color:var(--muted);">No allowed queries.</div>';
@@ -1109,7 +1110,7 @@
       document.getElementById('analytics-types').innerHTML = typeList.length ? typeList.map(([t, c]) => `
         <div style="margin-bottom:6px;">
           <div style="display:flex; justify-content:space-between; font-family:monospace; font-size: 0.72rem;">
-            <span style="color:#38bdf8;">Type: ${safeText(t)}</span>
+            <span style="color:#38bdf8;" class="truncate">Type: ${safeText(t)}</span>
             <span style="color:var(--muted);">${c} (${total > 0 ? Math.round((c/total)*100) : 0}%)</span>
           </div>
           <div class="bar-bg"><div class="bar-fill" style="width:${total > 0 ? Math.min(100, Math.round((c/total)*100)) : 0}%; background:#38bdf8;"></div></div>
@@ -1123,9 +1124,9 @@
           const info = getNextDNSIPDetails(ip);
           return `
             <div style="margin-bottom:10px;">
-              <div style="display:flex; justify-content:space-between; /*font-family:monospace;*/ font-size: 0.72rem; margin-bottom: 2px;">
+              <div style="display:flex; justify-content:space-between; font-family:monospace; font-size: 0.72rem; margin-bottom: 2px;">
                 <div>
-                  <span style="color:#38bdf8; font-weight:600; font-size:0.8rem;">${safeText(ip)}</span>
+                  <span style="color:#38bdf8; font-weight:600; font-size:0.8rem;" class="truncate">${safeText(ip)}</span>
                   <div style="color:var(--muted); font-size: 0.68rem; margin-top: 1px;">${safeText(info.isp)} | ${safeText(info.location)}</div>
                 </div>
                 <span style="color:var(--text); font-weight: bold; font-family: monospace;">${c} (${total > 0 ? Math.round((c/total)*100) : 0}%)</span>
