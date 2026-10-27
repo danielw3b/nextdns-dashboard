@@ -327,7 +327,7 @@
   <nav class="nav-tabs">
     <button class="active" data-tab="analytics">Real-time Analytics</button>
     <button data-tab="live">Live Log Stream</button>
-    <button data-tab="blocking">Guardrails & Rules</button>
+    <button data-tab="blocking">Frequent Hits & Deny</button>
     <button data-tab="config">Settings</button>
   </nav>
 
@@ -1603,7 +1603,7 @@
           badgeStyle = 'color: var(--blocked, #ef4444); font-weight: 600;';
         }
 
-        // Button should be disabled if blocked OR protected
+        // Button must be strictly disabled if the domain is blocked OR system protected
         const isDisabled = isBlocked || isSys;
 
         return `
@@ -1615,8 +1615,8 @@
             </td>
             <td style="${badgeStyle} font-size: 0.7rem;">${statusText}</td>
             <td style="text-align: right;">
-              <button onclick="addQuickDeny('${safeText(i.domain)}')" class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; ${isBlocked ? 'opacity: 0.5; cursor: not-allowed;' : ''}" ${isBlocked ? 'disabled' : ''}>
-                ${isBlocked ? 'Blocked' : 'Deny'}
+              <button onclick="addQuickDeny('${safeText(i.domain)}')" class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; ${isDisabled ? 'opacity: 0.5; cursor: not-allowed;' : ''}" ${isDisabled ? 'disabled' : ''}>
+                ${isBlocked ? 'Blocked' : (isSys ? 'Protected' : 'Deny')}
               </button>
             </td>
           </tr>
