@@ -384,7 +384,7 @@
         </div>
         
         <div class="card" style="margin-bottom:0;">
-          <div class="card-title">Top Allowed Clean Traffic</div>
+          <div class="card-title">Top Allowed Domains</div>
           <div id="analytics-top-allowed" style="font-size: 0.75rem;"></div>
         </div>
         
@@ -393,16 +393,16 @@
           <div id="analytics-devices" style="font-size: 0.75rem;"></div>
         </div>
         
-        <div class="card" style="margin-bottom:0;">
+        <!--<div class="card" style="margin-bottom:0;">
           <div class="card-title">DNS Security & Query Types</div>
           <div id="analytics-types" style="font-size: 0.75rem;"></div>
-        </div>
-      </div>
-      
+        </div>-->
 
-      <div class="card" style="margin-bottom:0;">
-        <div class="card-title">IPs (IP addresses making the queries)</div>
-        <div id="analytics-ips" style="font-size: 0.75rem;"></div>
+        <div class="card" style="margin-bottom:0;">
+          <div class="card-title">IP addresses making the queries</div>
+          <div id="analytics-ips" style="font-size: 0.75rem;"></div>
+        </div>        
+        
       </div>
     </section>
 
@@ -842,8 +842,8 @@
             clientIp: ipVal,
             status: statusVal,
             reasons: (item.reasons || []).map(r => typeof r === 'string' ? r : r.name),
-            proto: item.protocol || 'DoH',
-            type: item.root?.queryType || 'A',
+            proto: item.protocol || 'DoT',
+            //type: item.root?.queryType || 'A',
             latency: STATE.currentLatency
           };
     
@@ -1024,11 +1024,9 @@
             location: 'Unknown (Offline)' 
           };
         }
-    
         // Smooth out requests by waiting 250 milliseconds before triggering the next API loop task
         setTimeout(processNextQueueItem, 250);
       }
-    
       // Kickstart execution track loop
       processNextQueueItem();
     }
@@ -1097,7 +1095,7 @@
 
       const devList = Object.entries(devMap).sort((a,b)=>b[1]-a[1]);
       document.getElementById('analytics-devices').innerHTML = devList.map(([d, c]) => `
-        <div style="margin-bottom:6px; cursor:pointer;" onclick="filterByDevice('${safeText(d)}')">
+        <div style="margin-bottom:4px; cursor:pointer;" onclick="filterByDevice('${safeText(d)}')">
           <div style="display:flex; justify-content:space-between;">
             <span style="color:${d===STATE.selectedDevice?'#38bdf8':'#f1f5f9'};" class="truncate">${safeText(d)}</span>
             <span style="color:var(--muted); font-family:monospace;">${c}</span>
@@ -1106,16 +1104,16 @@
         </div>
       `).join('');
 
-      const typeList = Object.entries(typeMap).sort((a,b)=>b[1]-a[1]);
+      /*const typeList = Object.entries(typeMap).sort((a,b)=>b[1]-a[1]);
       document.getElementById('analytics-types').innerHTML = typeList.length ? typeList.map(([t, c]) => `
-        <div style="margin-bottom:6px;">
+        <div style="margin-bottom:4px;">
           <div style="display:flex; justify-content:space-between; font-family:monospace; font-size: 0.72rem;">
             <span style="color:#38bdf8;" class="truncate">Type: ${safeText(t)}</span>
             <span style="color:var(--muted);">${c} (${total > 0 ? Math.round((c/total)*100) : 0}%)</span>
           </div>
           <div class="bar-bg"><div class="bar-fill" style="width:${total > 0 ? Math.min(100, Math.round((c/total)*100)) : 0}%; background:#38bdf8;"></div></div>
         </div>
-      `).join('') : '<div style="color:var(--muted);">No data.</div>';
+      `).join('') : '<div style="color:var(--muted);">No data.</div>';*/
 
       const ipList = Object.entries(ipMap).sort((a,b)=>b[1]-a[1]);
       const ipElem = document.getElementById('analytics-ips');
@@ -1129,7 +1127,7 @@
                   <span style="color:#38bdf8;" class="truncate">${safeText(ip)}</span>
                   <div style="color:var(--muted); font-size: 0.68rem; margin-top: 1px;" class="truncate">${safeText(info.isp)} | ${safeText(info.location)}</div>
                 </div>
-                <span style="color:var(--text); /*font-weight: bold; font-family: monospace;*/">${c} (${total > 0 ? Math.round((c/total)*100) : 0}%)</span>
+                <span style="color:var(--text); /*font-weight: bold; font-family: monospace;*/" class="truncate">${c} (${total > 0 ? Math.round((c/total)*100) : 0}%)</span>
               </div>
               <div class="bar-bg"><div class="bar-fill" style="width:${total > 0 ? Math.min(100, Math.round((c/total)*100)) : 0}%; background:#38bdf8;"></div></div>
             </div>
