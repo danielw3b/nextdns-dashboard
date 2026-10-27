@@ -796,13 +796,15 @@
       const fragment = document.createDocumentFragment();
       for (const log of filtered.slice(0, 100)) {
         const tr = document.createElement('tr');
-        const lStatusLower = String(log.status || 'allowed').toLowerCase();
-        // addQuickDeny
-        const cleanDomain = log.domain.toLowerCase();
-        const isApiBlocked = (log.status === 'blocked' || log.status === 'security' || log.status === 'parental');
-        const isManuallyBlocked = STATE.manuallyBlocked && STATE.manuallyBlocked.has(cleanDomain);
         
+        const cleanDomain = log.domain.toLowerCase();
+        const isSys = typeof isProtected === 'function' ? isProtected(cleanDomain) : false;
+        const lStatusLower = String(log.status || 'allowed').toLowerCase();
+        const isApiBlocked = lStatusLower === 'blocked' || lStatusLower === 'security' || lStatusLower === 'parental';
+        const isManuallyBlocked = STATE.manuallyBlocked && STATE.manuallyBlocked.has(cleanDomain);
         const isBlocked = isApiBlocked || isManuallyBlocked;
+
+        const isDisabled = isBlocked || isSys;
 
         tr.innerHTML = `
           <td>
@@ -1558,9 +1560,12 @@
           statusText = 'Protected';
           badgeStyle = 'color: var(--info, #38bdf8); font-weight: 600;';
         } else if (isBlocked) {
-          statusText = 'blocked';
+          statusText = 'Blocked';
           badgeStyle = 'color: var(--blocked, #ef4444); font-weight: 600;';
         }
+
+        // Button should be disabled if blocked OR protected
+        const isDisabled = isBlocked || isSys;
 
         return `
           <tr>
@@ -1572,7 +1577,7 @@
             <td style="${badgeStyle} font-size: 0.7rem;">${statusText}</td>
             <td style="text-align: right;">
               <button onclick="addQuickDeny('${safeText(i.domain)}')" class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; ${isBlocked ? 'opacity: 0.5; cursor: not-allowed;' : ''}" ${isBlocked ? 'disabled' : ''}>
-                ${isBlocked ? 'Blocked' : 'Block'}
+                ${isBlocked ? 'Blocked' : 'Deny'}
               </button>
             </td>
           </tr>
@@ -1641,6 +1646,12 @@
     window.addQuickDeny = async function(domain) {
       const cleanDomain = domain.trim().toLowerCase();
       if (!cleanDomain) return;
+
+      // Guard: Never block system-protected domains
+      if (typeof isProtected === 'function' && isProtected(cleanDomain)) {
+        showToast('⚠️ Protected Domain', `Cannot block system-protected domain <code>${safeText(cleanDomain)}</code>`, 'warning');
+        return;
+      }
 
       // 1. Send POST request to NextDNS API
       if (STATE.mode === 'api' && STATE.config.profile && STATE.config.apiKey) {
