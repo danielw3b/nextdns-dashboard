@@ -582,7 +582,8 @@
       chartLogs: [],     // 60-minute rolling RAM buffer for canvas chart
       totalQueriesCounter: 0,
       devices: new Set(),
-      hits: {}, 
+      hits: {},
+      manuallyBlocked: new Set(),
       denylist: [
         { id: '1', domain: 'telemetry.samsungcloud.com', category: 'Tracking', active: true, hits: 341 }
       ],
@@ -796,9 +797,12 @@
       for (const log of filtered.slice(0, 100)) {
         const tr = document.createElement('tr');
         const lStatusLower = String(log.status || 'allowed').toLowerCase();
+        // addQuickDeny
+        const cleanDomain = log.domain.toLowerCase();
+        const isApiBlocked = (log.status === 'blocked' || log.status === 'security' || log.status === 'parental');
+        const isManuallyBlocked = STATE.manuallyBlocked && STATE.manuallyBlocked.has(cleanDomain);
         
-        // Check if NextDNS already blocked this query natively
-        const isBlocked = lStatusLower === 'blocked' || lStatusLower === 'security' || lStatusLower === 'parental';
+        const isBlocked = isApiBlocked || isManuallyBlocked;
 
         tr.innerHTML = `
           <td>
@@ -1538,18 +1542,21 @@
         const cleanDomain = i.domain.toLowerCase();
         const isSys = typeof isProtected === 'function' ? isProtected(cleanDomain) : false;
         
-        // Check API or local denial status
+        // Check API status or volatile runtime manual block
         const apiStatus = deviceStatus[cleanDomain];
         const isApiBlocked = apiStatus && apiStatus !== 'allowed' && apiStatus !== 'default';
+        const isManuallyBlocked = STATE.manuallyBlocked && STATE.manuallyBlocked.has(cleanDomain);
+        
+        const isBlocked = isApiBlocked || isManuallyBlocked;
 
-        // Status text & styling (strictly reflecting telemetry/monitoring)
+        // Status text & styling
         let statusText = 'Monitoring';
         let badgeStyle = 'color: var(--muted);';
 
         if (isSys) {
           statusText = 'Protected';
           badgeStyle = 'color: var(--info, #38bdf8); font-weight: 600;';
-        } else if (isApiBlocked) {
+        } else if (isBlocked) {
           statusText = 'blocked';
           badgeStyle = 'color: var(--blocked, #ef4444); font-weight: 600;';
         }
@@ -1559,12 +1566,12 @@
             <td class="domain-cell" title="${safeText(i.domain)}">${safeText(i.domain)}</td>
             <td style="color: var(--warn); font-weight: bold; font-family: monospace;">${i.count}</td>
             <td style="width: 140px;">
-              <div class="bar-bg"><div class="bar-fill" style="width:${pct}%; background:${isApiBlocked ? 'var(--blocked)' : 'var(--warn)'}"></div></div>
+              <div class="bar-bg"><div class="bar-fill" style="width:${pct}%; background:${isBlocked ? 'var(--blocked)' : 'var(--warn)'}"></div></div>
             </td>
             <td style="${badgeStyle} font-size: 0.7rem;">${statusText}</td>
             <td style="text-align: right;">
-              <button onclick="addQuickDeny('${safeText(i.domain)}')" class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; ${isApiBlocked ? 'opacity: 0.5; cursor: not-allowed;' : ''}" ${isApiBlocked ? 'disabled' : ''}>
-                ${isApiBlocked ? 'Blocked' : 'Block'}
+              <button onclick="addQuickDeny('${safeText(i.domain)}')" class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; ${isBlocked ? 'opacity: 0.5; cursor: not-allowed;' : ''}" ${isBlocked ? 'disabled' : ''}>
+                ${isBlocked ? 'Blocked' : 'Block'}
               </button>
             </td>
           </tr>
@@ -1579,7 +1586,7 @@
     };*/
 
     // New code: robust persistence (localStorage) + real NextDNS API POST sync
-    window.addQuickDeny = async function(domain) {
+    /*window.addQuickDeny = async function(domain) {
       const cleanDomain = domain.trim().toLowerCase();
       if (!cleanDomain) return;
     
@@ -1628,7 +1635,45 @@
     
       // Refresh UI tables if applicable
       if (typeof renderDenylistTable === 'function') renderDenylistTable();
-};
+    };*/
+
+    window.addQuickDeny = async function(domain) {
+      const cleanDomain = domain.trim().toLowerCase();
+      if (!cleanDomain) return;
+
+      // 1. Send POST request to NextDNS API
+      if (STATE.mode === 'api' && STATE.config.profile && STATE.config.apiKey) {
+        const proxy = STATE.config.proxy || 'https://api.nextdns.io';
+        try {
+          const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${STATE.config.profile}/denylist`, {
+            method: 'POST',
+            headers: {
+              'X-Api-Key': STATE.config.apiKey,
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify({ id: cleanDomain, active: true })
+          });
+
+          if (!res.ok) throw new Error(`API sync failed with status ${res.status}`);
+          showToast('🚫 NextDNS Blocked', `Successfully blocked ${safeText(cleanDomain)} on profile`, 'danger');
+        } catch (e) {
+          console.error('Failed to sync denylist to NextDNS API:', e);
+          showToast('⚠️ API Error', `Could not block via API: ${e.message}`, 'warning');
+          return;
+        }
+      } else {
+        showToast('Info', `Blocked simulation domain ${safeText(cleanDomain)}`, 'danger');
+      }
+
+      // 2. Mark domain as manually blocked in volatile RAM (preserves historical logs unchanged)
+      if (!STATE.manuallyBlocked) STATE.manuallyBlocked = new Set();
+      STATE.manuallyBlocked.add(cleanDomain);
+
+      // 3. Instantly re-render UI tables to reflect the new state in present/future rows
+      if (typeof renderFilteredLiveLogs === 'function') renderFilteredLiveLogs();
+      if (typeof renderHitsTable === 'function') renderHitsTable();
+    };
     
 
     // Export session logs and header KPIs to a CSV file
