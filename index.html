@@ -704,7 +704,7 @@
         }
       }
     
-      if (!log.clientIp) log.clientIp = '95.229.184.162';
+      if (!log.clientIp) log.clientIp = '203.0.113.1';
     
       // Prune chartLogs strictly to the last 60 minutes window
       const now = Date.now();
@@ -727,7 +727,7 @@
       renderHitsTable();
     }
 
-    function renderFilteredLiveLogs() {
+    /*function renderFilteredLiveLogs() {
       const tbody = document.getElementById('live-log-body');
       if (!tbody) return;
       const search = (document.getElementById('live-search')?.value || '').toLowerCase().trim();
@@ -770,7 +770,60 @@
       }
       tbody.innerHTML = '';
       tbody.appendChild(fragment);
-    }
+    }*/
+
+    function renderFilteredLiveLogs() {
+      const tbody = document.getElementById('live-log-body');
+      if (!tbody) return;
+      const search = (document.getElementById('live-search')?.value || '').toLowerCase().trim();
+      const statusFilter = (document.getElementById('live-status-filter')?.value || 'all').toLowerCase().trim();
+
+      const filtered = STATE.logs.filter(l => {
+        if (STATE.selectedDevice !== 'all' && l.device !== STATE.selectedDevice) return false;
+        const lStatus = String(l.status || 'allowed').toLowerCase();
+        if (statusFilter === 'blocked' && lStatus !== 'blocked' && lStatus !== 'security' && lStatus !== 'parental') return false;
+        if (statusFilter === 'allowed' && lStatus !== 'allowed' && lStatus !== 'default') return false;
+        if (search) {
+          const matchDomain = l.domain.toLowerCase().includes(search);
+          const matchDevice = l.device.toLowerCase().includes(search);
+          const matchReason = (l.reasons || []).some(r => r.toLowerCase().includes(search));
+          if (!matchDomain && !matchDevice && !matchReason) return false;
+        }
+        return true;
+      });
+
+      const fragment = document.createDocumentFragment();
+      for (const log of filtered.slice(0, 100)) {
+        const tr = document.createElement('tr');
+        const lStatusLower = String(log.status || 'allowed').toLowerCase();
+        
+        // Check if NextDNS already blocked this query natively
+        const isBlocked = lStatusLower === 'blocked' || lStatusLower === 'security' || lStatusLower === 'parental';
+
+        tr.innerHTML = `
+          <td>
+            <div style="font-weight: 500;">${log.time instanceof Date ? log.time.toLocaleTimeString() : new Date(log.time).toLocaleTimeString()}</div>
+            <div style="font-size: 0.62rem; color: var(--muted);">${safeText(log.proto)} (${log.latency}ms)</div>
+          </td>
+          <td><span class="status-pill ${isBlocked ? 'status-blocked' : 'status-allowed'}">${isBlocked ? 'Blocked' : 'Allowed'}</span></td>
+          <td class="domain-cell" style="color: ${isBlocked ? '#fca5a5' : '#f1f5f9'};">
+            <div style="font-weight: 600; font-family: monospace; word-break: break-all;">${safeText(log.domain)}</div>
+            <div style="font-size: 0.62rem; color: #38bdf8; cursor: pointer; text-decoration: underline;" onclick="filterByDevice('${safeText(log.device)}')">${safeTest(log.device)}</div>
+          </td>
+          <td>
+            <div style="color: #fde047; font-size: 0.68rem;">${safeText((log.reasons || []).join(', ') || '—')}</div>
+            <div style="margin-top: 3px;">
+              <button class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.62rem; ${isBlocked ? 'opacity: 0.5; cursor: not-allowed;' : ''}" ${isBlocked ? 'disabled' : ''} onclick="addQuickDeny('${safeText(log.domain)}')">
+                ${isBlocked ? 'Blocked' : 'Deny'}
+              </button>
+            </div>
+          </td>
+        `;
+        fragment.appendChild(tr);
+      }
+      tbody.innerHTML = '';
+      tbody.appendChild(fragment);
+    }    
 
     function startSimulation() {
       if (simTimer) clearInterval(simTimer);
