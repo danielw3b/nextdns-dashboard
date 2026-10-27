@@ -1443,7 +1443,7 @@
       }).join('') : `<tr><td colspan="5" style="text-align:center; color:var(--muted);">No frequency data for this selection.</td></tr>`;
     }*/
 
-    function renderHitsTable() {
+    /*function renderHitsTable() {
       const tbody = document.getElementById('autoblock-hits-body');
       if (!tbody) return;
     
@@ -1505,9 +1505,73 @@
           </tr>
         `;
       }).join('') : `<tr><td colspan="5" style="text-align:center; color:var(--muted);">No frequency data for this selection.</td></tr>`;
+    }*/
+
+    function renderHitsTable() {
+      const tbody = document.getElementById('autoblock-hits-body');
+      if (!tbody) return;
+
+      // Use sessionLogs buffer for frequency monitoring, respecting device filter
+      const sessionLogs = STATE.sessionLogs || [];
+      const activeLogs = STATE.selectedDevice === 'all' 
+        ? sessionLogs 
+        : sessionLogs.filter(l => l.device === STATE.selectedDevice);
+
+      const deviceHits = {};
+      const deviceStatus = {};
+      
+      activeLogs.forEach(l => { 
+        const d = (l.domain || 'unknown').toLowerCase(); 
+        deviceHits[d] = (deviceHits[d] || 0) + 1; 
+        
+        if (l.status && l.status !== 'allowed' && l.status !== 'default') {
+          deviceStatus[d] = l.status;
+        }
+      });
+
+      const items = Object.entries(deviceHits)
+        .map(([domain, count]) => ({ domain, count }))
+        .sort((a, b) => b.count - a.count);
+
+      tbody.innerHTML = items.length ? items.slice(0, 15).map(i => {
+        const pct = Math.min(100, Math.round((i.count / (STATE.config.threshold || 10)) * 100));
+        const cleanDomain = i.domain.toLowerCase();
+        const isSys = typeof isProtected === 'function' ? isProtected(cleanDomain) : false;
+        
+        // Check API or local denial status
+        const apiStatus = deviceStatus[cleanDomain];
+        const isApiBlocked = apiStatus && apiStatus !== 'allowed' && apiStatus !== 'default';
+
+        // Status text & styling (strictly reflecting telemetry/monitoring)
+        let statusText = 'Monitoring';
+        let badgeStyle = 'color: var(--muted);';
+
+        if (isSys) {
+          statusText = 'Protected';
+          badgeStyle = 'color: var(--info, #38bdf8); font-weight: 600;';
+        } else if (isApiBlocked) {
+          statusText = 'blocked';
+          badgeStyle = 'color: var(--blocked, #ef4444); font-weight: 600;';
+        }
+
+        return `
+          <tr>
+            <td class="domain-cell" title="${safeText(i.domain)}">${safeText(i.domain)}</td>
+            <td style="color: var(--warn); font-weight: bold; font-family: monospace;">${i.count}</td>
+            <td style="width: 140px;">
+              <div class="bar-bg"><div class="bar-fill" style="width:${pct}%; background:${isApiBlocked ? 'var(--blocked)' : 'var(--warn)'}"></div></div>
+            </td>
+            <td style="${badgeStyle} font-size: 0.7rem;">${statusText}</td>
+            <td style="text-align: right;">
+              <button onclick="addQuickDeny('${safeText(i.domain)}')" class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; ${isApiBlocked ? 'opacity: 0.5; cursor: not-allowed;' : ''}" ${isApiBlocked ? 'disabled' : ''}>
+                ${isApiBlocked ? 'Blocked' : 'Block'}
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('') : `<tr><td colspan="5" style="text-align:center; color:var(--muted);">No frequency data for this selection.</td></tr>`;
     }
       
-
     /*window.addQuickDeny = function(domain) {
       STATE.denylist.unshift({ id: String(Date.now()), domain, category: 'Quick Deny', active: true, hits: 1 });
       saveState();
