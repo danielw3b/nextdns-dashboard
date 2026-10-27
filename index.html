@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#090d16">
-  <meta name="description" content="NextDNS Zero-Dependency PWA: Real-time telemetry, analytics, and custom domain blocking.">
-  <title>NextDNS Sentinel Dashboard</title>
+  <meta name="description" content="NextDNS Live Viewer - Real-time telemetry, analytics, and custom domain blocking.">
+  <title>NextDNS Live Viewer</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <style>
@@ -148,6 +148,14 @@
       gap: 0.5rem;
       flex-wrap: wrap;
     }
+    /* Always 2 columns side-by-side, never collapsing on mobile viewports */
+    .form-grid-2col {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    
     .kpi-grid {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -309,17 +317,16 @@
         <path d="M42 52L48 58L58 46" stroke="#4ade80" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
       <div>
-        <h1>NextDNS Sentinel</h1>
+        <h1>NextDNS Live Viewer</h1>
         <div style="font-size: 0.68rem; color: var(--muted);">Real-time telemetry, analytics & guardrails</div>
       </div>
     </div>
 
     <div class="header-actions">
-      <span class="badge live" id="stream-status">Live</span>
-      <button class="btn-primary" id="btn-toggle-stream" title="Pause / Resume Stream" style="font-size: 1rem; padding: 0.3rem 0.6rem;">⏸️</button>
       <select id="global-device-select" style="padding: 0.35rem 0.5rem;" title="Filter all logs and analytics by device">
         <option value="all">All Devices</option>
       </select>
+      <span class="badge live" id="btn-toggle-stream" title="Click to Pause / Resume" style="cursor: pointer; user-select: none;">Live</span>
     </div>
   </header>
 
@@ -458,20 +465,6 @@
           </table>
         </div>
       </div>
-
-      <!--<div class="card">
-        <div class="card-title">Add Custom Deny Rule or Wildcard</div>
-        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-          <input type="text" id="new-deny-domain" placeholder="e.g. *.domain.com" style="flex: 2; min-width: 180px; font-family: monospace;">
-          <select id="new-deny-category" style="flex: 1; min-width: 130px;">
-            <option value="Tracking">Tracking</option>
-            <option value="Advertising">Advertising</option>
-            <option value="Social Media">Social Media</option>
-            <option value="Malware">Malware</option>
-          </select>
-          <button class="btn-primary" id="btn-add-deny">+ Block</button>
-        </div>
-      </div>-->
     </section>
 
     <!-- TAB: CONFIGURATION -->
@@ -482,7 +475,7 @@
           <a href="https://nextdns.io/?from=4ja3vp44" target="_blank" rel="noopener noreferrer" style="font-size: 0.75rem; color: #38bdf8; text-decoration: none; font-weight: 600;">Get NextDNS ↗</a>
         </div>
         
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+        <div class="form-grid-2col">
           <div class="form-group">
             <label>Profile ID (6 characters)</label>
             <input type="text" id="cfg-profile" placeholder="e.g. 2ab1c3" style="width: 100%; font-family: monospace;">
@@ -493,7 +486,7 @@
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+        <div class="form-grid-2col">
           <div class="form-group">
             <label>Cloudflare Pages Proxy Endpoint (Optional)</label>
             <input type="text" id="cfg-proxy" placeholder="/api/nextdns" style="width: 100%; font-family: monospace;">
@@ -504,7 +497,7 @@
           </div>
         </div>
 
-        <div class="card-title" style="margin-top: 1.25rem;">Thresholds & Retention</div>
+        <!--<div class="card-title" style="margin-top: 1.25rem;">Thresholds & Retention</div>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
           <div class="form-group">
             <label>Hit Threshold (hits / 24h)</label>
@@ -527,7 +520,7 @@
             <input type="checkbox" id="cfg-protect" checked>
             <span>Protect System Infrastructure (NTP, Apple, Windows Update, Google)</span>
           </label>
-        </div>
+        </div>-->
 
         <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
           <button class="btn-primary" id="btn-save-cfg" style="flex: 1; justify-content: center;">Save Configuration</button>
@@ -623,9 +616,6 @@
       devices: new Set(),
       hits: {},
       manuallyBlocked: new Set(),
-      denylist: [
-        { id: '1', domain: 'telemetry.samsungcloud.com', category: 'Tracking', active: true, hits: 341 }
-      ],
       config: {
         profile: '',
         apiKey: '',
@@ -640,7 +630,7 @@
 
     // Load configuration and denylist from localStorage
     try {
-      const savedCfg = localStorage.getItem('nextdns-single-cfg') || localStorage.getItem('nextdns-sentinel-cfg');
+      const savedCfg = localStorage.getItem('nextdns-single-cfg');
       if (savedCfg) {
         const parsed = JSON.parse(savedCfg);
         STATE.config.profile = parsed.profile || parsed.profileId || '';
@@ -651,8 +641,6 @@
         STATE.config.autoBlock = parsed.autoBlock ?? parsed.autoBlockEnabled ?? false;
         STATE.config.protectSystem = parsed.protectSystem ?? true;
       }
-      const savedDeny = localStorage.getItem('nextdns-single-deny') || localStorage.getItem('nextdns-sentinel-denylist');
-      if (savedDeny) STATE.denylist = JSON.parse(savedDeny);
     } catch(e) {}
 
     function updateThresholdBadge() {
@@ -676,7 +664,6 @@
     function saveState() {
       try {
         localStorage.setItem('nextdns-single-cfg', JSON.stringify(STATE.config));
-        localStorage.setItem('nextdns-single-deny', JSON.stringify(STATE.denylist));
       } catch(e) {}
     }
 
@@ -727,24 +714,16 @@
       STATE.totalQueriesCounter++;
       if (log.device) registerDevice(log.device);
     
-      // Frequency hits tracking
+     // Frequency hits tracking
       const d = (log.domain || 'unknown').toLowerCase();
       if (!STATE.hits[d]) STATE.hits[d] = { count: 0, lastSeen: Date.now() };
       STATE.hits[d].count++;
       STATE.hits[d].lastSeen = Date.now();
-    
-      // Auto-block guard evaluation
-      if (STATE.config.autoBlock && STATE.hits[d].count >= STATE.config.threshold) {
-        const isDeniedAlready = STATE.denylist.some(r => r.domain.toLowerCase() === d);
-        const isSys = STATE.config.protectSystem && isProtected(d);
-        if (!isDeniedAlready && !isSys) {
-          STATE.denylist.unshift({ id: String(Date.now()), domain: d, category: 'Auto-Block', active: true, hits: STATE.hits[d].count });
-          saveState();
-          showToast('🚫 Guard Denied', `Blocked <code>${safeText(d)}</code>`, 'danger');
-        }
+  
+      // Fallback client IP if missing
+      if (!log.clientIp) {
+        log.clientIp = '203.0.113.1';
       }
-    
-      if (!log.clientIp) log.clientIp = '203.0.113.1';
     
       // Prune chartLogs strictly to the last 60 minutes window
       const now = Date.now();
@@ -766,51 +745,6 @@
       updateAnalyticsKPIs();
       renderHitsTable();
     }
-
-    /*function renderFilteredLiveLogs() {
-      const tbody = document.getElementById('live-log-body');
-      if (!tbody) return;
-      const search = (document.getElementById('live-search')?.value || '').toLowerCase().trim();
-      const statusFilter = (document.getElementById('live-status-filter')?.value || 'all').toLowerCase().trim();
-
-      const filtered = STATE.logs.filter(l => {
-        if (STATE.selectedDevice !== 'all' && l.device !== STATE.selectedDevice) return false;
-        const lStatus = String(l.status || 'allowed').toLowerCase();
-        if (statusFilter === 'blocked' && lStatus !== 'blocked') return false;
-        if (statusFilter === 'allowed' && lStatus !== 'allowed' && lStatus !== 'default') return false;
-        if (search) {
-          const matchDomain = l.domain.toLowerCase().includes(search);
-          const matchDevice = l.device.toLowerCase().includes(search);
-          const matchReason = (l.reasons || []).some(r => r.toLowerCase().includes(search));
-          if (!matchDomain && !matchDevice && !matchReason) return false;
-        }
-        return true;
-      });
-
-      const fragment = document.createDocumentFragment();
-      for (const log of filtered.slice(0, 100)) {
-        const tr = document.createElement('tr');
-        const isBlocked = String(log.status || 'allowed').toLowerCase() === 'blocked';
-        tr.innerHTML = `
-          <td>
-            <div style="font-weight: 500;">${log.time instanceof Date ? log.time.toLocaleTimeString() : new Date(log.time).toLocaleTimeString()}</div>
-            <div style="font-size: 0.62rem; color: var(--muted);">${safeText(log.proto)} / ${safeText(log.type)} (${log.latency}ms)</div>
-          </td>
-          <td><span class="status-pill ${isBlocked ? 'status-blocked' : 'status-allowed'}">${isBlocked ? 'Blocked' : 'Allowed'}</span></td>
-          <td class="domain-cell" style="color: ${isBlocked ? '#fca5a5' : '#f1f5f9'};">
-            <div style="font-weight: 600; font-family: monospace; word-break: break-all;">${safeText(log.domain)}</div>
-            <div style="font-size: 0.62rem; color: #38bdf8; cursor: pointer; text-decoration: underline;" onclick="filterByDevice('${safeText(log.device)}')">${safeText(log.device)}</div>
-          </td>
-          <td>
-            <div style="color: #fde047; font-size: 0.68rem;">${safeText((log.reasons || []).join(', ') || '—')}</div>
-            <div style="margin-top: 3px;"><button class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.62rem;" onclick="addQuickDeny('${safeText(log.domain)}')">Deny</button></div>
-          </td>
-        `;
-        fragment.appendChild(tr);
-      }
-      tbody.innerHTML = '';
-      tbody.appendChild(fragment);
-    }*/
 
     function renderFilteredLiveLogs() {
       const tbody = document.getElementById('live-log-body');
@@ -838,11 +772,15 @@
         
         const cleanDomain = log.domain.toLowerCase();
         const isSys = typeof isProtected === 'function' ? isProtected(cleanDomain) : false;
+        
+        // Check API status or volatile runtime manual block
         const lStatusLower = String(log.status || 'allowed').toLowerCase();
         const isApiBlocked = lStatusLower === 'blocked' || lStatusLower === 'security' || lStatusLower === 'parental';
         const isManuallyBlocked = STATE.manuallyBlocked && STATE.manuallyBlocked.has(cleanDomain);
+        
         const isBlocked = isApiBlocked || isManuallyBlocked;
 
+        // Button must be strictly disabled if blocked OR system protected
         const isDisabled = isBlocked || isSys;
 
         tr.innerHTML = `
@@ -856,10 +794,12 @@
             <div style="font-size: 0.62rem; color: #38bdf8; cursor: pointer; text-decoration: underline;" onclick="filterByDevice('${safeText(log.device)}')">${safeText(log.device)}</div>
           </td>
           <td>
-            <div style="color: #fde047; font-size: 0.68rem;">${safeText((log.reasons || []).join(', ') || '—')}</div>
+            <div style="color: ${isSys ? '#38bdf8' : '#fde047'}; font-size: 0.68rem; font-weight: ${isSys ? '600' : 'normal'};">
+              ${isSys ? 'Protected System Domain' : safeText((log.reasons || []).join(', ') || '—')}
+            </div>
             <div style="margin-top: 3px;">
-              <button class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.62rem; ${isBlocked ? 'opacity: 0.5; cursor: not-allowed;' : ''}" ${isBlocked ? 'disabled' : ''} onclick="addQuickDeny('${safeText(log.domain)}')">
-                ${isBlocked ? 'Blocked' : 'Deny'}
+              <button class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.62rem; ${isDisabled ? 'opacity: 0.5; cursor: not-allowed;' : ''}" ${isDisabled ? 'disabled' : ''} onclick="addQuickDeny('${safeText(log.domain)}')">
+                ${isBlocked ? 'Blocked' : (isSys ? 'Protected' : 'Deny')}
               </button>
             </div>
           </td>
@@ -1202,17 +1142,6 @@
         </div>
       `).join('');
 
-      /*const typeList = Object.entries(typeMap).sort((a,b)=>b[1]-a[1]);
-      document.getElementById('analytics-types').innerHTML = typeList.length ? typeList.map(([t, c]) => `
-        <div style="margin-bottom:4px;">
-          <div style="display:flex; justify-content:space-between; font-family:monospace; font-size: 0.72rem;">
-            <span style="color:#38bdf8;" class="truncate">Type: ${safeText(t)}</span>
-            <span style="color:var(--muted);">${c} (${total > 0 ? Math.round((c/total)*100) : 0}%)</span>
-          </div>
-          <div class="bar-bg"><div class="bar-fill" style="width:${total > 0 ? Math.min(100, Math.round((c/total)*100)) : 0}%; background:#38bdf8;"></div></div>
-        </div>
-      `).join('') : '<div style="color:var(--muted);">No data.</div>';*/
-
       const ipList = Object.entries(ipMap).sort((a,b)=>b[1]-a[1]);
       const ipElem = document.getElementById('analytics-ips');
       if (ipElem) {
@@ -1452,107 +1381,6 @@
       tooltip.style.top = (mouseY - 40) + 'px';
     }
 
-    /*function renderHitsTable() {
-      const tbody = document.getElementById('autoblock-hits-body');
-      if (!tbody) return;
-    
-      // Use sessionLogs buffer for frequency monitoring, respecting device filter
-      const sessionLogs = STATE.sessionLogs || [];
-      const activeLogs = STATE.selectedDevice === 'all' 
-        ? sessionLogs 
-        : sessionLogs.filter(l => l.device === STATE.selectedDevice);
-    
-      const deviceHits = {};
-      activeLogs.forEach(l => { 
-        const d = (l.domain || 'unknown').toLowerCase(); 
-        deviceHits[d] = (deviceHits[d] || 0) + 1; 
-      });
-    
-      const items = Object.entries(deviceHits)
-        .map(([domain, count]) => ({ domain, count }))
-        .sort((a, b) => b.count - a.count);
-    
-      tbody.innerHTML = items.length ? items.slice(0, 15).map(i => {
-        const pct = Math.min(100, Math.round((i.count / (STATE.config.threshold || 10)) * 100));
-        const isSys = typeof isProtected === 'function' ? isProtected(i.domain) : false;
-        return `
-          <tr>
-            <td class="domain-cell" title="${safeText(i.domain)}">${safeText(i.domain)} ${isSys ? '<span class="badge">Protected</span>' : ''}</td>
-            <td style="color: var(--warn); font-weight: bold; font-family: monospace;">${i.count}</td>
-            <td style="width: 140px;">
-              <div class="bar-bg"><div class="bar-fill" style="width:${pct}%; background:${pct >= 100 ? 'var(--blocked)' : 'var(--warn)'}"></div></div>
-            </td>
-            <td style="color: var(--muted); font-size: 0.7rem;">${isSys ? 'Guardrail' : (pct >= 100 ? 'Auto-Denied' : 'Monitoring')}</td>
-            <td style="text-align: right;"><button onclick="addQuickDeny('${safeText(i.domain)}')" class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">Block</button></td>
-          </tr>
-        `;
-      }).join('') : `<tr><td colspan="5" style="text-align:center; color:var(--muted);">No frequency data for this selection.</td></tr>`;
-    }*/
-
-    /*function renderHitsTable() {
-      const tbody = document.getElementById('autoblock-hits-body');
-      if (!tbody) return;
-    
-      // Use sessionLogs buffer for frequency monitoring, respecting device filter
-      const sessionLogs = STATE.sessionLogs || [];
-      const activeLogs = STATE.selectedDevice === 'all' 
-        ? sessionLogs 
-        : sessionLogs.filter(l => l.device === STATE.selectedDevice);
-    
-      const deviceHits = {};
-      const deviceStatus = {}; // Tracks API status per domain
-      
-      activeLogs.forEach(l => { 
-        const d = (l.domain || 'unknown').toLowerCase(); 
-        deviceHits[d] = (deviceHits[d] || 0) + 1; 
-        
-        // Save the latest known API status for this domain
-        if (l.status && l.status !== 'allowed' && l.status !== 'default') {
-          deviceStatus[d] = l.status;
-        }
-      });
-    
-      const items = Object.entries(deviceHits)
-        .map(([domain, count]) => ({ domain, count }))
-        .sort((a, b) => b.count - a.count);
-    
-      tbody.innerHTML = items.length ? items.slice(0, 15).map(i => {
-        const pct = Math.min(100, Math.round((i.count / (STATE.config.threshold || 10)) * 100));
-        const cleanDomain = i.domain.toLowerCase();
-        const isSys = typeof isProtected === 'function' ? isProtected(cleanDomain) : false;
-        
-        // Check if the domain was blocked by NextDNS API in recent logs
-        const apiStatus = deviceStatus[cleanDomain];
-        const isApiBlocked = apiStatus && apiStatus !== 'allowed' && apiStatus !== 'default';
-
-        // Determine status text and badge style
-        let statusText = 'Monitoring';
-        let badgeHtml = '';
-
-        if (isSys) {
-          statusText = 'Protected';
-          badgeHtml = '<span class="badge">Protected</span>';
-        } else if (isApiBlocked) {
-          statusText = `Blocked (${apiStatus})`;
-          badgeHtml = `<span class="badge" style="background: var(--blocked);">${safeText(apiStatus)}</span>`;
-        } else if (pct >= 100) {
-          statusText = 'Auto-Denied';
-        }
-
-        return `
-          <tr>
-            <td class="domain-cell" title="${safeText(i.domain)}">${safeText(i.domain)} ${badgeHtml}</td>
-            <td style="color: var(--warn); font-weight: bold; font-family: monospace;">${i.count}</td>
-            <td style="width: 140px;">
-              <div class="bar-bg"><div class="bar-fill" style="width:${pct}%; background:${isApiBlocked || pct >= 100 ? 'var(--blocked)' : 'var(--warn)'}"></div></div>
-            </td>
-            <td style="color: var(--muted); font-size: 0.7rem;">${statusText}</td>
-            <td style="text-align: right;"><button onclick="addQuickDeny('${safeText(i.domain)}')" class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;" ${isApiBlocked ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>${isApiBlocked ? 'Blocked' : 'Block'}</button></td>
-          </tr>
-        `;
-      }).join('') : `<tr><td colspan="5" style="text-align:center; color:var(--muted);">No frequency data for this selection.</td></tr>`;
-    }*/
-
     function renderHitsTable() {
       const tbody = document.getElementById('autoblock-hits-body');
       if (!tbody) return;
@@ -1623,64 +1451,6 @@
         `;
       }).join('') : `<tr><td colspan="5" style="text-align:center; color:var(--muted);">No frequency data for this selection.</td></tr>`;
     }
-      
-    /*window.addQuickDeny = function(domain) {
-      STATE.denylist.unshift({ id: String(Date.now()), domain, category: 'Quick Deny', active: true, hits: 1 });
-      saveState();
-      showToast('Blocked', `Added ${safeText(domain)}`, 'danger');
-    };*/
-
-    // New code: robust persistence (localStorage) + real NextDNS API POST sync
-    /*window.addQuickDeny = async function(domain) {
-      const cleanDomain = domain.trim().toLowerCase();
-      if (!cleanDomain) return;
-    
-      // Prevent duplicates in local denylist state
-      if (STATE.denylist.some(item => item.domain.toLowerCase() === cleanDomain)) {
-        showToast('Info', `Domain ${safeText(cleanDomain)} is already blocked.`, 'warning');
-        return;
-      }
-    
-      // 1. Update local state & persist via localStorage
-      STATE.denylist.unshift({ 
-        id: String(Date.now()), 
-        domain: cleanDomain, 
-        category: 'Quick Deny', 
-        active: true, 
-        hits: 1 
-      });
-      saveState();
-    
-      // 2. If running in API mode, sync with NextDNS profile via POST request
-      if (STATE.mode === 'api' && STATE.config.profile && STATE.config.apiKey) {
-        const proxy = STATE.config.proxy || 'https://api.nextdns.io';
-        try {
-          const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${STATE.config.profile}/denylist`, {
-            method: 'POST',
-            headers: {
-              'X-Api-Key': STATE.config.apiKey,
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            },
-            body: JSON.stringify({ id: cleanDomain, active: true })
-          });
-    
-          if (!res.ok) {
-            throw new Error(`API sync failed with status ${res.status}`);
-          }
-          
-          showToast('🚫 NextDNS Blocked', `Successfully blocked ${safeText(cleanDomain)} on profile`, 'danger');
-        } catch (e) {
-          console.error('Failed to sync denylist to NextDNS API:', e);
-          showToast('⚠️ Sync Warning', `Blocked locally, but API sync failed: ${e.message}`, 'warning');
-        }
-      } else {
-        showToast('🚫 Guard Denied', `Added ${safeText(cleanDomain)} to local denylist`, 'danger');
-      }
-    
-      // Refresh UI tables if applicable
-      if (typeof renderDenylistTable === 'function') renderDenylistTable();
-    };*/
 
     window.addQuickDeny = async function(domain) {
       const cleanDomain = domain.trim().toLowerCase();
@@ -1798,8 +1568,7 @@
     // Export configuration and denylist as a JSON file
     function backupConfigJSON() {
       const data = {
-        config: STATE.config,
-        denylist: STATE.denylist
+        config: STATE.config
       };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
@@ -1823,9 +1592,6 @@
           if (parsed && typeof parsed === 'object') {
             if (parsed.config) {
               STATE.config = { ...STATE.config, ...parsed.config };
-            }
-            if (parsed.denylist && Array.isArray(parsed.denylist)) {
-              STATE.denylist = parsed.denylist;
             }
     
             saveState();
@@ -1872,19 +1638,11 @@
 
     document.getElementById('btn-toggle-stream').onclick = () => {
       STATE.isStreaming = !STATE.isStreaming;
-      document.getElementById('btn-toggle-stream').textContent = STATE.isStreaming ? '⏸️' : '▶️';
-      document.getElementById('stream-status').textContent = STATE.isStreaming ? (STATE.mode === 'api' ? 'Live' : 'Demo') : 'Paused';
+      
+      const badge = document.getElementById('btn-toggle-stream');
+      badge.textContent = STATE.isStreaming ? (STATE.mode === 'api' ? 'Live' : 'Demo') : 'Paused';
+      badge.className = STATE.isStreaming ? (STATE.mode === 'api' ? 'badge live' : 'badge sim') : 'badge paused';
     };
-
-    /*document.getElementById('btn-add-deny').onclick = () => {
-      const inp = document.getElementById('new-deny-domain');
-      const domain = inp.value.trim().toLowerCase();
-      if (!domain) return;
-      STATE.denylist.unshift({ id: String(Date.now()), domain, category: 'Custom', active: true, hits: 0 });
-      saveState();
-      inp.value = '';
-      showToast('Rule Added', `Blocked ${safeText(domain)}`, 'danger');
-    };*/
 
     document.getElementById('btn-save-cfg').onclick = () => {
       const newProfile = document.getElementById('cfg-profile').value.trim();
