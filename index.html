@@ -1671,8 +1671,8 @@
         document.getElementById('global-device-select').innerHTML = '<option value="all">All Devices</option>';
         
         STATE.mode = 'api';
-        document.getElementById('stream-status').textContent = 'Live';
-        document.getElementById('stream-status').className = 'badge live';
+        document.getElementById('btn-toggle-stream').textContent = 'Live';
+        document.getElementById('btn-toggle-stream').className = 'badge live';
         fetchNextDNSLogs();
         if (apiPollTimer) clearInterval(apiPollTimer);
         apiPollTimer = setInterval(fetchNextDNSLogs, 10000);
@@ -1814,11 +1814,11 @@
     STATE.mode = (STATE.config.profile && STATE.config.apiKey) ? 'api' : 'sim';
 
     if (STATE.mode === 'api') {
-      document.getElementById('stream-status').textContent = 'Live';
+      document.getElementById('btn-toggle-stream').textContent = 'Live';
       fetchNextDNSLogs();
       apiPollTimer = setInterval(fetchNextDNSLogs, 10000);
     } else {
-      document.getElementById('stream-status').textContent = 'Demo';
+      document.getElementById('btn-toggle-stream').textContent = 'Demo';
       startSimulation();
     }
 
