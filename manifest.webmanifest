@@ -1,6 +1,6 @@
 {
-  "name": "NextDNS Sentinel Dashboard",
-  "short_name": "NextDNS Dashboard",
+  "name": "NextDNS Live Viewer",
+  "short_name": "NextDNS Live Viewer",
   "description": "Real-time NextDNS log monitor, analytics, custom domain blocking toggles, and security auditor",
   "start_url": "/",
   "display": "standalone",
