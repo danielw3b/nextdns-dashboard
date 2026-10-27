@@ -7,7 +7,7 @@ A lightweight, zero-dependency Progressive Web App (PWA) providing real-time tel
 ## 📸 Preview
 
 <p align="center">
-  <img src="screenshot.jpg" alt="NextDNS Live Viewer Dashboard" width="100%" style="max-width: 900px; border-radius: 8px; border: 1px solid #334155;">
+  <img src="screenshot.png" alt="NextDNS Live Viewer Dashboard" width="100%" style="max-width: 900px; border-radius: 8px; border: 1px solid #334155;">
 </p>
 
 ## ✨ Features
