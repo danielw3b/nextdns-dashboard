@@ -1275,7 +1275,8 @@
       const rawMaxVal = Math.max(0, ...buckets.map(b => Math.max(b.allowed, b.blocked, b.total)));
       const maxVal = Math.max(4, rawMaxVal);
     
-      const padding = { top: 15, right: 42, bottom: 28, left: 40 };
+      //const padding = { top: 15, right: 42, bottom: 28, left: 40 };
+      const padding = { top: 15, right: 32, bottom: 28, left: 30 };
       const chartWidth = width - padding.left - padding.right;
       const chartHeight = height - padding.top - padding.bottom;
       currentChartMetrics = { padding, chartWidth, chartHeight, maxVal, bucketsCount };
