@@ -1353,7 +1353,7 @@
       tooltip.style.top = (mouseY - 40) + 'px';
     }
 
-    function renderHitsTable() {
+    /*function renderHitsTable() {
       const tbody = document.getElementById('autoblock-hits-body');
       if (!tbody) return;
     
@@ -1388,13 +1388,131 @@
           </tr>
         `;
       }).join('') : `<tr><td colspan="5" style="text-align:center; color:var(--muted);">No frequency data for this selection.</td></tr>`;
-    }
+    }*/
 
-    window.addQuickDeny = function(domain) {
+    function renderHitsTable() {
+      const tbody = document.getElementById('autoblock-hits-body');
+      if (!tbody) return;
+    
+      // Use sessionLogs buffer for frequency monitoring, respecting device filter
+      const sessionLogs = STATE.sessionLogs || [];
+      const activeLogs = STATE.selectedDevice === 'all' 
+        ? sessionLogs 
+        : sessionLogs.filter(l => l.device === STATE.selectedDevice);
+    
+      const deviceHits = {};
+      const deviceStatus = {}; // Tracks API status per domain
+      
+      activeLogs.forEach(l => { 
+        const d = (l.domain || 'unknown').toLowerCase(); 
+        deviceHits[d] = (deviceHits[d] || 0) + 1; 
+        
+        // Save the latest known API status for this domain
+        if (l.status && l.status !== 'allowed' && l.status !== 'default') {
+          deviceStatus[d] = l.status;
+        }
+      });
+    
+      const items = Object.entries(deviceHits)
+        .map(([domain, count]) => ({ domain, count }))
+        .sort((a, b) => b.count - a.count);
+    
+      tbody.innerHTML = items.length ? items.slice(0, 15).map(i => {
+        const pct = Math.min(100, Math.round((i.count / (STATE.config.threshold || 10)) * 100));
+        const cleanDomain = i.domain.toLowerCase();
+        const isSys = typeof isProtected === 'function' ? isProtected(cleanDomain) : false;
+        
+        // Check if the domain was blocked by NextDNS API in recent logs
+        const apiStatus = deviceStatus[cleanDomain];
+        const isApiBlocked = apiStatus && apiStatus !== 'allowed' && apiStatus !== 'default';
+
+        // Determine status text and badge style
+        let statusText = 'Monitoring';
+        let badgeHtml = '';
+
+        if (isSys) {
+          statusText = 'Protected';
+          badgeHtml = '<span class="badge">Protected</span>';
+        } else if (isApiBlocked) {
+          statusText = `Blocked (${apiStatus})`;
+          badgeHtml = `<span class="badge" style="background: var(--blocked);">${safeText(apiStatus)}</span>`;
+        } else if (pct >= 100) {
+          statusText = 'Auto-Denied';
+        }
+
+        return `
+          <tr>
+            <td class="domain-cell" title="${safeText(i.domain)}">${safeText(i.domain)} ${badgeHtml}</td>
+            <td style="color: var(--warn); font-weight: bold; font-family: monospace;">${i.count}</td>
+            <td style="width: 140px;">
+              <div class="bar-bg"><div class="bar-fill" style="width:${pct}%; background:${isApiBlocked || pct >= 100 ? 'var(--blocked)' : 'var(--warn)'}"></div></div>
+            </td>
+            <td style="color: var(--muted); font-size: 0.7rem;">${statusText}</td>
+            <td style="text-align: right;"><button onclick="addQuickDeny('${safeText(i.domain)}')" class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;" ${isApiBlocked ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>${isApiBlocked ? 'Blocked' : 'Block'}</button></td>
+          </tr>
+        `;
+      }).join('') : `<tr><td colspan="5" style="text-align:center; color:var(--muted);">No frequency data for this selection.</td></tr>`;
+    }
+      
+
+    /*window.addQuickDeny = function(domain) {
       STATE.denylist.unshift({ id: String(Date.now()), domain, category: 'Quick Deny', active: true, hits: 1 });
       saveState();
       showToast('Blocked', `Added ${safeText(domain)}`, 'danger');
-    };
+    };*/
+
+    // New code: robust persistence (localStorage) + real NextDNS API POST sync
+    window.addQuickDeny = async function(domain) {
+      const cleanDomain = domain.trim().toLowerCase();
+      if (!cleanDomain) return;
+    
+      // Prevent duplicates in local denylist state
+      if (STATE.denylist.some(item => item.domain.toLowerCase() === cleanDomain)) {
+        showToast('Info', `Domain ${safeText(cleanDomain)} is already blocked.`, 'warning');
+        return;
+      }
+    
+      // 1. Update local state & persist via localStorage
+      STATE.denylist.unshift({ 
+        id: String(Date.now()), 
+        domain: cleanDomain, 
+        category: 'Quick Deny', 
+        active: true, 
+        hits: 1 
+      });
+      saveState();
+    
+      // 2. If running in API mode, sync with NextDNS profile via POST request
+      if (STATE.mode === 'api' && STATE.config.profile && STATE.config.apiKey) {
+        const proxy = STATE.config.proxy || 'https://api.nextdns.io';
+        try {
+          const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${STATE.config.profile}/denylist`, {
+            method: 'POST',
+            headers: {
+              'X-Api-Key': STATE.config.apiKey,
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify({ id: cleanDomain, active: true })
+          });
+    
+          if (!res.ok) {
+            throw new Error(`API sync failed with status ${res.status}`);
+          }
+          
+          showToast('🚫 NextDNS Blocked', `Successfully blocked ${safeText(cleanDomain)} on profile`, 'danger');
+        } catch (e) {
+          console.error('Failed to sync denylist to NextDNS API:', e);
+          showToast('⚠️ Sync Warning', `Blocked locally, but API sync failed: ${e.message}`, 'warning');
+        }
+      } else {
+        showToast('🚫 Guard Denied', `Added ${safeText(cleanDomain)} to local denylist`, 'danger');
+      }
+    
+      // Refresh UI tables if applicable
+      if (typeof renderDenylistTable === 'function') renderDenylistTable();
+};
+    
 
     // Export session logs and header KPIs to a CSV file
     function exportLiveLogsToCSV() {
