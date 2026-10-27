@@ -559,11 +559,50 @@
         .replace(/'/g, '&#39;');
     }
 
+    // List of core infrastructure and system domains protected from accidental blocking in the UI
     const PROTECTED_DOMAINS = [
-      'apple.com', 'icloud.com', 'captive.apple.com', 'google.com',
-      'connectivitycheck.gstatic.com', 'windowsupdate.com', 'microsoft.com',
-      'pool.ntp.org', 'time.apple.com', 'time.windows.com', 'cloudflare.com',
-      'nextdns.io', 'local', 'lan'
+      // Apple Ecosystem & Connectivity
+      'apple.com',
+      'icloud.com',
+      'captive.apple.com',
+      'time.apple.com',
+      'ocsp.apple.com',
+      'mzstatic.com',
+      
+      // Google & Android Ecosystem
+      'google.com',
+      'googleapis.com',
+      'gstatic.com',
+      'googleusercontent.com',
+      'connectivitycheck.gstatic.com',
+      'clients3.google.com',
+      
+      // Microsoft & Windows Ecosystem
+      'microsoft.com',
+      'windowsupdate.com',
+      'live.com',
+      'msftconnecttest.com',
+      'time.windows.com',
+      
+      // Network Time & Core Infrastructure
+      'pool.ntp.org',
+      'time.nist.gov',
+      'ntp.org',
+      
+      // Cloudflare & DNS Core
+      'cloudflare.com',
+      'cloudflare.net',
+      'nextdns.io',
+      
+      // Certificate Authorities & OCSP (Essential for HTTPS/TLS certificate validation)
+      'ocsp.sectigo.com',
+      'ocsp.digicert.com',
+      'ocsp.godaddy.com',
+      'ocsp.entrust.net',
+      
+      // Local / LAN environment
+      'local',
+      'lan'
     ];
 
     // Check if domain is part of protected core infrastructure
