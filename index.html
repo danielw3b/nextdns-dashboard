@@ -201,7 +201,7 @@
       outline: none;
       border-color: var(--accent);
     }
-    .table-container {
+    /*.table-container {
       overflow-x: auto;
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -212,8 +212,8 @@
     }
     
     .compact-table-container { 
-      /*height: auto; */
-      height: calc(100vh - 290px);
+      /*height: auto;*/
+      /*height: calc(100vh - 290px);
       overflow-x: hidden; 
       overflow-y: auto;
     }
@@ -231,7 +231,48 @@
     #tab-live th:nth-child(1), #tab-live td:nth-child(1) { width: 22%; }
     #tab-live th:nth-child(2), #tab-live td:nth-child(2) { width: 14%; }
     #tab-live th:nth-child(3), #tab-live td:nth-child(3) { width: 42%; }
-    #tab-live th:nth-child(4), #tab-live td:nth-child(4) { width: 22%; }
+    #tab-live th:nth-child(4), #tab-live td:nth-child(4) { width: 22%; }*/
+
+    .table-container {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #060911;
+      height: calc(100vh - 290px);
+      min-height: 350px;
+      overflow-y: auto;
+    }
+    
+    .compact-table-container { 
+      /*height: auto;*/
+      height: calc(100vh - 290px);
+      overflow-x: hidden; 
+      overflow-y: auto;
+    }
+    
+    .compact-table-container table,
+    #tab-live {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    #tab-live th, #tab-live td {
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      white-space: nowrap; 
+    }
+
+    #tab-live th:last-child, #tab-live td:last-child {
+      text-align: right;
+    }
+    
+    @media (max-width: 600px) {
+      #tab-live th, #tab-live td {
+        white-space: normal;
+        font-size: 0.7rem;
+      }
+    }
+    
 
     th, td {
       padding: 0.4rem 0.5rem;
@@ -428,14 +469,15 @@
         </div>
       </div>
 
-      <div class="table-container">
-        <table>
+      <div class="table-container compact-table-container">
+        <table id="tab-live">
           <thead>
             <tr>
-              <th>Time / Proto</th>
+              <th>Time</th>
+              <th>Domain</th>
               <th>Status</th>
-              <th>Domain / Device</th>
-              <th>Reason / Action</th>
+              <th>Reason</th>
+              <th>Device</th>
             </tr>
           </thead>
           <tbody id="live-log-body"></tbody>
