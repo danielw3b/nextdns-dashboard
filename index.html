@@ -202,7 +202,7 @@
       border-color: var(--accent);
     }
 
-    .table-container {
+.table-container {
       overflow-x: auto;
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -219,26 +219,34 @@
     }
     
     .compact-table-container table,
-    #tab-live {
+    #tab-live,
+    #tab-autoblock {
       width: 100%;
       border-collapse: collapse;
     }
 
-    #tab-live th, #tab-live td {
+    /* Gemeinsames Grundlayout für Tabellenzellen beider Tabellen */
+    #tab-live th, #tab-live td,
+    #tab-autoblock th, #tab-autoblock td {
       padding: 0.5rem 0.75rem;
       text-align: left;
       white-space: nowrap; 
     }
 
-    /* Reason-row on Desktop */
+    /* Spalten-Zügelung für Live Stream */
     #tab-live th:nth-child(4), #tab-live td:nth-child(4) {
-      max-width: 120px;
+      max-width: 110px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #tab-live th:nth-child(2), #tab-live td:nth-child(2) {
+      max-width: 320px;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
-    /* Domain-row on Desktop */
-    #tab-live th:nth-child(2), #tab-live td:nth-child(2) {
+    /* Spalten-Zügelung für Guardrail / Frequent Hits (#tab-autoblock) */
+    #tab-autoblock th:nth-child(1), #tab-autoblock td:nth-child(1) {
       max-width: 320px;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -257,7 +265,6 @@
     }
     tr:hover td { background: rgba(30, 41, 59, 0.4); }
 
-    /* Default Domain-Cell on Desktop */
     .domain-cell {
       font-family: monospace;
       font-weight: 600;
@@ -265,8 +272,7 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-
-    /* Status-Pills & Toasts (unverändert) */
+    
     .status-pill {
       display: inline-block;
       padding: 0.15rem 0.45rem;
@@ -277,21 +283,20 @@
     .status-blocked { background: var(--blocked-bg); color: #fca5a5; }
     .status-allowed { background: var(--allowed-bg); color: #86efac; }
 
-    /* --- RESPONSIVE MOBILE FIX (incl. 360px Viewport) --- */
+    /* --- RESPONSIVE MOBILE FIX FÜR BEIDE TABELLEN (bis runter zu 360px) --- */
     @media (max-width: 800px) {
       .compact-table-container {
-        overflow-x: auto; /* Erlaubt sicheres Scrollen, falls es extrem eng wird */
+        overflow-x: auto;
       }
-      #tab-live th, 
-      #tab-live td,
-      #tab-live .domain-cell {
-        white-space: normal !important; /* Erzwingt das Aufheben des Einzeilers überall */
-        /*word-break: break-all;          /* Bricht lange Domains und Reasons sauber um */
+      #tab-live th, #tab-live td, #tab-live .domain-cell,
+      #tab-autoblock th, #tab-autoblock td {
+        white-space: normal !important;
+        /*word-break: break-all;*/
         overflow-wrap: anywhere;
-        /*max-width: none !important;     /* Hebt künstliche Breitenbegrenzungen auf */
+        /*max-width: none !important;*/
         font-size: 0.7rem;
       }
-      #tab-live td {
+      #tab-live td, #tab-autoblock td {
         padding: 0.35rem 0.4rem;
       }
     }
@@ -345,7 +350,7 @@
         <path d="M42 52L48 58L58 46" stroke="#4ade80" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
       <div>
-        <h1>NextDNS Live Viewer</h1>
+        <h1>NextDNS Live</h1>
         <div style="font-size: 0.68rem; color: var(--muted);">Real-time telemetry, analytics & guardrails</div>
       </div>
     </div>
@@ -480,7 +485,7 @@
           <span style="font-size: 0.7rem; color: var(--muted); font-family: monospace;" id="autoblock-threshold-badge">Threshold: 2000 hits/24h</span>
         </div>
         <div class="table-container compact-table-container">
-          <table>
+          <table id="tab-autoblock">
             <thead>
               <tr>
                 <th>Domain</th>
