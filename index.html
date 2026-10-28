@@ -93,24 +93,60 @@
     .btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
 
     #global-device-select {
+      /* Layout & typography (font-family inherited from body) */
       padding: 0.65rem 2.5rem 0.65rem 0.9rem;
-      font-size: 13px; 
+      font-size: 13px;
+      
+      /* Reset default styles & add custom arrow (color matched to --muted) */
       appearance: none;
       -webkit-appearance: none;
       background: url("data:image/svg+xml,%3Csvg xmlns='http://w3.org' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E") no-repeat right 0.8rem center / 1.1rem;
     
+      /* Theme integration using custom properties */
       color: var(--text);
       background-color: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       cursor: pointer;
       transition: border-color 0.15s ease;
+    
+      /* Opt-in for modern customizable select behavior on compatible engines */
+      appearance: base-select; 
     }
+    
+    /* Style the opened dropdown popover (modern browsers/tablets) */
+    #global-device-select::picker(select) {
+      appearance: base-select;
+      background-color: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 4px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+    
+    /* Style individual options inside the dropdown */
+    #global-device-select option {
+      background-color: var(--surface-2);
+      color: var(--text);
+      padding: 0.5rem 0.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    
+    /* Interaction states for individual options */
+    #global-device-select option:hover,
+    #global-device-select option:checked {
+      background-color: var(--accent);
+      color: #000000;
+    }
+    
+    /* Focus and hover states for the select button itself */
     #global-device-select:hover,
     #global-device-select:focus {
       outline: none;
       border-color: var(--accent);
     }
+
     
     .nav-tabs {
       background: var(--surface);
