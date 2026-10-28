@@ -257,28 +257,28 @@
     }
 
     /* Row Domain compressing */
-    #tab-live th:nth-child(2), #tab-live td:nth-child(2) {
+    /*#tab-live th:nth-child(2), #tab-live td:nth-child(2) {
       width: 35%;
       max-width: 300px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-    }
+    }*/
   /* Row Reason compressing */
-   #tab-live th:nth-child(4), #tab-live td:nth-child(4) {
+   /*#tab-live th:nth-child(4), #tab-live td:nth-child(4) {
       width: 15%; 
       max-width: 120px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-    }
+    }*/
     
     #tab-live th, #tab-live td {
       padding: 0.5rem 0.75rem;
       text-align: left;
       white-space: nowrap; 
     }
-
+/*
     #tab-live th:last-child, #tab-live td:last-child {
       text-align: right;
     }
@@ -288,16 +288,42 @@
         white-space: normal;
         font-size: 0.7rem;
       }
+    }*/
+
+    /* 1. Reason-Spalte gezielt begrenzen, damit lange Filterlisten nicht das Layout sprengen */
+    #tab-live th:nth-child(4), #tab-live td:nth-child(4) {
+      max-width: 170px;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
+
+    /* 2. Domain-Spalte bekommt den freigewordenen Platz */
+    #tab-live th:nth-child(2), #tab-live td:nth-child(2) {
+      max-width: 400px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* 3. Responsive Breakpoint: Wenn der Viewport schmäler wird, bricht es sauber um, statt Spalten zu verstecken */
+    @media (max-width: 950px) {
+      #tab-live th, #tab-live td {
+        white-space: normal; /* Allow multi-line wrapping on smaller screens */
+        font-size: 0.7rem;
+      }
+      #tab-live td {
+        padding: 0.35rem 0.4rem;
+      }
+    }
+
     
 
-    th, td {
+    /*th, td {
       padding: 0.4rem 0.5rem;
       border-bottom: 1px solid rgba(51, 65, 85, 0.5);
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-    }
+    }*/
     th {
       background: var(--surface);
       color: var(--muted);
