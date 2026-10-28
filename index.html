@@ -264,6 +264,14 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
+  /* Row Reason compressing */
+   #tab-live th:nth-child(3), #tab-live td:nth-child(3) {
+      width: 15%; /* Obergrenze für die Reason-Breite */
+      max-width: 150px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
     
     #tab-live th, #tab-live td {
       padding: 0.5rem 0.75rem;
