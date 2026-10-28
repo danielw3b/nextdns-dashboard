@@ -201,37 +201,6 @@
       outline: none;
       border-color: var(--accent);
     }
-    /*.table-container {
-      overflow-x: auto;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: #060911;
-      height: calc(100vh - 290px);
-      min-height: 350px;
-      overflow-y: auto;
-    }
-    
-    .compact-table-container { 
-      /*height: auto;*/
-      /*height: calc(100vh - 290px);
-      overflow-x: hidden; 
-      overflow-y: auto;
-    }
-    .compact-table-container table {
-      table-layout: fixed;
-      width: 100%;
-    }
-    .compact-table-container th:nth-child(1), .compact-table-container td:nth-child(1) { width: 34%; }
-    .compact-table-container th:nth-child(2), .compact-table-container td:nth-child(2) { width: 12%; }
-    .compact-table-container th:nth-child(3), .compact-table-container td:nth-child(3) { width: 28%; }
-    .compact-table-container th:nth-child(4), .compact-table-container td:nth-child(4) { width: 14%; }
-    .compact-table-container th:nth-child(5), .compact-table-container td:nth-child(5) { width: 12%; text-align: right; }
-
-    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-    #tab-live th:nth-child(1), #tab-live td:nth-child(1) { width: 22%; }
-    #tab-live th:nth-child(2), #tab-live td:nth-child(2) { width: 14%; }
-    #tab-live th:nth-child(3), #tab-live td:nth-child(3) { width: 42%; }
-    #tab-live th:nth-child(4), #tab-live td:nth-child(4) { width: 22%; }*/
 
     .table-container {
       overflow-x: auto;
@@ -244,7 +213,6 @@
     }
     
     .compact-table-container { 
-      /*height: auto;*/
       height: calc(100vh - 290px);
       overflow-x: hidden; 
       overflow-y: auto;
@@ -256,74 +224,26 @@
       border-collapse: collapse;
     }
 
-    /* Row Domain compressing */
-    /*#tab-live th:nth-child(2), #tab-live td:nth-child(2) {
-      width: 35%;
-      max-width: 300px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }*/
-  /* Row Reason compressing */
-   /*#tab-live th:nth-child(4), #tab-live td:nth-child(4) {
-      width: 15%; 
-      max-width: 120px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }*/
-    
     #tab-live th, #tab-live td {
       padding: 0.5rem 0.75rem;
       text-align: left;
       white-space: nowrap; 
     }
-/*
-    #tab-live th:last-child, #tab-live td:last-child {
-      text-align: right;
-    }
-    
-    @media (max-width: 600px) {
-      #tab-live th, #tab-live td {
-        white-space: normal;
-        font-size: 0.7rem;
-      }
-    }*/
 
-    /* 1. Reason-Spalte gezielt begrenzen, damit lange Filterlisten nicht das Layout sprengen */
+    /* Reason-row on Desktop */
     #tab-live th:nth-child(4), #tab-live td:nth-child(4) {
       max-width: 170px;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
-    /* 2. Domain-Spalte bekommt den freigewordenen Platz */
+    /* Domain-row on Desktop */
     #tab-live th:nth-child(2), #tab-live td:nth-child(2) {
       max-width: 400px;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
-    /* 3. Responsive Breakpoint: Wenn der Viewport schmäler wird, bricht es sauber um, statt Spalten zu verstecken */
-    @media (max-width: 950px) {
-      #tab-live th, #tab-live td {
-        white-space: normal; /* Allow multi-line wrapping on smaller screens */
-        font-size: 0.7rem;
-      }
-      #tab-live td {
-        padding: 0.35rem 0.4rem;
-      }
-    }
-
-    
-
-    /*th, td {
-      padding: 0.4rem 0.5rem;
-      border-bottom: 1px solid rgba(51, 65, 85, 0.5);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }*/
     th {
       background: var(--surface);
       color: var(--muted);
@@ -336,6 +256,8 @@
       letter-spacing: 0.03em;
     }
     tr:hover td { background: rgba(30, 41, 59, 0.4); }
+
+    /* Default Domain-Cell on Desktop */
     .domain-cell {
       font-family: monospace;
       font-weight: 600;
@@ -343,6 +265,8 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
+
+    /* Status-Pills & Toasts (unverändert) */
     .status-pill {
       display: inline-block;
       padding: 0.15rem 0.45rem;
@@ -352,6 +276,27 @@
     }
     .status-blocked { background: var(--blocked-bg); color: #fca5a5; }
     .status-allowed { background: var(--allowed-bg); color: #86efac; }
+
+    /* --- RESPONSIVE MOBILE FIX (incl. 360px Viewport) --- */
+    @media (max-width: 950px) {
+      .compact-table-container {
+        overflow-x: auto; /* Erlaubt sicheres Scrollen, falls es extrem eng wird */
+      }
+      #tab-live th, 
+      #tab-live td,
+      #tab-live .domain-cell {
+        white-space: normal !important; /* Erzwingt das Aufheben des Einzeilers überall */
+        word-break: break-all;          /* Bricht lange Domains und Reasons sauber um */
+        overflow-wrap: anywhere;
+        max-width: none !important;     /* Hebt künstliche Breitenbegrenzungen auf */
+        font-size: 0.7rem;
+      }
+      #tab-live td {
+        padding: 0.35rem 0.4rem;
+      }
+    }
+
+    
     .toast-container {
       position: fixed;
       bottom: 1.5rem;
