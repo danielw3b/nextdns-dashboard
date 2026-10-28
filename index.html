@@ -232,14 +232,14 @@
 
     /* Reason-row on Desktop */
     #tab-live th:nth-child(4), #tab-live td:nth-child(4) {
-      max-width: 170px;
+      max-width: 120px;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
     /* Domain-row on Desktop */
     #tab-live th:nth-child(2), #tab-live td:nth-child(2) {
-      max-width: 400px;
+      max-width: 320px;
       overflow: hidden;
       text-overflow: ellipsis;
     }
@@ -278,7 +278,7 @@
     .status-allowed { background: var(--allowed-bg); color: #86efac; }
 
     /* --- RESPONSIVE MOBILE FIX (incl. 360px Viewport) --- */
-    @media (max-width: 950px) {
+    @media (max-width: 800px) {
       .compact-table-container {
         overflow-x: auto; /* Erlaubt sicheres Scrollen, falls es extrem eng wird */
       }
@@ -286,16 +286,15 @@
       #tab-live td,
       #tab-live .domain-cell {
         white-space: normal !important; /* Erzwingt das Aufheben des Einzeilers überall */
-        word-break: break-all;          /* Bricht lange Domains und Reasons sauber um */
+        /*word-break: break-all;          /* Bricht lange Domains und Reasons sauber um */
         overflow-wrap: anywhere;
-        max-width: none !important;     /* Hebt künstliche Breitenbegrenzungen auf */
+        /*max-width: none !important;     /* Hebt künstliche Breitenbegrenzungen auf */
         font-size: 0.7rem;
       }
       #tab-live td {
         padding: 0.35rem 0.4rem;
       }
     }
-
     
     .toast-container {
       position: fixed;
