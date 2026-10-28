@@ -94,40 +94,25 @@
 
     #global-device-select {
       /* Layout & typography (font-family inherited from body) */
-      padding: 0.65rem 2.3rem 0.65rem 0.9rem; /* Reserved precise right space for the icon */
+      padding: 0.65rem 2.5rem 0.65rem 0.9rem;
       font-size: 13px;
       
-      /* Opt-in for modern customizable select behavior */
-      appearance: base-select;
-      -webkit-appearance: base-select;
+      /* Keep default OS look & native arrow for the closed button state */
+      appearance: auto;
+      -webkit-appearance: auto;
     
-      /* Force the custom gray line-chevron as background image (positioned perfectly right) */
-      background: url("data:image/svg+xml,%3Csvg xmlns='http://w3.org' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 0.7rem center / 0.85rem;
-    
-      /* Theme integration using custom properties */
+      /* Theme integration using your custom properties */
       color: var(--text);
       background-color: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       cursor: pointer;
-      transition: border-color 0.15s ease, background-image 0.15s ease;
+      transition: border-color 0.15s ease;
     }
     
-    /* Fix for Chrome/Chromebook: Hides the built-in system arrow to prevent overlapping */
-    #global-device-select::picker-icon {
-      display: none !important;
-      content: none !important;
-    }
-    
-    /* Invert the line-chevron to point upwards when the dropdown is open */
-    #global-device-select:popover-open,
-    #global-device-select::picker(select):popover-open {
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://w3.org' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 15l-6-6-6 6'/%3E%3C/svg%3E");
-    }
-    
-    /* Style the opened dropdown popover (modern dark-theme layout) */
+    /* Style ONLY the opened dropdown popover (keeps the premium layout) */
     #global-device-select::picker(select) {
-      appearance: base-select;
+      appearance: base-select; /* Enables custom styling for the options list overlay */
       background-color: var(--surface-2);
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -135,7 +120,7 @@
       box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
     }
     
-    /* Style individual options inside the dropdown */
+    /* Style individual options inside the custom dropdown overlay */
     #global-device-select option {
       background-color: var(--surface-2);
       color: var(--text);
