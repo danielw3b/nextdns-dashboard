@@ -94,12 +94,15 @@
 
     #global-device-select {
       /* Layout & typography (font-family inherited from body) */
-      padding: 0.65rem 2.5rem 0.65rem 0.9rem;
+      padding: 0.65rem 2.3rem 0.65rem 0.9rem; /* Reserved precise right space for the icon */
       font-size: 13px;
       
       /* Opt-in for modern customizable select behavior */
       appearance: base-select;
       -webkit-appearance: base-select;
+    
+      /* Force the custom gray line-chevron as background image (positioned perfectly right) */
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://w3.org' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 0.7rem center / 0.85rem;
     
       /* Theme integration using custom properties */
       color: var(--text);
@@ -107,23 +110,19 @@
       border: 1px solid var(--border);
       border-radius: var(--radius);
       cursor: pointer;
-      transition: border-color 0.15s ease;
+      transition: border-color 0.15s ease, background-image 0.15s ease;
     }
     
-    /* Force the custom gray line-chevron from your image into the native picker icon slot */
+    /* Fix for Chrome/Chromebook: Hides the built-in system arrow to prevent overlapping */
     #global-device-select::picker-icon {
-      content: "";
-      display: block !important;
-      visibility: visible !important;
-      width: 0.9rem;
-      height: 0.9rem;
-      background: url("data:image/svg+xml,%3Csvg xmlns='http://w3.org' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat center / contain;
-      transition: transform 0.15s ease;
+      display: none !important;
+      content: none !important;
     }
     
-    /* Smoothly rotate the line-chevron upwards when the select popover is open */
-    #global-device-select:popover-open::picker-icon {
-      transform: rotate(180deg);
+    /* Invert the line-chevron to point upwards when the dropdown is open */
+    #global-device-select:popover-open,
+    #global-device-select::picker(select):popover-open {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://w3.org' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 15l-6-6-6 6'/%3E%3C/svg%3E");
     }
     
     /* Style the opened dropdown popover (modern dark-theme layout) */
@@ -158,6 +157,7 @@
       outline: none;
       border-color: var(--accent);
     }
+
     
     .nav-tabs {
       background: var(--surface);
