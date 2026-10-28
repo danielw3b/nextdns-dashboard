@@ -749,7 +749,7 @@
     function renderFilteredLiveLogs() {
       const tbody = document.getElementById('live-log-body');
       if (!tbody) return;
-      const search = (document.getElementById('live-search')?.value || '').toLowerCase().trim();
+      /*const search = (document.getElementById('live-search')?.value || '').toLowerCase().trim();
       const statusFilter = (document.getElementById('live-status-filter')?.value || 'all').toLowerCase().trim();
 
       const filtered = STATE.logs.filter(l => {
@@ -764,13 +764,45 @@
           if (!matchDomain && !matchDevice && !matchReason) return false;
         }
         return true;
+      });*/
+
+      const search = (document.getElementById('live-search')?.value || '').toLowerCase().trim();
+      const statusFilter = (document.getElementById('live-status-filter')?.value || 'all').toLowerCase().trim();
+
+      const filtered = STATE.logs.filter(l => {
+        if (STATE.selectedDevice !== 'all' && l.device !== STATE.selectedDevice) return false;
+        
+        const lStatus = String(l.status || 'allowed').toLowerCase();
+        if (statusFilter === 'blocked' && lStatus !== 'blocked' && lStatus !== 'security' && lStatus !== 'parental') return false;
+        if (statusFilter === 'allowed' && lStatus !== 'allowed' && lStatus !== 'default') return false;
+
+        if (search) {
+          const cleanDomain = (l.domain || '').toLowerCase();
+          const matchDomain = cleanDomain.includes(search);
+          const matchDevice = (l.device || '').toLowerCase().includes(search);
+          
+          // Check original reasons
+          const reasonsList = (l.reasons || []).map(r => r.toLowerCase());
+          
+          const isSysDomain = typeof isProtected === 'function' ? isProtected(cleanDomain) : false;
+          if (isSysDomain) {
+            reasonsList.push('protected system domain', 'protected', 'system');
+          } else if (reasonsList.length === 0) {
+            reasonsList.push('—'); // Macht den Platzhalter durchsuchbar!
+          }
+
+          const matchReason = reasonsList.some(r => r.includes(search));
+
+          if (!matchDomain && !matchDevice && !matchReason) return false;
+        }
+        return true;
       });
 
       const fragment = document.createDocumentFragment();
       for (const log of filtered.slice(0, 100)) {
         const tr = document.createElement('tr');
         
-        const cleanDomain = log.domain.toLowerCase();
+        /*const cleanDomain = log.domain.toLowerCase();
         const isSys = typeof isProtected === 'function' ? isProtected(cleanDomain) : false;
         
         // Check API status or volatile runtime manual block
@@ -803,7 +835,44 @@
               </button>
             </div>
           </td>
+        `;*/
+        
+        const cleanDomain = log.domain.toLowerCase();
+        const isSys = typeof isProtected === 'function' ? isProtected(cleanDomain) : false;
+        
+        const lStatusLower = String(log.status || 'allowed').toLowerCase();
+        const isApiBlocked = lStatusLower === 'blocked' || lStatusLower === 'security' || lStatusLower === 'parental';
+        const isManuallyBlocked = STATE.manuallyBlocked && STATE.manuallyBlocked.has(cleanDomain);
+        const isBlocked = isApiBlocked || isManuallyBlocked;
+
+        // Action is only available for allowed domains that are not system-protected
+        const canDeny = !isBlocked && !isSys;
+
+        tr.innerHTML = `
+          <td style="white-space: nowrap; font-size: 0.75rem; color: var(--muted);">
+            ${log.time instanceof Date ? log.time.toLocaleTimeString() : new Date(log.time).toLocaleTimeString()}
+          </td>
+          <td class="domain-cell" style="font-weight: 600; font-family: monospace; color: ${isBlocked ? '#fca5a5' : '#f1f5f9'};">
+            ${safeText(log.domain)}
+          </td>
+          <td>
+            ${isSys 
+              ? `<span class="status-pill" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; cursor: not-allowed; opacity: 0.8;">Protected</span>`
+              : isBlocked
+                ? `<span class="status-pill status-blocked">Blocked</span>`
+                : `<span class="status-pill status-allowed" style="cursor: pointer;" onclick="addQuickDeny('${safeText(log.domain)}')">Allowed</span>`
+            }
+          </td>
+          <td style="font-size: 0.75rem; color: ${isSys ? '#38bdf8' : 'var(--muted);'};">
+            ${isSys ? 'Protected System Domain' : safeText((log.reasons || []).join(', ') || '—')}
+          </td>
+          <td style="font-size: 0.75rem;">
+            <span style="color: #38bdf8; cursor: pointer; text-decoration: underline;" onclick="filterByDevice('${safeText(log.device)}')">
+              ${safeText(log.device)}
+            </span>
+          </td>
         `;
+        
         fragment.appendChild(tr);
       }
       tbody.innerHTML = '';
