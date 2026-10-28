@@ -92,36 +92,65 @@
     .btn-danger { background: var(--blocked-bg); color: #fca5a5; border-color: rgba(239, 68, 68, 0.3); }
     .btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
 
+    /* Container to position the custom chevron */
+    .custom-select-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+    
+    /* The actual select element */
     #global-device-select {
+      /* Layout & typography (font-family inherited from body) */
       padding: 0.65rem 2.2rem 0.65rem 0.9rem;
       font-size: 13px;
+      
+      /* Reset default styles completely */
       appearance: none;
       -webkit-appearance: none;
-      background: url("data:image/svg+xml,%3Csvg xmlns='http://w3.org' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 0.6rem center / 0.9rem;
+      -moz-appearance: none;
+      background: var(--surface);
     
       /* Theme integration using custom properties */
       color: var(--text);
-      background-color: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       cursor: pointer;
-      transition: border-color 0.15s ease, background-image 0.15s ease;
-    
-      /* Opt-in for modern customizable select behavior on compatible engines */
-      appearance: base-select; 
+      transition: border-color 0.15s ease;
+      width: 100%;
     }
     
-    /* IMPORTANT: This removes the browser's default white triangle icon completely */
+    /* Clear native picker icons */
     #global-device-select::picker-icon {
       display: none !important;
     }
     
-    /* Invert the line-chevron to point upwards when the dropdown is open */
-    #global-device-select:popover-open,
-    #global-device-select::picker(select):popover-open {
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://w3.org' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 15l-6-6-6 6'/%3E%3C/svg%3E");
+    /* The custom gray line-chevron from your image placed via CSS */
+    .custom-select-wrapper::after {
+      content: "";
+      position: absolute;
+      right: 0.8rem;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 0.9rem;
+      height: 0.9rem;
+      pointer-events: none; /* Allows clicking through the icon to open the select */
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://w3.org' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat center / contain;
+      transition: transform 0.15s ease;
     }
     
+    /* Rotate the chevron when the select menu is open */
+    .custom-select-wrapper:has(#global-device-select:focus)::after {
+      transform: translateY(-50%) rotate(180deg);
+    }
+    
+    /* Focus and hover states for the select button itself */
+    #global-device-select:hover,
+    #global-device-select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    
+    /* Style the opened dropdown popover (modern browsers/tablets) */
     #global-device-select::picker(select) {
       appearance: base-select;
       background-color: var(--surface-2);
@@ -131,6 +160,7 @@
       box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
     }
     
+    /* Style individual options inside the dropdown */
     #global-device-select option {
       background-color: var(--surface-2);
       color: var(--text);
@@ -139,17 +169,13 @@
       cursor: pointer;
     }
     
+    /* Interaction states for individual options */
     #global-device-select option:hover,
     #global-device-select option:checked {
       background-color: var(--accent);
       color: #000000;
     }
-    
-    #global-device-select:hover,
-    #global-device-select:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
+
 
     .nav-tabs {
       background: var(--surface);
@@ -261,7 +287,7 @@
       border-color: var(--accent);
     }
 
-.table-container {
+    .table-container {
       overflow-x: auto;
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -408,9 +434,11 @@
     </div>
 
     <div class="header-actions">
-      <select id="global-device-select" title="Filter all logs and analytics by device">
-        <option value="all">All Devices</option>
-      </select>
+      <div class="custom-select-wrapper">
+        <select id="global-device-select" title="Filter all logs and analytics by device">
+          <option value="all">All Devices</option>
+        </select>
+      </div>
       <span class="badge live" id="btn-toggle-stream" title="Click to Pause / Resume" style="cursor: pointer; user-select: none;">Live</span>
     </div>
   </header>
