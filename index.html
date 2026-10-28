@@ -94,14 +94,14 @@
 
     #global-device-select {
       /* Layout & typography (font-family inherited from body) */
-      padding: 0.65rem 2.5rem 0.65rem 0.9rem;
+      padding: 0.65rem 1.2rem; /* Balanced, uniform padding since there is no arrow */
       font-size: 13px;
       
-      /* Keep default OS look & native arrow for the closed button state */
-      appearance: auto;
-      -webkit-appearance: auto;
+      /* Opt-in for modern customizable select behavior */
+      appearance: base-select;
+      -webkit-appearance: base-select;
     
-      /* Theme integration using your custom properties */
+      /* Theme integration using custom properties */
       color: var(--text);
       background-color: var(--surface);
       border: 1px solid var(--border);
@@ -110,9 +110,15 @@
       transition: border-color 0.15s ease;
     }
     
-    /* Style ONLY the opened dropdown popover (keeps the premium layout) */
+    /* Completely remove any default browser/engine arrow elements */
+    #global-device-select::picker-icon {
+      display: none !important;
+      content: none !important;
+    }
+    
+    /* Style the opened dropdown popover (modern dark-theme layout) */
     #global-device-select::picker(select) {
-      appearance: base-select; /* Enables custom styling for the options list overlay */
+      appearance: base-select;
       background-color: var(--surface-2);
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -120,7 +126,7 @@
       box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
     }
     
-    /* Style individual options inside the custom dropdown overlay */
+    /* Style individual options inside the dropdown */
     #global-device-select option {
       background-color: var(--surface-2);
       color: var(--text);
@@ -142,6 +148,7 @@
       outline: none;
       border-color: var(--accent);
     }
+
 
     
     .nav-tabs {
