@@ -97,10 +97,10 @@
       padding: 0.65rem 2.5rem 0.65rem 0.9rem;
       font-size: 13px;
       
-      /* Reset default styles & add custom arrow (color matched to --muted) */
+      /* Reset default styles & add the clean line-chevron (color matched to --muted) */
       appearance: none;
       -webkit-appearance: none;
-      background: url("data:image/svg+xml,%3Csvg xmlns='http://w3.org' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E") no-repeat right 0.8rem center / 1.1rem;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://w3.org' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E") no-repeat right 0.9rem center / 1.0rem;
     
       /* Theme integration using custom properties */
       color: var(--text);
@@ -108,10 +108,16 @@
       border: 1px solid var(--border);
       border-radius: var(--radius);
       cursor: pointer;
-      transition: border-color 0.15s ease;
+      transition: border-color 0.15s ease, background-image 0.15s ease;
     
       /* Opt-in for modern customizable select behavior on compatible engines */
       appearance: base-select; 
+    }
+    
+    /* Invert the line-chevron to point upwards when the dropdown is open */
+    #global-device-select:popover-open,
+    #global-device-select::picker(select):popover-open {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://w3.org' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M4.5 15.75l7.5-7.5 7.5 7.5'/%3E%3C/svg%3E");
     }
     
     /* Style the opened dropdown popover (modern browsers/tablets) */
@@ -146,7 +152,6 @@
       outline: none;
       border-color: var(--accent);
     }
-
     
     .nav-tabs {
       background: var(--surface);
