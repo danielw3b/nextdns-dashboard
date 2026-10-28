@@ -240,14 +240,14 @@
       text-overflow: ellipsis;
     }
     #tab-live th:nth-child(2), #tab-live td:nth-child(2) {
-      max-width: 200px;
+      max-width: 300px;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
     /* Spalten-Zügelung für Guardrail / Frequent Hits (#tab-autoblock) */
     #tab-autoblock th:nth-child(1), #tab-autoblock td:nth-child(1) {
-      max-width: 200px;
+      max-width: 300px;
       overflow: hidden;
       text-overflow: ellipsis;
     }
@@ -898,7 +898,7 @@
             }
           </td>
           <td style="font-size: 0.75rem; color: ${isSys ? '#38bdf8' : 'var(--muted);'};">
-            ${isSys ? 'Protected System Domain' : safeText((log.reasons || []).join(', ') || '—')}
+            ${isSys ? 'System Domain' : safeText((log.reasons || []).join(', ') || '—')}
           </td>
           <td style="font-size: 0.75rem;">
             <span style="color: #38bdf8; cursor: pointer; text-decoration: underline;" onclick="filterByDevice('${safeText(log.device)}')">
