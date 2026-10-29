@@ -255,7 +255,7 @@
       height: 180px !important;
       display: block;
     }
-    .truncate {min-width:0; overflow:hidden; white-space:nowrap;}
+    .truncate {min-width:0; overflow:hidden; white-space:nowrap; text-overflow: ellipsis;}
     
     .filter-bar {
       display: flex;
@@ -282,13 +282,13 @@
       border: 1px solid var(--border);
       border-radius: 8px;
       background: #060911;
-      height: calc(100vh - 290px);
-      min-height: 350px;
+      height: calc(100vh - 280px);
+      /*min-height: 350px;*/
       overflow-y: auto;
     }
     
     .compact-table-container { 
-      height: calc(100vh - 190px);
+      /*height: calc(100vh - 190px);*/
       overflow-x: hidden; 
       overflow-y: auto;
     }
