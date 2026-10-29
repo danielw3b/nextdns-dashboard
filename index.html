@@ -1755,7 +1755,6 @@
       }).join('') : `<tr><td colspan="5" style="text-align:center; color:var(--muted);">No frequency data for this selection.</td></tr>`;
     }
     
-
     // Sends a push notification via Telegram Bot API
     async function sendTelegramNotification(domain, count) {
       const botToken = STATE.config.telegramBotToken;
@@ -1806,56 +1805,61 @@
       btn.onclick = () => switchTab(btn.dataset.tab);
     });
 
-    // Touch swipe gesture listener for smooth navigation between tabs
-    let touchStartX = null;
-    let touchStartY = null;
+    // Unified Pointer Event Swipe Gesture (Supports Touch, Touchpad, Mouse Drag & Stylus)
+    let pointerStartX = null;
+    let pointerStartY = null;
+    let activePointerId = null;
     const mainEl = document.querySelector('main');
 
     if (mainEl) {
-      mainEl.addEventListener('touchstart', (e) => {
-        // Ignore swipe if touch starts inside a table container, input, button, or select
-        if (e.target.closest('.table-container') || e.target.closest('input') || e.target.closest('button') || e.target.closest('select')) {
-          touchStartX = null;
+      mainEl.addEventListener('pointerdown', (e) => {
+        // Only ignore if the user is actively typing inside a text input field
+        if (e.target.closest('input') || e.target.closest('textarea')) {
+          pointerStartX = null;
           return;
         }
-        if (e.touches.length === 1) {
-          touchStartX = e.touches[0].clientX;
-          touchStartY = e.touches[0].clientY;
-        }
-      }, { passive: true });
+        pointerStartX = e.clientX;
+        pointerStartY = e.clientY;
+        activePointerId = e.pointerId;
+      });
 
-      mainEl.addEventListener('touchend', (e) => {
-        if (touchStartX === null || touchStartY === null) return;
-        if (e.changedTouches.length === 1) {
-          const touchEndX = e.changedTouches[0].clientX;
-          const touchEndY = e.changedTouches[0].clientY;
-          const diffX = touchEndX - touchStartX;
-          const diffY = touchEndY - touchStartY;
+      mainEl.addEventListener('pointerup', (e) => {
+        if (pointerStartX === null || pointerStartY === null) return;
+        if (activePointerId !== null && e.pointerId !== activePointerId) return;
 
-          // Check if horizontal swipe is dominant and exceeds 60px distance threshold
-          if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 60) {
-            const activeBtn = document.querySelector('.nav-tabs button.active');
-            const currentTab = activeBtn ? activeBtn.dataset.tab : 'analytics';
-            const currentIndex = TABS_ORDER.indexOf(currentTab);
+        const diffX = e.clientX - pointerStartX;
+        const diffY = e.clientY - pointerStartY;
 
-            if (currentIndex !== -1) {
-              if (diffX < 0) {
-                // Swiped Left -> Next Tab
-                const nextIndex = (currentIndex + 1) % TABS_ORDER.length;
-                switchTab(TABS_ORDER[nextIndex]);
-              } else {
-                // Swiped Right -> Previous Tab
-                const prevIndex = (currentIndex - 1 + TABS_ORDER.length) % TABS_ORDER.length;
-                switchTab(TABS_ORDER[prevIndex]);
-              }
+        // Check if horizontal movement is dominant and exceeds 50px threshold
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+          const activeBtn = document.querySelector('.nav-tabs button.active');
+          const currentTab = activeBtn ? activeBtn.dataset.tab : 'analytics';
+          const currentIndex = TABS_ORDER.indexOf(currentTab);
+
+          if (currentIndex !== -1) {
+            if (diffX < 0) {
+              // Swiped Left -> Next Tab
+              const nextIndex = (currentIndex + 1) % TABS_ORDER.length;
+              switchTab(TABS_ORDER[nextIndex]);
+            } else {
+              // Swiped Right -> Previous Tab
+              const prevIndex = (currentIndex - 1 + TABS_ORDER.length) % TABS_ORDER.length;
+              switchTab(TABS_ORDER[prevIndex]);
             }
           }
         }
-        touchStartX = null;
-        touchStartY = null;
-      }, { passive: true });
-    }
 
+        pointerStartX = null;
+        pointerStartY = null;
+        activePointerId = null;
+      });
+
+      mainEl.addEventListener('pointercancel', () => {
+        pointerStartX = null;
+        pointerStartY = null;
+        activePointerId = null;
+      });
+    }
     
     window.addQuickDeny = async function(domain) {
       const cleanDomain = domain.trim().toLowerCase();
