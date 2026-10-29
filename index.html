@@ -149,8 +149,6 @@
       outline: none;
       border-color: var(--accent);
     }
-
-
     
     .nav-tabs {
       background: var(--surface);
@@ -240,6 +238,7 @@
       gap: 0.75rem;
       margin-bottom: 1.25rem;
     }*/
+      
     .kpi-grid {
       display: grid;
       /* Mobil-First: 2 Spalten (2x2 Layout) */
@@ -251,7 +250,6 @@
       box-sizing: border-box;
     }
 
-    /* Ab 481px: Alle 4 Boxen nebeneinander (4x1) */
     @media (min-width: 480px) {
       .kpi-grid {
         grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -370,7 +368,6 @@
     .status-blocked { background: var(--blocked-bg); color: #fca5a5; }
     .status-allowed { background: var(--allowed-bg); color: #86efac; }
 
-    /* --- RESPONSIVE MOBILE FIX FÜR BEIDE TABELLEN (bis runter zu 360px) --- */
     @media (max-width: 800px) {
       .compact-table-container {
         overflow-x: auto;
@@ -1279,7 +1276,7 @@
         ipMap[l.clientIp || '198.51.100.1'] = (ipMap[l.clientIp || '198.51.100.1'] || 0) + 1;
       }
 
-      /*const topB = Object.entries(blockedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
+      const topB = Object.entries(blockedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
       document.getElementById('analytics-top-blocked').innerHTML = topB.length ? topB.map(([d, c]) => `
         <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-family:monospace;">
           <span style="color:#fca5a5;" class="truncate">${safeText(d)}</span>
@@ -1304,9 +1301,9 @@
           </div>
           <div class="bar-bg"><div class="bar-fill" style="width:${total > 0 ? Math.min(100, Math.round((c/total)*100)) : 0}%; background:#a855f7;"></div></div>
         </div>
-      `).join('');*/
+      `).join('');
 
-      const topB = Object.entries(blockedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
+      /*const topB = Object.entries(blockedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
       document.getElementById('analytics-top-blocked').innerHTML = topB.length ? topB.map(([d, c]) => `
         <div style="display:flex; justify-content:space-between; gap:0.5rem; margin-bottom:4px; font-family:monospace; min-width:0;">
           <span style="color:#fca5a5; flex:1;" class="truncate">${safeText(d)}</span>
@@ -1331,7 +1328,7 @@
           </div>
           <div class="bar-bg"><div class="bar-fill" style="width:${total > 0 ? Math.min(100, Math.round((c/total)*100)) : 0}%; background:#a855f7;"></div></div>
         </div>
-      `).join('');
+      `).join('');*/
 
       
 
