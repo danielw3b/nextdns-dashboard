@@ -220,7 +220,7 @@
     .analytics-grid {
       display: grid;
       /* Mobil-First (1x4) */
-      grid-template-columns: repeat(1, 1fr); 
+      grid-template-columns: minmax(0, 1fr);  
       gap: 1rem;
       margin-bottom: 1.75rem; 
       width: 100%; 
@@ -230,7 +230,7 @@
   
     /* 600px (2x2) */
     @media (min-width: 600px) {
-      .analytics-grid { grid-template-columns: repeat(2, minmax(0, 1fr));}
+      .analytics-grid { grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     
