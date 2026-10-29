@@ -1312,6 +1312,28 @@
         ipElem.innerHTML = ipList.length ? ipList.map(([ip, c]) => {
           const info = getNextDNSIPDetails(ip);
           return `
+            <div style="margin-bottom:12px; min-width:0;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; font-family:monospace; font-size:0.72rem; margin-bottom:4px; gap:0.5rem; min-width:0;">
+                <div style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                  <div style="color:#38bdf8; font-weight:600;">${safeText(ip)}</div>
+                  <div style="color:var(--muted); font-size:0.65rem; margin-top:2px;">${safeText(info.isp)} | ${safeText(info.location)}</div>
+                </div>
+                <div style="color:var(--text); white-space:nowrap; text-align:right; font-size:0.7rem;">
+                  ${c} (${total > 0 ? Math.round((c/total)*100) : 0}%)
+                </div>
+              </div>
+              <div class="bar-bg">
+                <div class="bar-fill" style="width:${total > 0 ? Math.min(100, Math.round((c/total)*100)) : 0}%; background:#38bdf8;"></div>
+              </div>
+            </div>
+          `;
+        }).join('') : '<div style="color:var(--muted);">No IP telemetry.</div>';
+      }
+
+      renderAnalyticsChart();
+    }
+
+/*
             <div style="margin-bottom:10px;">
               <div style="display:flex; justify-content:space-between; font-family:monospace; font-size: 0.72rem; margin-bottom: 2px;">
                 <div>
@@ -1322,13 +1344,8 @@
               </div>
               <div class="bar-bg"><div class="bar-fill" style="width:${total > 0 ? Math.min(100, Math.round((c/total)*100)) : 0}%; background:#38bdf8;"></div></div>
             </div>
-          `;
-        }).join('') : '<div style="color:var(--muted);">No IP telemetry.</div>';
-      }
-
-      renderAnalyticsChart();
-    }
-
+*/
+    
     let currentChartBuckets = [];
     let currentChartMetrics = {};
     let activeTooltipIndex = null;
