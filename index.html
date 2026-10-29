@@ -1279,7 +1279,7 @@
         ipMap[l.clientIp || '198.51.100.1'] = (ipMap[l.clientIp || '198.51.100.1'] || 0) + 1;
       }
 
-      const topB = Object.entries(blockedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
+      /*const topB = Object.entries(blockedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
       document.getElementById('analytics-top-blocked').innerHTML = topB.length ? topB.map(([d, c]) => `
         <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-family:monospace;">
           <span style="color:#fca5a5;" class="truncate">${safeText(d)}</span>
@@ -1304,7 +1304,36 @@
           </div>
           <div class="bar-bg"><div class="bar-fill" style="width:${total > 0 ? Math.min(100, Math.round((c/total)*100)) : 0}%; background:#a855f7;"></div></div>
         </div>
+      `).join('');*/
+
+      const topB = Object.entries(blockedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
+      document.getElementById('analytics-top-blocked').innerHTML = topB.length ? topB.map(([d, c]) => `
+        <div style="display:flex; justify-content:space-between; gap:0.5rem; margin-bottom:4px; font-family:monospace; min-width:0;">
+          <span style="color:#fca5a5; flex:1;" class="truncate">${safeText(d)}</span>
+          <span style="color:var(--muted); white-space:nowrap;">${c}</span>
+        </div>
+      `).join('') : '<div style="color:var(--muted);">No blocked queries.</div>';
+
+      const topA = Object.entries(allowedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
+      document.getElementById('analytics-top-allowed').innerHTML = topA.length ? topA.map(([d, c]) => `
+        <div style="display:flex; justify-content:space-between; gap:0.5rem; margin-bottom:4px; font-family:monospace; min-width:0;">
+          <span style="color:#86efac; flex:1;" class="truncate">${safeText(d)}</span>
+          <span style="color:var(--muted); white-space:nowrap;">${c}</span>
+        </div>
+      `).join('') : '<div style="color:var(--muted);">No allowed queries.</div>';
+
+      const devList = Object.entries(devMap).sort((a,b)=>b[1]-a[1]);
+      document.getElementById('analytics-devices').innerHTML = devList.map(([d, c]) => `
+        <div style="margin-bottom:4px; cursor:pointer; min-width:0;" onclick="filterByDevice('${safeText(d)}')">
+          <div style="display:flex; justify-content:space-between; gap:0.5rem; min-width:0;">
+            <span style="color:${d===STATE.selectedDevice?'#38bdf8':'#f1f5f9'}; flex:1;" class="truncate">${safeText(d)}</span>
+            <span style="color:var(--muted); font-family:monospace; white-space:nowrap;">${c}</span>
+          </div>
+          <div class="bar-bg"><div class="bar-fill" style="width:${total > 0 ? Math.min(100, Math.round((c/total)*100)) : 0}%; background:#a855f7;"></div></div>
+        </div>
       `).join('');
+
+      
 
       const ipList = Object.entries(ipMap).sort((a,b)=>b[1]-a[1]);
       const ipElem = document.getElementById('analytics-ips');
