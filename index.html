@@ -217,6 +217,20 @@
       margin-bottom: 1rem;
     }
     
+    .analytics-grid {
+      display: grid;
+      /* Mobil-First (1x4) */
+      grid-template-columns: repeat(1, 1fr); 
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+  
+    /* 600px (2x2) */
+    @media (min-width: 600px) {
+      .analytics-grid { grid-template-columns: repeat(2, minmax(0, 1fr));}
+    }
+
+    
     .kpi-grid {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -450,7 +464,7 @@
         <div class="kpi-box">
           <div class="kpi-val" style="color: var(--accent);" id="kpi-latency">0 ms</div>
           <div class="kpi-label">API Latency</div>
-          <div class="kpi-sub">Encrypted DoH</div>
+          <div class="kpi-sub">HTTPS/TLS</div>
         </div>
       </div>
 
@@ -470,34 +484,23 @@
         </div>
       </div>
 
-      <!-- Grid wrapping layout: Displays as 2x2 blocks on large displays, fluidly stacks 1x4 vertically on mobile viewports -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr)); gap: 1rem; margin-bottom: 1rem;">
-        
+      <div class="analytics-grid">      
         <div class="card" style="margin-bottom:0;">
           <div class="card-title">Top Blocked Domains</div>
           <div id="analytics-top-blocked" style="font-size: 0.75rem;"></div>
         </div>
-        
         <div class="card" style="margin-bottom:0;">
           <div class="card-title">Top Allowed Domains</div>
           <div id="analytics-top-allowed" style="font-size: 0.75rem;"></div>
         </div>
-        
         <div class="card" style="margin-bottom:0;">
           <div class="card-title">Device Breakdown</div>
           <div id="analytics-devices" style="font-size: 0.75rem;"></div>
         </div>
-        
-        <!--<div class="card" style="margin-bottom:0;">
-          <div class="card-title">DNS Security & Query Types</div>
-          <div id="analytics-types" style="font-size: 0.75rem;"></div>
-        </div>-->
-
         <div class="card" style="margin-bottom:0;">
           <div class="card-title">IP addresses making the queries</div>
           <div id="analytics-ips" style="font-size: 0.75rem;"></div>
-        </div>        
-        
+        </div>
       </div>
     </section>
 
@@ -537,7 +540,7 @@
       <div class="card">
         <div class="card-title">
           <span>Frequent Hit Monitor & Guardrail</span>
-          <span style="font-size: 0.7rem; color: var(--muted); font-family: monospace;" id="autoblock-threshold-badge">Threshold: 2000 hits/24h</span>
+          <span style="font-size: 0.7rem; color: var(--muted); font-family: monospace;" id="autoblock-threshold-badge">Threshold: 200 hits</span>
         </div>
         <div class="table-container compact-table-container">
           <table id="tab-autoblock">
@@ -567,18 +570,18 @@
         <div class="form-grid-2col">
           <div class="form-group">
             <label>Profile ID</label>
-            <input type="text" id="cfg-profile" placeholder="e.g. 2ab1c3" style="width: 100%; font-family: monospace;">
+            <input type="text" id="cfg-profile" placeholder="e.g. 2ab1c3" style="width: 100%;">
           </div>
           <div class="form-group">
             <label>NextDNS API Key</label>
-            <input type="password" id="cfg-apikey" placeholder="sk_..." style="width: 100%; font-family: monospace;">
+            <input type="password" id="cfg-apikey" placeholder="sk_..." style="width: 100%;">
           </div>
         </div>
 
         <div class="form-grid-2col">
           <div class="form-group">
             <label>Cloudflare Pages Proxy</label>
-            <input type="text" id="cfg-proxy" placeholder="/api/nextdns" style="width: 100%; font-family: monospace;">
+            <input type="text" id="cfg-proxy" placeholder="/api/nextdns" style="width: 100%;">
           </div>
           <div class="form-group">
             <label>Hits Threshold</label>
@@ -600,7 +603,7 @@
         <div class="form-group" style="margin-bottom: 1.25rem;">
           <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
             <input type="checkbox" id="cfg-protect" checked>
-            <span>Protect System Infrastructure (NTP, Apple, Windows Update, Google)</span>
+            <span>Protect System Infrastructure (NTP, Apple, Windows, Google)</span>
           </label>
         </div>
         <div class="form-group" style="margin-bottom: 1.25rem;">
@@ -840,88 +843,6 @@
       renderHitsTable();
     }
 
-    /*function renderFilteredLiveLogs() {
-      const tbody = document.getElementById('live-log-body');
-      if (!tbody) return;
-
-      const search = (document.getElementById('live-search')?.value || '').toLowerCase().trim();
-      const statusFilter = (document.getElementById('live-status-filter')?.value || 'all').toLowerCase().trim();
-
-      const filtered = STATE.logs.filter(l => {
-        if (STATE.selectedDevice !== 'all' && l.device !== STATE.selectedDevice) return false;
-        
-        const lStatus = String(l.status || 'allowed').toLowerCase();
-        if (statusFilter === 'blocked' && lStatus !== 'blocked' && lStatus !== 'security' && lStatus !== 'parental') return false;
-        if (statusFilter === 'allowed' && lStatus !== 'allowed' && lStatus !== 'default') return false;
-
-        if (search) {
-          const cleanDomain = (l.domain || '').toLowerCase();
-          const matchDomain = cleanDomain.includes(search);
-          const matchDevice = (l.device || '').toLowerCase().includes(search);
-          
-          // Check original reasons
-          const reasonsList = (l.reasons || []).map(r => r.toLowerCase());
-          
-          const isSysDomain = typeof isProtected === 'function' ? isProtected(cleanDomain) : false;
-          if (isSysDomain) {
-            reasonsList.push('protected system domain', 'protected', 'system');
-          } else if (reasonsList.length === 0) {
-            reasonsList.push('—'); // Macht den Platzhalter durchsuchbar!
-          }
-
-          const matchReason = reasonsList.some(r => r.includes(search));
-
-          if (!matchDomain && !matchDevice && !matchReason) return false;
-        }
-        return true;
-      });
-
-      const fragment = document.createDocumentFragment();
-      for (const log of filtered.slice(0, 100)) {
-        const tr = document.createElement('tr');
-        
-        const cleanDomain = log.domain.toLowerCase();
-        const isSys = typeof isProtected === 'function' ? isProtected(cleanDomain) : false;
-        
-        const lStatusLower = String(log.status || 'allowed').toLowerCase();
-        const isApiBlocked = lStatusLower === 'blocked' || lStatusLower === 'security' || lStatusLower === 'parental';
-        const isManuallyBlocked = STATE.manuallyBlocked && STATE.manuallyBlocked.has(cleanDomain);
-        const isBlocked = isApiBlocked || isManuallyBlocked;
-
-        // Action is only available for allowed domains that are not system-protected
-        const canDeny = !isBlocked && !isSys;
-
-        tr.innerHTML = `
-          <td style="white-space: nowrap; font-size: 0.75rem; color: var(--muted);">
-            ${log.time instanceof Date ? log.time.toLocaleTimeString() : new Date(log.time).toLocaleTimeString()}
-          </td>
-          <td class="domain-cell" style="font-weight: 600; font-family: monospace; color: ${isBlocked ? '#fca5a5' : '#f1f5f9'};">
-            ${safeText(log.domain)}
-          </td>
-          <td>
-            ${isSys 
-              ? `<span class="status-pill" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; cursor: not-allowed; opacity: 0.8;">Protected</span>`
-              : isBlocked
-                ? `<span class="status-pill status-blocked">Blocked</span>`
-                : `<span class="status-pill status-allowed" style="cursor: pointer;" onclick="addQuickDeny('${safeText(log.domain)}')">Allowed</span>`
-            }
-          </td>
-          <td style="font-size: 0.75rem; color: ${isSys ? '#38bdf8' : 'var(--muted);'};">
-            ${isSys ? 'System Domain' : safeText((log.reasons || []).join(', ') || '—')}
-          </td>
-          <td style="font-size: 0.75rem;">
-            <span style="color: #38bdf8; cursor: pointer; text-decoration: underline;" onclick="filterByDevice('${safeText(log.device)}')">
-              ${safeText(log.device)}
-            </span>
-          </td>
-        `;
-        
-        fragment.appendChild(tr);
-      }
-      tbody.innerHTML = '';
-      tbody.appendChild(fragment);
-    }*/
-
     // Render filtered live logs with search, status filters, and dynamic system protection setting
     function renderFilteredLiveLogs() {
       const tbody = document.getElementById('live-log-body');
@@ -995,7 +916,7 @@
             }
           </td>
           <td style="font-size: 0.75rem; color: ${isSys ? '#38bdf8' : 'var(--muted);'};">
-            ${isSys ? 'Protected System Domain' : safeText((log.reasons || []).join(', ') || '—')}
+            ${isSys ? 'System Domain' : safeText((log.reasons || []).join(', ') || '—')}
           </td>
           <td style="font-size: 0.75rem;">
             <span style="color: #38bdf8; cursor: pointer; text-decoration: underline;" onclick="filterByDevice('${safeText(log.device)}')">
@@ -1049,16 +970,37 @@
     
       const startTime = performance.now();
     
+      /*try {
+        const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${profile}/logs?limit=50`, {
+          headers: { 'X-Api-Key': apiKey, 'Accept': 'application/json' }
+        });
+    
+        //const duration = Math.round(performance.now() - startTime);
+        //STATE.currentLatency = Math.max(12, duration);
+        if (res.ok) {
+          const duration = Math.round(performance.now() - startTime);
+          STATE.currentLatency = Math.max(12, duration);
+        } else {
+          STATE.currentLatency = null;
+        }   
+    
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        const data = await res.json();*/
+
       try {
         const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${profile}/logs?limit=50`, {
           headers: { 'X-Api-Key': apiKey, 'Accept': 'application/json' }
         });
     
+        if (!res.ok) {
+          STATE.currentLatency = null;
+          throw new Error(`API error: ${res.status}`);
+        }
+        const data = await res.json();
+
         const duration = Math.round(performance.now() - startTime);
         STATE.currentLatency = Math.max(12, duration);
-    
-        if (!res.ok) throw new Error(`API error: ${res.status}`);
-        const data = await res.json();
+      
         const logsArray = data.data || data.logs || (Array.isArray(data) ? data : []);
     
         // Process logs from oldest to newest via central handler
@@ -1090,6 +1032,7 @@
     
       } catch (e) {
         console.error('Failed to fetch NextDNS logs:', e);
+        STATE.currentLatency = null;
       }
     }
     
