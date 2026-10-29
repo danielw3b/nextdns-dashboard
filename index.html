@@ -1814,8 +1814,8 @@
 
     if (mainEl) {
       mainEl.addEventListener('pointerdown', (e) => {
-        // Only ignore if the user is actively typing inside a text input field
-        if (e.target.closest('input') || e.target.closest('textarea')) {
+        // Ignore swipe if user interacts with text inputs, textareas, or tables (allowing text selection)
+        if (e.target.closest('input') || e.target.closest('textarea') || e.target.closest('table') || e.target.closest('.table-container')) {
           pointerStartX = null;
           return;
         }
