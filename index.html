@@ -8,83 +8,146 @@
   <title>NextDNS Live</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <style>
-    :root {
-      --bg: #090d16;
-      --surface: #0f172a;
-      --surface-2: #1e293b;
-      --border: #334155;
-      --text: #f1f5f9;
-      --muted: #94a3b8;
-      --accent: #38bdf8;
-      --accent-hover: #0ea5e9;
-      --blocked: #f87171;
-      --blocked-bg: rgba(239, 68, 68, 0.15);
-      --allowed: #4ade80;
-      --allowed-bg: rgba(34, 197, 94, 0.15);
-      --warn: #fbbf24;
-      --radius: 10px;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.5;
-      font-size: 13px;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
+
+<style>
+  /* --- GLOBAL & ROOT --- */
+  :root {
+    --bg: #090d16; --surface: #0f172a; --surface-2: #1e293b; --border: #334155;
+    --text: #f1f5f9; --muted: #94a3b8; --accent: #38bdf8; --accent-hover: #0ea5e9;
+    --blocked: #f87171; --blocked-bg: rgba(239, 68, 68, 0.15);
+    --allowed: #4ade80; --allowed-bg: rgba(34, 197, 94, 0.15);
+    --warn: #fbbf24; --radius: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.5; font-size: 13px;
+    min-height: 100vh; display: flex; flex-direction: column;
+  }
+
+    /* --- HEADER & NAVIGATION --- */
     header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 0.75rem 1rem;
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-      flex-wrap: wrap;
+      background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.75rem 1rem;
+      position: sticky; top: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;
     }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
+      .brand { display: flex; align-items: center; gap: 0.6rem; }
+        .brand svg { width: 48px; height: 48px; }
+        .brand h1 { font-size: 1rem; font-weight: 600; letter-spacing: -0.02em; }
+
+      .badge {
+        font-size: 0.7rem; padding: 0.2rem 0.6rem; border-radius: 99px; background: var(--surface-2);
+        border: 1px solid var(--border); color: var(--muted); font-weight: 500; display: inline-flex; align-items: center; gap: 0.35rem;
+      }
+      .badge.live { background: rgba(34, 197, 94, 0.15); border-color: rgba(34, 197, 94, 0.4); color: #86efac; }
+      .badge.sim { background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.4); color: #fde047; }
+
+      .header-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+
+    #global-device-select {
+      padding: 0.65rem 1.2rem; font-size: 13px; appearance: base-select; -webkit-appearance: base-select;
+      color: var(--text); background-color: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: border-color 0.15s ease; min-width: 130px;
     }
-    .brand svg { width: 48px; height: 48px; }
-    .brand h1 { font-size: 1rem; font-weight: 600; letter-spacing: -0.02em; }
-    .badge {
-      font-size: 0.7rem;
-      padding: 0.2rem 0.6rem;
-      border-radius: 99px;
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      color: var(--muted);
-      font-weight: 500;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
+    #global-device-select::picker-icon { display: none !important; content: none !important; }
+    #global-device-select::picker(select) { appearance: base-select; background-color: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); }
+    #global-device-select option { background-color: var(--surface-2); color: var(--text); padding: 0.5rem 0.8rem; border-radius: 6px; cursor: pointer; }
+    #global-device-select option:hover, #global-device-select option:checked { background-color: var(--accent); color: #000; }
+    #global-device-select:hover, #global-device-select:focus { outline: none; border-color: var(--accent); }
+
+    .nav-tabs {
+      background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 1rem;
+      display: flex; gap: 0.25rem; overflow-x: auto; scrollbar-width: none; position: sticky; top: 72px; z-index: 40;
     }
-    .badge.live { background: rgba(34, 197, 94, 0.15); border-color: rgba(34, 197, 94, 0.4); color: #86efac; }
-    .badge.sim { background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.4); color: #fde047; }
-    .header-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+      .nav-tabs button {
+        background: transparent; border: none; border-bottom: 2px solid transparent; border-radius: 0;
+        padding: 0.6rem 0.85rem; color: var(--muted); font-size: 0.8rem; white-space: nowrap; cursor: pointer;
+      }
+      .nav-tabs button:hover { color: var(--text); }
+      .nav-tabs button.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+
+    /* --- MAIN CONTENT & CARDS --- */
+    main { width: 100%; margin: 1.25rem auto; padding: 0 1rem; flex: 1; touch-action: pan-y; }
+
+      .tab-content { display: none; }
+      .tab-content.active { display: block; }
+
+      .card {
+        background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+        padding: 0.9rem; margin-bottom: 1.25rem; box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      }
+        .card-title {
+          font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 0.75rem;
+          display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;
+        }
+
+      .form-grid-2col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+      
+      .form-group { margin-bottom: 0.9rem; }
+        .form-group label { display: block; font-size: 0.72rem; color: var(--muted); margin-bottom: 0.3rem; font-weight: 500; }
+
+      .analytics-grid {
+        display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; margin-bottom: 1.75rem; width: 100%;
+      }
+      @media (min-width: 600px) { .analytics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+      #analytics-canvas { width: 100% !important; height: 180px !important; display: block; }
+
+      .kpi-grid {
+        display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; margin-bottom: 1.25rem; width: 100%;
+      }
+      @media (min-width: 480px) { .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+        .kpi-box {
+          background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+          padding: 0.9rem; display: flex; flex-direction: column; justify-content: space-between;
+        }
+          .kpi-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); order: 2; margin-top: 0.25rem; }
+          .kpi-val { font-size: 1.3rem; font-weight: 700; font-family: monospace; order: 1; }
+          .kpi-sub { font-size: 0.68rem; color: var(--muted); order: 3; margin-top: 0.2rem; }
+
+      .filter-bar { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+      .truncate { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+
+    /* --- TABLES & DATA VIEWS --- */
+    .table-container { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; background: #060911; height: calc(100vh - 300px); min-height: 300px; overflow-y: auto; }
+    .compact-table-container { overflow-x: hidden; overflow-y: auto; }
+    
+    .compact-table-container table, #tab-live, #tab-autoblock { width: 100%; border-collapse: collapse; }
+
+    th { background: var(--surface); color: var(--muted); font-weight: 600; position: sticky; top: 0; z-index: 10; text-transform: uppercase; font-size: 0.64rem; letter-spacing: 0.03em; }
+    
+    #tab-live th, #tab-live td, #tab-autoblock th, #tab-autoblock td { padding: 0.5rem 0.75rem; text-align: left; white-space: nowrap; }
+    tr:hover td { background: rgba(30, 41, 59, 0.4); }
+
+    #tab-live th:nth-child(4), #tab-live td:nth-child(4) { max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
+    #tab-live th:nth-child(2), #tab-live td:nth-child(2) { max-width: 400px; overflow: hidden; text-overflow: ellipsis; }
+
+    #tab-autoblock th:nth-child(1), #tab-autoblock td:nth-child(1) { max-width: 400px; overflow: hidden; text-overflow: ellipsis; }
+    #tab-autoblock td:nth-child(2), #tab-autoblock th:nth-child(2) { text-align: right; font-family: monospace; font-variant-numeric: tabular-nums; }
+
+    .domain-cell { font-family: monospace; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    
+    .status-pill { display: inline-block; padding: 0.15rem 0.45rem; border-radius: 99px; font-size: 0.68rem; font-weight: 600; }
+    .status-blocked { background: var(--blocked-bg); color: #fca5a5; }
+    .status-allowed { background: var(--allowed-bg); color: #86efac; }
+
+    .bar-bg { width: 100%; height: 5px; background: #1e293b; border-radius: 99px; overflow: hidden; margin-top: 3px; }
+    .bar-fill { height: 100%; border-radius: 99px; transition: width 0.3s ease; }
+
+    @media (max-width: 800px) {
+      .compact-table-container { overflow-x: auto; }
+      #tab-live th:nth-child(2), #tab-live td:nth-child(2), #tab-autoblock th:nth-child(1), #tab-autoblock td:nth-child(1) { max-width: 200px; }
+      #tab-live th, #tab-live td, #tab-live .domain-cell, #tab-autoblock th, #tab-autoblock td { overflow-wrap: anywhere; font-size: 0.7rem; }
+      #tab-live td, #tab-autoblock td { padding: 0.35rem 0.4rem; }
+    }
+
+
+    /* --- CONTROLS & BUTTONS --- */
     button, .btn {
-      font-family: inherit;
-      font-size: 0.75rem;
-      font-weight: 600;
-      padding: 0.4rem 0.75rem;
-      border-radius: 6px;
-      border: 1px solid transparent;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      transition: all 0.15s ease;
-      background: var(--surface-2);
-      color: var(--text);
+      font-family: inherit; font-size: 0.75rem; font-weight: 600; padding: 0.4rem 0.75rem;
+      border-radius: 6px; border: 1px solid transparent; cursor: pointer; display: inline-flex;
+      align-items: center; gap: 0.35rem; transition: all 0.15s ease; background: var(--surface-2); color: var(--text);
     }
     button:hover { background: var(--border); }
     .btn-primary { background: var(--accent); color: #090d16; }
@@ -92,346 +155,36 @@
     .btn-danger { background: var(--blocked-bg); color: #fca5a5; border-color: rgba(239, 68, 68, 0.3); }
     .btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
 
-    #global-device-select {
-      /* Layout & typography (font-family inherited from body) */
-      padding: 0.65rem 1.2rem; /* Balanced, uniform padding since there is no arrow */
-      font-size: 13px;
-      
-      /* Opt-in for modern customizable select behavior */
-      appearance: base-select;
-      -webkit-appearance: base-select;
-    
-      /* Theme integration using custom properties */
-      color: var(--text);
-      background-color: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      cursor: pointer;
-      transition: border-color 0.15s ease;
-      min-width: 130px;
-    }
-    
-    /* Completely remove any default browser/engine arrow elements */
-    #global-device-select::picker-icon {
-      display: none !important;
-      content: none !important;
-    }
-    
-    /* Style the opened dropdown popover (modern dark-theme layout) */
-    #global-device-select::picker(select) {
-      appearance: base-select;
-      background-color: var(--surface-2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 4px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
-    }
-    
-    /* Style individual options inside the dropdown */
-    #global-device-select option {
-      background-color: var(--surface-2);
-      color: var(--text);
-      padding: 0.5rem 0.8rem;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    
-    /* Interaction states for individual options */
-    #global-device-select option:hover,
-    #global-device-select option:checked {
-      background-color: var(--accent);
-      color: #000000;
-    }
-    
-    /* Focus and hover states for the select button itself */
-    #global-device-select:hover,
-    #global-device-select:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
-    
-    .nav-tabs {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 0 1rem;
-      display: flex;
-      gap: 0.25rem;
-      overflow-x: auto;
-      scrollbar-width: none;
-      position: sticky;
-      top: 72px;
-      z-index: 40;
-    }
-    .nav-tabs button {
-      background: transparent;
-      border: none;
-      border-bottom: 2px solid transparent;
-      border-radius: 0;
-      padding: 0.6rem 0.85rem;
-      color: var(--muted);
-      font-size: 0.8rem;
-      white-space: nowrap;
-    }
-    .nav-tabs button:hover { color: var(--text); }
-    .nav-tabs button.active {
-      color: var(--accent);
-      border-bottom-color: var(--accent);
-      font-weight: 600;
-    }
-    main {
-      /*max-width: 1100px;*/
-      width: 100%;
-      margin: 1.25rem auto;
-      padding: 0 1rem;
-      flex: 1;
-      touch-action: pan-y;
-    }
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 0.9rem;
-      margin-bottom: 1.25rem;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-    }
-    .card-title {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 0.75rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
-    /* Always 2 columns side-by-side, never collapsing on mobile viewports */
-    .form-grid-2col {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 1rem;
-      margin-bottom: 1rem;
-    }
-    
-    .analytics-grid {
-      display: grid;
-      /* Mobil-First (1x4) */
-      grid-template-columns: minmax(0, 1fr);  
-      gap: 1rem;
-      margin-bottom: 1.75rem; 
-      width: 100%; 
-      max-width: 100%;
-      box-sizing: border-box;
-    }
-  
-    /* 600px (2x2) */
-    @media (min-width: 600px) {
-      .analytics-grid { grid-template-columns: repeat(2, minmax(0, 1fr));}
-    }
-
-    
-    /*.kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 0.75rem;
-      margin-bottom: 1.25rem;
-    }*/
-      
-    .kpi-grid {
-      display: grid;
-      /* Mobil-First: 2 Spalten (2x2 Layout) */
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 0.75rem;
-      margin-bottom: 1.25rem;
-      width: 100%;
-      max-width: 100%;
-      box-sizing: border-box;
-    }
-
-    @media (min-width: 480px) {
-      .kpi-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-      }
-    }
-    
-    .kpi-box {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 0.9rem;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-    .kpi-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); order: 2; margin-top: 0.25rem; }
-    .kpi-val { font-size: 1.3rem; font-weight: 700; font-family: monospace; order: 1; }
-    .kpi-sub { font-size: 0.68rem; color: var(--muted); order: 3; margin-top: 0.2rem; }
-
-    #analytics-canvas {
-      width: 100% !important;
-      height: 180px !important;
-      display: block;
-    }
-    .truncate {min-width:0; overflow:hidden; white-space:nowrap; text-overflow: ellipsis;}
-    
-    .filter-bar {
-      display: flex;
-      gap: 0.5rem;
-      margin-bottom: 0.75rem;
-      flex-wrap: wrap;
-    }
     input[type="text"], input[type="password"], input[type="number"], select {
-      background: #060911;
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 0.45rem 0.65rem;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      font-family: inherit;
+      background: #060911; border: 1px solid var(--border); color: var(--text);
+      padding: 0.45rem 0.65rem; border-radius: 6px; font-size: 0.75rem; font-family: inherit;
     }
-    input[type="text"]:focus, select:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
+    input[type="text"]:focus, select:focus { outline: none; border-color: var(--accent); }
 
-    .table-container {
-      overflow-x: auto;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: #060911;
-      height: calc(100vh - 300px);
-      min-height: 300px;
-      overflow-y: auto;
-    }
-    
-    .compact-table-container { 
-      /*height: calc(100vh - 190px);*/
-      overflow-x: hidden; 
-      overflow-y: auto;
-    }
-    
-    .compact-table-container table,
-    #tab-live,
-    #tab-autoblock {
-      width: 100%;
-      border-collapse: collapse;
-    }
 
-    #tab-live th, #tab-live td,
-    #tab-autoblock th, #tab-autoblock td {
-      padding: 0.5rem 0.75rem;
-      text-align: left;
-      white-space: nowrap; 
-    }
-
-    #tab-live th:nth-child(4), #tab-live td:nth-child(4) {
-      max-width: 80px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    #tab-live th:nth-child(2), #tab-live td:nth-child(2), #tab-autoblock th:nth-child(1), #tab-autoblock td:nth-child(1)  {
-      max-width: 400px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    /* Right-align the Hits column (2nd column) for clean vertical alignment */
-    #tab-autoblock td:nth-child(2),
-    #tab-autoblock th:nth-child(2) {
-      text-align: right;
-      font-family: monospace;
-      font-variant-numeric: tabular-nums;
-    }
-
-    th {
-      background: var(--surface);
-      color: var(--muted);
-      font-weight: 600;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      text-transform: uppercase;
-      font-size: 0.64rem;
-      letter-spacing: 0.03em;
-    }
-    tr:hover td { background: rgba(30, 41, 59, 0.4); }
-
-    .domain-cell {
-      font-family: monospace;
-      font-weight: 600;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    
-    .status-pill {
-      display: inline-block;
-      padding: 0.15rem 0.45rem;
-      border-radius: 99px;
-      font-size: 0.68rem;
-      font-weight: 600;
-    }
-    .status-blocked { background: var(--blocked-bg); color: #fca5a5; }
-    .status-allowed { background: var(--allowed-bg); color: #86efac; }
-
-    @media (max-width: 800px) {
-      .compact-table-container {
-        overflow-x: auto;
-      }
-      #tab-live th:nth-child(2), #tab-live td:nth-child(2), #tab-autoblock th:nth-child(1), #tab-autoblock td:nth-child(1)  {
-      max-width: 200px;
-      }
-      #tab-live th, #tab-live td, #tab-live .domain-cell,
-      #tab-autoblock th, #tab-autoblock td {
-        /*white-space: normal !important;*/
-        /*word-break: break-all;*/
-        overflow-wrap: anywhere;
-        /*max-width: none !important;*/
-        font-size: 0.7rem;
-      }
-      #tab-live td, #tab-autoblock td {
-        padding: 0.35rem 0.4rem;
-      }
-    }
-    
+    /* --- TOAST NOTIFICATIONS --- */
     .toast-container {
-      position: fixed;
-      bottom: 1.5rem;
-      right: 1.5rem;
-      z-index: 100;
-      max-width: 360px;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
+      position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 100; max-width: 360px; display: flex; flex-direction: column; gap: 0.5rem;
     }
-    .toast {
-      background: #0b1324;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.75rem 1rem;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-      animation: slideIn 0.25s ease;
-      font-size: 0.75rem;
-    }
-    .toast-warn { border-color: rgba(245, 158, 11, 0.5); }
-    .toast-danger { border-color: rgba(239, 68, 68, 0.5); }
-    .toast-success { border-color: rgba(34, 197, 94, 0.5); }
+      .toast {
+        background: #0b1324; border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.5); animation: slideIn 0.25s ease; font-size: 0.75rem;
+      }
+      .toast-warn { border-color: rgba(245, 158, 11, 0.5); }
+      .toast-danger { border-color: rgba(239, 68, 68, 0.5); }
+      .toast-success { border-color: rgba(34, 197, 94, 0.5); }
+
     @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-    .bar-bg { width: 100%; height: 5px; background: #1e293b; border-radius: 99px; overflow: hidden; margin-top: 3px; }
-    .bar-fill { height: 100%; border-radius: 99px; transition: width 0.3s ease; }
-    .form-group { margin-bottom: 0.9rem; }
-    .form-group label { display: block; font-size: 0.72rem; color: var(--muted); margin-bottom: 0.3rem; font-weight: 500; }
+
+
+    /* --- FOOTER --- */
     footer {
-      background: var(--surface);
-      border-top: 1px solid var(--border);
-      padding: 0.75rem 1rem;
-      text-align: right;
-      font-size: 0.75rem;
+      background: var(--surface); border-top: 1px solid var(--border); padding: 0.75rem 1rem; text-align: right; font-size: 0.75rem;
     }
     footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
     footer a:hover { text-decoration: underline; }
-  </style>
+</style>
+  
 </head>
 <body>
 
@@ -830,7 +583,7 @@
     
       // 3. Add to live DOM table ring buffer (max 500 entries)
       STATE.logs.unshift(log);
-      if (STATE.logs.length > 500) STATE.logs.pop();
+      if (STATE.logs.length > 1000) STATE.logs.pop();
     
       // Global counter & device registration
       STATE.totalQueriesCounter++;
@@ -867,94 +620,6 @@
       updateAnalyticsKPIs();
       renderHitsTable();
     }
-
-    // Render filtered live logs with search, status filters, and dynamic system protection setting
-    /*function renderFilteredLiveLogs() {
-      const tbody = document.getElementById('live-log-body');
-      if (!tbody) return;
-
-      const search = (document.getElementById('live-search')?.value || '').toLowerCase().trim();
-      const statusFilter = (document.getElementById('live-status-filter')?.value || 'all').toLowerCase().trim();
-
-      // Check if system protection feature is enabled in settings
-      const protectSystemEnabled = STATE.config && STATE.config.protectSystem === true;
-
-      const filtered = STATE.logs.filter(l => {
-        if (STATE.selectedDevice !== 'all' && l.device !== STATE.selectedDevice) return false;
-        
-        const lStatus = String(l.status || 'allowed').toLowerCase();
-        if (statusFilter === 'blocked' && lStatus !== 'blocked' && lStatus !== 'security' && lStatus !== 'parental') return false;
-        if (statusFilter === 'allowed' && lStatus !== 'allowed' && lStatus !== 'default') return false;
-
-        if (search) {
-          const cleanDomain = (l.domain || '').toLowerCase();
-          const matchDomain = cleanDomain.includes(search);
-          const matchDevice = (l.device || '').toLowerCase().includes(search);
-          
-          // Check original reasons
-          const reasonsList = (l.reasons || []).map(r => r.toLowerCase());
-          
-          // Include virtual 'protected system domain' text only if protectSystem is enabled
-          const isSysDomain = protectSystemEnabled && (typeof isProtected === 'function' ? isProtected(cleanDomain) : false);
-          if (isSysDomain) {
-            reasonsList.push('protected system domain', 'protected', 'system');
-          } else if (reasonsList.length === 0) {
-            reasonsList.push('—');
-          }
-
-          const matchReason = reasonsList.some(r => r.includes(search));
-
-          if (!matchDomain && !matchDevice && !matchReason) return false;
-        }
-        return true;
-      });
-
-      const fragment = document.createDocumentFragment();
-      for (const log of filtered.slice(0, 100)) {
-        const tr = document.createElement('tr');
-        
-        const cleanDomain = log.domain.toLowerCase();
-        // Respect STATE.config.protectSystem setting
-        const isSys = protectSystemEnabled && (typeof isProtected === 'function' ? isProtected(cleanDomain) : false);
-        
-        const lStatusLower = String(log.status || 'allowed').toLowerCase();
-        const isApiBlocked = lStatusLower === 'blocked' || lStatusLower === 'security' || lStatusLower === 'parental';
-        const isManuallyBlocked = STATE.manuallyBlocked && STATE.manuallyBlocked.has(cleanDomain);
-        const isBlocked = isApiBlocked || isManuallyBlocked;
-
-        // Action is only available for allowed domains that are not system-protected
-        const canDeny = !isBlocked && !isSys;
-
-        tr.innerHTML = `
-          <td style="white-space: nowrap; font-size: 0.75rem; color: var(--muted);">
-            ${log.time instanceof Date ? log.time.toLocaleTimeString() : new Date(log.time).toLocaleTimeString()}
-          </td>
-          <td class="domain-cell" style="font-weight: 600; font-family: monospace; color: ${isBlocked ? '#fca5a5' : '#f1f5f9'};">
-            ${safeText(log.domain)}
-          </td>
-          <td>
-            ${isSys 
-              ? `<span class="status-pill" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; cursor: not-allowed; opacity: 0.8;">Protected</span>`
-              : isBlocked
-                ? `<span class="status-pill status-blocked">Blocked</span>`
-                : `<span class="status-pill status-allowed" style="cursor: pointer;" onclick="addQuickDeny('${safeText(log.domain)}')">Allowed</span>`
-            }
-          </td>
-          <td style="font-size: 0.75rem; color: ${isSys ? '#38bdf8' : 'var(--muted);'};">
-            ${isSys ? 'System Domain' : safeText((log.reasons || []).join(', ') || '—')}
-          </td>
-          <td style="font-size: 0.75rem;">
-            <span style="color: #38bdf8; cursor: pointer; text-decoration: underline;" onclick="filterByDevice('${safeText(log.device)}')">
-              ${safeText(log.device)}
-            </span>
-          </td>
-        `;
-        
-        fragment.appendChild(tr);
-      }
-      tbody.innerHTML = '';
-      tbody.appendChild(fragment);
-    }*/
 
     // Render filtered live logs with search, status filters, and manual amber unblock toggle
     function renderFilteredLiveLogs() {
@@ -1690,181 +1355,6 @@
       }
       tooltip.style.top = (mouseY - 40) + 'px';
     }
-
-    /*function renderHitsTable() {
-      const tbody = document.getElementById('autoblock-hits-body');
-      if (!tbody) return;
-
-      // Use sessionLogs buffer for frequency monitoring, respecting device filter
-      const sessionLogs = STATE.sessionLogs || [];
-      const activeLogs = STATE.selectedDevice === 'all' 
-        ? sessionLogs 
-        : sessionLogs.filter(l => l.device === STATE.selectedDevice);
-
-      const deviceHits = {};
-      const deviceStatus = {};
-      
-      activeLogs.forEach(l => { 
-        const d = (l.domain || 'unknown').toLowerCase(); 
-        deviceHits[d] = (deviceHits[d] || 0) + 1; 
-        
-        if (l.status && l.status !== 'allowed' && l.status !== 'default') {
-          deviceStatus[d] = l.status;
-        }
-      });
-
-      const items = Object.entries(deviceHits)
-        .map(([domain, count]) => ({ domain, count }))
-        .sort((a, b) => b.count - a.count);
-
-      tbody.innerHTML = items.length ? items.slice(0, 15).map(i => {
-        const pct = Math.min(100, Math.round((i.count / (STATE.config.threshold || 10)) * 100));
-        const cleanDomain = i.domain.toLowerCase();
-        const isSys = typeof isProtected === 'function' ? isProtected(cleanDomain) : false;
-        
-        // Check API status or volatile runtime manual block
-        const apiStatus = deviceStatus[cleanDomain];
-        const isApiBlocked = apiStatus && apiStatus !== 'allowed' && apiStatus !== 'default';
-        const isManuallyBlocked = STATE.manuallyBlocked && STATE.manuallyBlocked.has(cleanDomain);
-        
-        const isBlocked = isApiBlocked || isManuallyBlocked;
-
-        // Status text & styling
-        let statusText = 'Monitoring';
-        let badgeStyle = 'color: var(--muted);';
-
-        if (isSys) {
-          statusText = 'Protected';
-          badgeStyle = 'color: var(--info, #38bdf8); font-weight: 600;';
-        } else if (isBlocked) {
-          statusText = 'Blocked';
-          badgeStyle = 'color: var(--blocked, #ef4444); font-weight: 600;';
-        }
-
-        // Button must be strictly disabled if the domain is blocked OR system protected
-        const isDisabled = isBlocked || isSys;
-
-        return `
-          <tr>
-            <td class="domain-cell" title="${safeText(i.domain)}">${safeText(i.domain)}</td>
-            <td style="color: var(--warn); font-weight: bold; font-family: monospace;">${i.count}</td>
-            <td style="width: 140px;">
-              <div class="bar-bg"><div class="bar-fill" style="width:${pct}%; background:${isBlocked ? 'var(--blocked)' : 'var(--warn)'}"></div></div>
-            </td>
-            <td style="${badgeStyle} font-size: 0.7rem;">${statusText}</td>
-            <td style="text-align: right;">
-              <button onclick="addQuickDeny('${safeText(i.domain)}')" class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; ${isDisabled ? 'opacity: 0.5; cursor: not-allowed;' : ''}" ${isDisabled ? 'disabled' : ''}>
-                ${isBlocked ? 'Blocked' : (isSys ? 'Protected' : 'Deny')}
-              </button>
-            </td>
-          </tr>
-        `;
-      }).join('') : `<tr><td colspan="5" style="text-align:center; color:var(--muted);">No frequency data for this selection.</td></tr>`;
-    }*/
-
-    // Render DNS hits monitoring table with threshold reporting, toast, Telegram alert, and dynamic system protection setting
-    /*function renderHitsTable() {
-      const tbody = document.getElementById('autoblock-hits-body');
-      if (!tbody) return;
-
-      // Ensure state tracking for notifications exists
-      STATE.reportedThresholdDomains = STATE.reportedThresholdDomains || new Set();
-      STATE.telegramNotifiedDomains = STATE.telegramNotifiedDomains || new Set();
-
-      // Check if system protection feature is enabled in settings
-      const protectSystemEnabled = STATE.config && STATE.config.protectSystem === true;
-
-      // Use sessionLogs buffer for frequency monitoring, respecting device filter
-      const sessionLogs = STATE.sessionLogs || [];
-      const activeLogs = STATE.selectedDevice === 'all' 
-        ? sessionLogs 
-        : sessionLogs.filter(l => l.device === STATE.selectedDevice);
-
-      const deviceHits = {};
-      const deviceStatus = {};
-      
-      activeLogs.forEach(l => { 
-        const d = (l.domain || 'unknown').toLowerCase(); 
-        deviceHits[d] = (deviceHits[d] || 0) + 1; 
-        
-        if (l.status && l.status !== 'allowed' && l.status !== 'default') {
-          deviceStatus[d] = l.status;
-        }
-      });
-
-      const items = Object.entries(deviceHits)
-        .map(([domain, count]) => ({ domain, count }))
-        .sort((a, b) => b.count - a.count);
-
-      const threshold = STATE.config.threshold || 10;
-
-      tbody.innerHTML = items.length ? items.slice(0, 15).map(i => {
-        const pct = Math.min(100, Math.round((i.count / threshold) * 100));
-        const cleanDomain = i.domain.toLowerCase();
-        
-        // Respect STATE.config.protectSystem setting
-        const isSys = protectSystemEnabled && (typeof isProtected === 'function' ? isProtected(cleanDomain) : false);
-        
-        // Check API status or volatile runtime manual block
-        const apiStatus = deviceStatus[cleanDomain];
-        const isApiBlocked = apiStatus && apiStatus !== 'allowed' && apiStatus !== 'default';
-        const isManuallyBlocked = STATE.manuallyBlocked && STATE.manuallyBlocked.has(cleanDomain);
-        
-        const isBlocked = isApiBlocked || isManuallyBlocked;
-        const isThresholdReached = i.count >= threshold;
-
-        // Status text & styling
-        let statusText = 'Monitoring';
-        let badgeStyle = 'color: var(--muted);';
-
-        if (isSys) {
-          statusText = 'Protected';
-          badgeStyle = 'color: var(--info, #38bdf8); font-weight: 600;';
-        } else if (isBlocked) {
-          statusText = 'Blocked';
-          badgeStyle = 'color: var(--blocked, #ef4444); font-weight: 600;';
-        } else if (isThresholdReached) {
-          statusText = 'Report';
-          badgeStyle = 'color: var(--warn, #f59e0b); font-weight: 600;';
-
-          // Trigger local Toast notification once per session
-          if (!STATE.reportedThresholdDomains.has(cleanDomain)) {
-            STATE.reportedThresholdDomains.add(cleanDomain);
-            
-            if (typeof showToast === 'function') {
-              showToast('Threshold Reached', `Domain <b>${cleanDomain}</b> hit ${i.count} requests. Status changed to Report.`, 'warn');
-            }
-
-            // Trigger external Telegram notification once per session
-            if (!STATE.telegramNotifiedDomains.has(cleanDomain)) {
-              STATE.telegramNotifiedDomains.add(cleanDomain);
-              if (typeof sendTelegramNotification === 'function') {
-                sendTelegramNotification(cleanDomain, i.count);
-              }
-            }
-          }
-        }
-
-        // Button must be strictly disabled if the domain is blocked OR system protected
-        const isDisabled = isBlocked || isSys;
-
-        return `
-          <tr>
-            <td class="domain-cell" title="${safeText(i.domain)}">${safeText(i.domain)}</td>
-            <td style="color: var(--warn); font-weight: bold; font-family: monospace;">${i.count}</td>
-            <td style="width: 140px;">
-              <div class="bar-bg"><div class="bar-fill" style="width:${pct}%; background:${isBlocked ? 'var(--blocked)' : 'var(--warn)'}"></div></div>
-            </td>
-            <td style="${badgeStyle} font-size: 0.7rem;">${statusText}</td>
-            <td style="text-align: right;">
-              <button onclick="addQuickDeny('${safeText(i.domain)}')" class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; ${isDisabled ? 'opacity: 0.5; cursor: not-allowed;' : ''}" ${isDisabled ? 'disabled' : ''}>
-                ${isBlocked ? 'Blocked' : (isSys ? 'Protected' : 'Deny')}
-              </button>
-            </td>
-          </tr>
-        `;
-      }).join('') : `<tr><td colspan="5" style="text-align:center; color:var(--muted);">No frequency data for this selection.</td></tr>`;
-    }*/
 
     // Render DNS hits monitoring table with threshold reporting and manual amber toggle
     function renderHitsTable() {
