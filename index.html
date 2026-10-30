@@ -788,7 +788,7 @@
       div.className = `toast toast-${type}`;
       div.innerHTML = `<b>${safeText(title)}</b><div style="margin-top:2px;color:#cbd5e1;">${msg}</div>`;
       container.appendChild(div);
-      setTimeout(() => { div.style.opacity = '0'; setTimeout(() => div.remove(), 300); }, 4000);
+      setTimeout(() => { div.style.opacity = '0'; setTimeout(() => div.remove(), 300); }, 6000);
     }
 
     let simTimer = null;
@@ -862,7 +862,7 @@
     }
 
     // Render filtered live logs with search, status filters, and dynamic system protection setting
-    function renderFilteredLiveLogs() {
+    /*function renderFilteredLiveLogs() {
       const tbody = document.getElementById('live-log-body');
       if (!tbody) return;
 
@@ -932,6 +932,99 @@
                 ? `<span class="status-pill status-blocked">Blocked</span>`
                 : `<span class="status-pill status-allowed" style="cursor: pointer;" onclick="addQuickDeny('${safeText(log.domain)}')">Allowed</span>`
             }
+          </td>
+          <td style="font-size: 0.75rem; color: ${isSys ? '#38bdf8' : 'var(--muted);'};">
+            ${isSys ? 'System Domain' : safeText((log.reasons || []).join(', ') || '—')}
+          </td>
+          <td style="font-size: 0.75rem;">
+            <span style="color: #38bdf8; cursor: pointer; text-decoration: underline;" onclick="filterByDevice('${safeText(log.device)}')">
+              ${safeText(log.device)}
+            </span>
+          </td>
+        `;
+        
+        fragment.appendChild(tr);
+      }
+      tbody.innerHTML = '';
+      tbody.appendChild(fragment);
+    }*/
+
+// Render filtered live logs with search, status filters, and interactive badge toggle (Allowed <-> Blocked)
+    function renderFilteredLiveLogs() {
+      const tbody = document.getElementById('live-log-body');
+      if (!tbody) return;
+
+      const search = (document.getElementById('live-search')?.value || '').toLowerCase().trim();
+      const statusFilter = (document.getElementById('live-status-filter')?.value || 'all').toLowerCase().trim();
+
+      // Check if system protection feature is enabled in settings
+      const protectSystemEnabled = STATE.config && STATE.config.protectSystem === true;
+
+      const filtered = STATE.logs.filter(l => {
+        if (STATE.selectedDevice !== 'all' && l.device !== STATE.selectedDevice) return false;
+        
+        const lStatus = String(l.status || 'allowed').toLowerCase();
+        if (statusFilter === 'blocked' && lStatus !== 'blocked' && lStatus !== 'security' && lStatus !== 'parental') return false;
+        if (statusFilter === 'allowed' && lStatus !== 'allowed' && lStatus !== 'default') return false;
+
+        if (search) {
+          const cleanDomain = (l.domain || '').toLowerCase();
+          const matchDomain = cleanDomain.includes(search);
+          const matchDevice = (l.device || '').toLowerCase().includes(search);
+          
+          const reasonsList = (l.reasons || []).map(r => r.toLowerCase());
+          const isSysDomain = protectSystemEnabled && (typeof isProtected === 'function' ? isProtected(cleanDomain) : false);
+          
+          if (isSysDomain) {
+            reasonsList.push('protected system domain', 'protected', 'system');
+          } else if (reasonsList.length === 0) {
+            reasonsList.push('—');
+          }
+
+          const matchReason = reasonsList.some(r => r.includes(search));
+
+          if (!matchDomain && !matchDevice && !matchReason) return false;
+        }
+        return true;
+      });
+
+      const fragment = document.createDocumentFragment();
+      for (const log of filtered.slice(0, 100)) {
+        const tr = document.createElement('tr');
+        
+        const cleanDomain = log.domain.toLowerCase();
+        // Respect STATE.config.protectSystem setting
+        const isSys = protectSystemEnabled && (typeof isProtected === 'function' ? isProtected(cleanDomain) : false);
+        
+        const lStatusLower = String(log.status || 'allowed').toLowerCase();
+        const isApiBlocked = lStatusLower === 'blocked' || lStatusLower === 'security' || lStatusLower === 'parental';
+        const isManuallyBlocked = STATE.manuallyBlocked && STATE.manuallyBlocked.has(cleanDomain);
+        const isBlocked = isApiBlocked || isManuallyBlocked;
+
+        // Badge HTML based on state
+        let badgeHTML = '';
+        if (isSys) {
+          badgeHTML = `<span class="status-pill" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; cursor: not-allowed; opacity: 0.8;">Protected</span>`;
+        } else if (isManuallyBlocked) {
+          // Amber badge for manual blocks with click to remove (quick unblock)
+          badgeHTML = `<span class="status-pill" style="background: rgba(245, 158, 11, 0.2); color: #fde047; border: 1px solid rgba(245, 158, 11, 0.4); cursor: pointer;" onclick="removeQuickDeny('${safeText(log.domain)}')">Blocked</span>`;
+        } else if (isApiBlocked) {
+          // Standard immutable NextDNS block
+          badgeHTML = `<span class="status-pill status-blocked">Blocked</span>`;
+        } else {
+          // Allowed status badge with click to quick deny
+          badgeHTML = `<span class="status-pill status-allowed" style="cursor: pointer;" onclick="addQuickDeny('${safeText(log.domain)}')">Allowed</span>`;
+        }
+
+        tr.innerHTML = `
+          <td style="white-space: nowrap; font-size: 0.75rem; color: var(--muted);">
+            ${log.time instanceof Date ? log.time.toLocaleTimeString() : new Date(log.time).toLocaleTimeString()}
+          </td>
+          <td class="domain-cell" style="font-weight: 600; font-family: monospace; color: ${isManuallyBlocked ? '#fde047' : (isBlocked ? '#fca5a5' : '#f1f5f9')};">
+            ${safeText(log.domain)}
+          </td>
+          <td>
+            ${badgeHTML}
           </td>
           <td style="font-size: 0.75rem; color: ${isSys ? '#38bdf8' : 'var(--muted);'};">
             ${isSys ? 'System Domain' : safeText((log.reasons || []).join(', ') || '—')}
@@ -1660,7 +1753,7 @@
     }*/
 
     // Render DNS hits monitoring table with threshold reporting, toast, Telegram alert, and dynamic system protection setting
-    function renderHitsTable() {
+    /*function renderHitsTable() {
       const tbody = document.getElementById('autoblock-hits-body');
       if (!tbody) return;
 
@@ -1757,6 +1850,111 @@
               <button onclick="addQuickDeny('${safeText(i.domain)}')" class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; ${isDisabled ? 'opacity: 0.5; cursor: not-allowed;' : ''}" ${isDisabled ? 'disabled' : ''}>
                 ${isBlocked ? 'Blocked' : (isSys ? 'Protected' : 'Deny')}
               </button>
+            </td>
+          </tr>
+        `;
+      }).join('') : `<tr><td colspan="5" style="text-align:center; color:var(--muted);">No frequency data for this selection.</td></tr>`;
+    }*/
+
+    // Render DNS hits monitoring table with threshold reporting and manual amber toggle
+    function renderHitsTable() {
+      const tbody = document.getElementById('autoblock-hits-body');
+      if (!tbody) return;
+
+      // Ensure state tracking for notifications exists
+      STATE.reportedThresholdDomains = STATE.reportedThresholdDomains || new Set();
+      STATE.telegramNotifiedDomains = STATE.telegramNotifiedDomains || new Set();
+
+      // Check if system protection feature is enabled in settings
+      const protectSystemEnabled = STATE.config && STATE.config.protectSystem === true;
+
+      const sessionLogs = STATE.sessionLogs || [];
+      const activeLogs = STATE.selectedDevice === 'all' 
+        ? sessionLogs 
+        : sessionLogs.filter(l => l.device === STATE.selectedDevice);
+
+      const deviceHits = {};
+      const deviceStatus = {};
+      
+      activeLogs.forEach(l => { 
+        const d = (l.domain || 'unknown').toLowerCase(); 
+        deviceHits[d] = (deviceHits[d] || 0) + 1; 
+        
+        if (l.status && l.status !== 'allowed' && l.status !== 'default') {
+          deviceStatus[d] = l.status;
+        }
+      });
+
+      const items = Object.entries(deviceHits)
+        .map(([domain, count]) => ({ domain, count }))
+        .sort((a, b) => b.count - a.count);
+
+      const threshold = STATE.config.threshold || 10;
+
+      tbody.innerHTML = items.length ? items.slice(0, 15).map(i => {
+        const pct = Math.min(100, Math.round((i.count / threshold) * 100));
+        const cleanDomain = i.domain.toLowerCase();
+        
+        // Respect STATE.config.protectSystem setting
+        const isSys = protectSystemEnabled && (typeof isProtected === 'function' ? isProtected(cleanDomain) : false);
+        
+        const apiStatus = deviceStatus[cleanDomain];
+        const isApiBlocked = apiStatus && apiStatus !== 'allowed' && apiStatus !== 'default';
+        const isManuallyBlocked = STATE.manuallyBlocked && STATE.manuallyBlocked.has(cleanDomain);
+        
+        const isBlocked = isApiBlocked || isManuallyBlocked;
+        const isThresholdReached = i.count >= threshold;
+
+        // Status text & styling
+        let statusText = 'Monitoring';
+        let badgeStyle = 'color: var(--muted);';
+        let actionBtnHTML = '';
+
+        if (isSys) {
+          statusText = 'Protected';
+          badgeStyle = 'color: var(--info, #38bdf8); font-weight: 600;';
+          actionBtnHTML = `<button class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; opacity: 0.5; cursor: not-allowed;" disabled>Protected</button>`;
+        } else if (isManuallyBlocked) {
+          // Manually added by us -> Amber / Warning style with toggle remove action
+          statusText = 'Blocked (Manual)';
+          badgeStyle = 'color: var(--warn, #f59e0b); font-weight: 600;';
+          actionBtnHTML = `<button onclick="removeQuickDeny('${safeText(i.domain)}')" class="btn" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; background: rgba(245, 158, 11, 0.2); color: #fde047; border-color: rgba(245, 158, 11, 0.4);">Unblock</button>`;
+        } else if (isApiBlocked) {
+          // Default NextDNS block -> Red style, disabled
+          statusText = 'Blocked';
+          badgeStyle = 'color: var(--blocked, #ef4444); font-weight: 600;';
+          actionBtnHTML = `<button class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; opacity: 0.5; cursor: not-allowed;" disabled>Blocked</button>`;
+        } else if (isThresholdReached) {
+          statusText = 'Report';
+          badgeStyle = 'color: var(--warn, #f59e0b); font-weight: 600;';
+
+          if (!STATE.reportedThresholdDomains.has(cleanDomain)) {
+            STATE.reportedThresholdDomains.add(cleanDomain);
+            if (typeof showToast === 'function') {
+              showToast('Threshold Reached', `Domain <b>${cleanDomain}</b> hit ${i.count} requests. Status changed to Report.`, 'warn');
+            }
+            if (!STATE.telegramNotifiedDomains.has(cleanDomain)) {
+              STATE.telegramNotifiedDomains.add(cleanDomain);
+              if (typeof sendTelegramNotification === 'function') {
+                sendTelegramNotification(cleanDomain, i.count);
+              }
+            }
+          }
+          actionBtnHTML = `<button onclick="addQuickDeny('${safeText(i.domain)}')" class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">Deny</button>`;
+        } else {
+          actionBtnHTML = `<button onclick="addQuickDeny('${safeText(i.domain)}')" class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">Deny</button>`;
+        }
+
+        return `
+          <tr>
+            <td class="domain-cell" title="${safeText(i.domain)}">${safeText(i.domain)}</td>
+            <td style="color: var(--warn); font-weight: bold; font-family: monospace;">${i.count}</td>
+            <td style="width: 140px;">
+              <div class="bar-bg"><div class="bar-fill" style="width:${pct}%; background:${isManuallyBlocked ? 'var(--warn)' : (isBlocked ? 'var(--blocked)' : 'var(--warn)')}"></div></div>
+            </td>
+            <td style="${badgeStyle} font-size: 0.7rem;">${statusText}</td>
+            <td style="text-align: right;">
+              ${actionBtnHTML}
             </td>
           </tr>
         `;
@@ -1868,6 +2066,51 @@
         activePointerId = null;
       });
     }
+
+    // Removes a domain from NextDNS denylist and local manual block state
+    window.removeQuickDeny = async function(domain) {
+      const cleanDomain = domain.trim().toLowerCase();
+      if (!cleanDomain) return;
+
+      // Guard: Never modify system-protected domains
+      if (typeof isProtected === 'function' && isProtected(cleanDomain)) {
+        showToast('⚠️ Protected Domain', `Cannot modify system-protected domain <code>${safeText(cleanDomain)}</code>`, 'warning');
+        return;
+      }
+
+      // 1. Send DELETE request to NextDNS API
+      if (STATE.mode === 'api' && STATE.config.profile && STATE.config.apiKey) {
+        const proxy = STATE.config.proxy || 'https://api.nextdns.io';
+        try {
+          const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${STATE.config.profile}/denylist/${encodeURIComponent(cleanDomain)}`, {
+            method: 'DELETE',
+            headers: {
+              'X-Api-Key': STATE.config.apiKey,
+              'Accept': 'application/json'
+            }
+          });
+
+          if (!res.ok) throw new Error(`API remove failed with status ${res.status}`);
+          showToast('✅ NextDNS Unblocked', `Successfully removed ${safeText(cleanDomain)} from denylist`, 'success');
+        } catch (e) {
+          console.error('Failed to remove from NextDNS denylist API:', e);
+          showToast('⚠️ API Error', `Could not remove via API: ${e.message}`, 'warning');
+          return;
+        }
+      } else {
+        showToast('Info', `Removed simulation domain ${safeText(cleanDomain)} from local denylist`, 'success');
+      }
+
+      // 2. Remove domain from volatile RAM manually blocked set
+      if (STATE.manuallyBlocked) {
+        STATE.manuallyBlocked.delete(cleanDomain);
+      }
+
+      // 3. Instantly re-render UI tables to reflect allowed state
+      if (typeof renderFilteredLiveLogs === 'function') renderFilteredLiveLogs();
+      if (typeof renderHitsTable === 'function') renderHitsTable();
+    };
+
     
     window.addQuickDeny = async function(domain) {
       const cleanDomain = domain.trim().toLowerCase();
