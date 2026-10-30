@@ -336,6 +336,13 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    /* Right-align the Hits column (2nd column) for clean vertical alignment */
+    #tab-autoblock td:nth-child(2),
+    #tab-autoblock th:nth-child(2) {
+      text-align: right;
+      font-family: monospace;
+      font-variant-numeric: tabular-nums;
+    }
 
     th {
       background: var(--surface);
@@ -949,7 +956,7 @@
       tbody.appendChild(fragment);
     }*/
 
-// Render filtered live logs with search, status filters, and interactive badge toggle (Allowed <-> Blocked)
+    // Render filtered live logs with search, status filters, and manual amber unblock toggle
     function renderFilteredLiveLogs() {
       const tbody = document.getElementById('live-log-body');
       if (!tbody) return;
@@ -963,12 +970,16 @@
       const filtered = STATE.logs.filter(l => {
         if (STATE.selectedDevice !== 'all' && l.device !== STATE.selectedDevice) return false;
         
+        const cleanDomain = (l.domain || '').toLowerCase();
         const lStatus = String(l.status || 'allowed').toLowerCase();
-        if (statusFilter === 'blocked' && lStatus !== 'blocked' && lStatus !== 'security' && lStatus !== 'parental') return false;
-        if (statusFilter === 'allowed' && lStatus !== 'allowed' && lStatus !== 'default') return false;
+        const isApiBlocked = lStatus === 'blocked' || lStatus === 'security' || lStatus === 'parental';
+        const isManuallyBlocked = STATE.manuallyBlocked && STATE.manuallyBlocked.has(cleanDomain);
+        const isEffectiveBlocked = isApiBlocked || isManuallyBlocked;
+
+        if (statusFilter === 'blocked' && !isEffectiveBlocked) return false;
+        if (statusFilter === 'allowed' && isEffectiveBlocked) return false;
 
         if (search) {
-          const cleanDomain = (l.domain || '').toLowerCase();
           const matchDomain = cleanDomain.includes(search);
           const matchDevice = (l.device || '').toLowerCase().includes(search);
           
@@ -993,7 +1004,6 @@
         const tr = document.createElement('tr');
         
         const cleanDomain = log.domain.toLowerCase();
-        // Respect STATE.config.protectSystem setting
         const isSys = protectSystemEnabled && (typeof isProtected === 'function' ? isProtected(cleanDomain) : false);
         
         const lStatusLower = String(log.status || 'allowed').toLowerCase();
