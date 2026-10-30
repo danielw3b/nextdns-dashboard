@@ -214,7 +214,7 @@
   <nav class="nav-tabs">
     <button class="active" data-tab="analytics">Real-time Analytics</button>
     <button data-tab="live">Live Log Stream</button>
-    <button data-tab="blocking">Frequent Hits & Deny</button>
+    <button data-tab="blocking">Frequency Monitor</button>
     <button data-tab="config">Settings</button>
   </nav>
 
@@ -669,12 +669,14 @@
         const tr = document.createElement('tr');
         
         const cleanDomain = log.domain.toLowerCase();
-        const isSys = protectSystemEnabled && (typeof isProtected === 'function' ? isProtected(cleanDomain) : false);
-        
+        // 1. Check NextDNS API status first (Source of Truth)
         const lStatusLower = String(log.status || 'allowed').toLowerCase();
         const isApiBlocked = lStatusLower === 'blocked' || lStatusLower === 'security' || lStatusLower === 'parental';
         const isManuallyBlocked = STATE.manuallyBlocked && STATE.manuallyBlocked.has(cleanDomain);
         const isBlocked = isApiBlocked || isManuallyBlocked;
+
+        // 2. System protection only applies if NextDNS hasn't blocked it already
+        const isSys = protectSystemEnabled && !isBlocked && (typeof isProtected === 'function' ? isProtected(cleanDomain) : false);
 
         // Badge HTML based on state
         let badgeHTML = '';
@@ -1395,14 +1397,14 @@
         const pct = Math.min(100, Math.round((i.count / threshold) * 100));
         const cleanDomain = i.domain.toLowerCase();
         
-        // Respect STATE.config.protectSystem setting
-        const isSys = protectSystemEnabled && (typeof isProtected === 'function' ? isProtected(cleanDomain) : false);
-        
+        // 1. Check API status first
         const apiStatus = deviceStatus[cleanDomain];
         const isApiBlocked = apiStatus && apiStatus !== 'allowed' && apiStatus !== 'default';
         const isManuallyBlocked = STATE.manuallyBlocked && STATE.manuallyBlocked.has(cleanDomain);
-        
         const isBlocked = isApiBlocked || isManuallyBlocked;
+
+        // 2. System protection respects NextDNS as source of truth
+        const isSys = protectSystemEnabled && !isBlocked && (typeof isProtected === 'function' ? isProtected(cleanDomain) : false);
         const isThresholdReached = i.count >= threshold;
 
         // Status text & styling
