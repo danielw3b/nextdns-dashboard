@@ -16,7 +16,7 @@
 ## Architecture
 
 <p align="center">
-  <img src="NextDNS-Live-PWA-Architecture.svg" alt="NextDNS Live PWA Architecture" width="100%" style="max-width: 600px; border-radius: 8px; border: 1px solid #334155;">
+  <img src="PWA-Architecture.png" alt="NextDNS Live PWA Architecture" width="100%" style="max-width: 600px; border-radius: 8px; border: 1px solid #334155;">
 </p>
 
 
