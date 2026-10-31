@@ -69,7 +69,7 @@
 
 
     /* --- MAIN CONTENT & CARDS --- */
-    main { width: 100%; margin: 1.25rem auto; padding: 0 1rem; flex: 1; touch-action: pan-y; }
+    main { width: 100%; /*max-width: 1100px;*/ margin: 1.25rem auto; padding: 0 1rem; flex: 1; touch-action: pan-y; }
 
       .tab-content { display: none; }
       .tab-content.active { display: block; }
@@ -79,7 +79,7 @@
         padding: 0.9rem; margin-bottom: 1.25rem; box-shadow: 0 4px 12px rgba(0,0,0,0.25);
       }
         .card-title {
-          font-size: 0.85rem; font-weight: 600; color: var(--text); /*margin-bottom: 0.75rem;*/
+          font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 0.75rem;
           display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;
         }
 
@@ -111,7 +111,7 @@
 
 
     /* --- TABLES & DATA VIEWS --- */
-    .table-container { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; background: #060911; height: calc(100vh - 300px); min-height: 250px; overflow-y: auto; }
+    .table-container { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; background: #060911; height: calc(100vh - 300px); min-height: 240px; overflow-y: auto; }
     .compact-table-container { overflow-x: hidden; overflow-y: auto; }
     
     .compact-table-container table, #tab-live, #tab-autoblock { width: 100%; border-collapse: collapse; }
@@ -125,7 +125,7 @@
     #tab-live th:nth-child(2), #tab-live td:nth-child(2) { max-width: 400px; overflow: hidden; text-overflow: ellipsis; }
 
     #tab-autoblock th:nth-child(1), #tab-autoblock td:nth-child(1) { max-width: 400px; overflow: hidden; text-overflow: ellipsis; }
-    #tab-autoblock td:nth-child(2), #tab-autoblock th:nth-child(2) { text-align: right; font-family: monospace; font-variant-numeric: tabular-nums; }
+    #tab-autoblock td:nth-child(2), #tab-autoblock th:nth-child(2) { text-align: right; /*font-family: monospace; font-variant-numeric: tabular-nums;*/ }
 
     .domain-cell { font-family: monospace; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     
@@ -214,8 +214,8 @@
   <!-- Sticky Navigation Tabs -->
   <nav class="nav-tabs">
     <button class="active" data-tab="analytics">Real-time Analytics</button>
-    <button data-tab="live">Live Log Stream</button>
-    <button data-tab="blocking">Frequency Monitor</button>
+    <button data-tab="live">Live Stream</button>
+    <button data-tab="blocking">Monitoring</button>
     <button data-tab="config">Settings</button>
   </nav>
 
@@ -318,7 +318,7 @@
     <section id="tab-blocking" class="tab-content">
       <div class="card" style="padding: 0.75rem 1rem;">
         <div class="card-title">
-          <span>Monitoring & Notification</span>
+          <span>Top 20 Monitoring & Notification</span>
           <span style="font-size: 0.7rem; color: var(--muted); font-family: monospace;" id="autoblock-threshold-badge">Threshold: 200 hits</span>
         </div>
       </div>
@@ -1396,9 +1396,9 @@
         .map(([domain, count]) => ({ domain, count }))
         .sort((a, b) => b.count - a.count);
 
-      const threshold = STATE.config.threshold || 10;
+      const threshold = STATE.config.threshold || 200;
 
-      tbody.innerHTML = items.length ? items.slice(0, 15).map(i => {
+      tbody.innerHTML = items.length ? items.slice(0, 20).map(i => {
         const pct = Math.min(100, Math.round((i.count / threshold) * 100));
         const cleanDomain = i.domain.toLowerCase();
         
