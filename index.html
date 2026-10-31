@@ -755,7 +755,7 @@
 
     // Fetches real-time NextDNS logs and passes them to the central handler
     async function fetchNextDNSLogs() {
-      if (STATE.mode !== 'api') return;
+     if (STATE.mode !== 'api' || !STATE.isStreaming) return;
       const profile = STATE.config.profile;
       const apiKey = STATE.config.apiKey;
       const proxy = STATE.config.proxy || 'https://api.nextdns.io';
