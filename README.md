@@ -50,38 +50,35 @@ The diagram below illustrates the single-file PWA architecture, including volati
 
 ```mermaid
 flowchart TD
-    %% Define Styles
     classDef cloud fill:#0f172a,stroke:#38bdf8,stroke-width:1.5px,color:#f1f5f9
     classDef client fill:#1e293b,stroke:#334155,stroke-width:1px,color:#f1f5f9
     classDef engine fill:#060911,stroke:#38bdf8,stroke-width:1.5px,color:#f1f5f9
     classDef alert fill:#2a1215,stroke:#f87171,stroke-width:1.5px,color:#f1f5f9
 
     subgraph External_Cloud [External Services]
-        NextAPI["NextDNS REST API - Telemetry and Rules"]:::cloud
-        TelegramAPI["Telegram Bot API - Instant Push Alerts"]:::alert
+        NextAPI[NextDNS REST API]:::cloud
+        TelegramAPI[Telegram Bot API]:::alert
     end
 
-    subgraph Single_File_PWA [Single-File PWA Architecture - index.html]
+    subgraph Single_File_PWA [Single-File PWA Architecture]
         subgraph Data_Storage [State and Storage]
-            LS["LocalStorage - Config, Keys, Threshold"]:::client
-            RAM["Volatile Buffer - STATE.logs (1000 Entries)"]:::client
+            LS[LocalStorage Config]:::client
+            RAM[STATE.logs Buffer]:::client
         end
 
-        subgraph Core_Engine [Core Guardrail and Logic]
-            Poller["API Poller / Stream (10s Interval)"]:::engine
-            TruthEngine["Source of Truth Engine (NextDNS Priority)"]:::engine
-            FreqMon["Frequency Monitor - Hit Counter"]:::engine
+        subgraph Core_Engine [Core Guardrail Logic]
+            Poller[API Poller Stream]:::engine
+            TruthEngine[Source of Truth Engine]:::engine
+            FreqMon[Frequency Monitor]:::engine
         end
 
-        subgraph UI_Layer [User Interface and Touch Layer]
-            TouchNav["Touch Event Swipe API (Mobile Nav)"]:::client
-            LiveStream["Live Log Stream"]:::client
-            HitsReport["Frequency Report Tab"]:::client
-            SettingsTab["Settings and Throttled Controls"]:::client
+        subgraph UI_Layer [User Interface Layer]
+            TouchNav[Touch Swipe API]:::client
+            LiveStream[Live Log Stream]:::client
+            HitsReport[Frequency Report]:::client
         end
     end
 
-    %% Flow Connections
     NextAPI --> Poller
     Poller --> RAM
     RAM --> TruthEngine
@@ -93,7 +90,6 @@ flowchart TD
     FreqMon --> HitsReport
     FreqMon --> TelegramAPI
 
-    SettingsTab --> LS
     TouchNav --> UI_Layer
 
 
