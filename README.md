@@ -50,51 +50,49 @@ The diagram below illustrates the single-file PWA architecture, including volati
 
 ```mermaid
 flowchart TD
-    %% Styling
-    classDef cloud fill:#0f172a,stroke:#38bdf8,stroke-width:1.5px,color:#f1f5f9;
-    classDef client fill:#1e293b,stroke:#334155,stroke-width:1px,color:#f1f5f9;
-    classDef engine fill:#060911,stroke:#38bdf8,stroke-width:1.5px,color:#f1f5f9;
-    classDef alert fill:#2a1215,stroke:#f87171,stroke-width:1.5px,color:#f1f5f9;
+    classDef cloud fill:#0f172a,stroke:#38bdf8,stroke-width:1.5px,color:#f1f5f9
+    classDef client fill:#1e293b,stroke:#334155,stroke-width:1px,color:#f1f5f9
+    classDef engine fill:#060911,stroke:#38bdf8,stroke-width:1.5px,color:#f1f5f9
+    classDef alert fill:#2a1215,stroke:#f87171,stroke-width:1.5px,color:#f1f5f9
 
-    subgraph External_Cloud [External Services]
-        NextAPI["🌐 NextDNS REST API<br/>(Telemetry & Denial Rules)"]:::cloud
-        TelegramAPI["📢 Telegram Bot API<br/>(Instant Push Alerts)"]:::alert
+    subgraph External_Cloud ["External Services"]
+        NextAPI["NextDNS REST API - Telemetry & Denial Rules"]:::cloud
+        TelegramAPI["Telegram Bot API - Instant Push Alerts"]:::alert
     end
 
-    subgraph Single_File_PWA [Single-File PWA Architecture - index.html]
-        subgraph Data_Storage [State & Storage]
-            LS["💾 LocalStorage<br/>(API Keys, Threshold, Proxy)"]:::client
-            RAM["⚡ Volatile Buffer<br/>(STATE.logs - 1000 Rotating Entries)"]:::client
+    subgraph Single_File_PWA ["Single-File PWA Architecture - index.html"]
+        subgraph Data_Storage ["State & Storage"]
+            LS["LocalStorage - API Keys, Threshold, Proxy"]:::client
+            RAM["Volatile Buffer - STATE.logs (1000 Rotating Entries)"]:::client
         end
 
-        subgraph Core_Engine [Core Guardrail & Logic]
-            Poller["🔄 API Poller / Stream<br/>(10s Interval)"]:::engine
-            TruthEngine{"⚖️ Source of Truth Engine<br/>(NextDNS > System > Allowed)"}:::engine
-            FreqMon["📊 Frequency Monitor<br/>(Threshold Hit Counter)"]:::engine
+        subgraph Core_Engine ["Core Guardrail & Logic"]
+            Poller["API Poller / Stream (10s Interval)"]:::engine
+            TruthEngine["Source of Truth Engine (NextDNS > System > Allowed)"]:::engine
+            FreqMon["Frequency Monitor - Threshold Hit Counter"]:::engine
         end
 
-        subgraph UI_Layer [User Interface & Touch Layer]
-            TouchNav["📱 Touch Event Swipe API<br/>(Mobile Nav - Tables Included)"]:::client
-            LiveStream["🔴 Live Log Stream"]:::client
-            HitsReport["📋 Frequency Report Tab"]:::client
-            SettingsTab["⚙️ Settings & Throttled Controls"]:::client
+        subgraph UI_Layer ["User Interface & Touch Layer"]
+            TouchNav["Touch Event Swipe API (Mobile Nav)"]:::client
+            LiveStream["Live Log Stream"]:::client
+            HitsReport["Frequency Report Tab"]:::client
+            SettingsTab["Settings & Throttled Controls"]:::client
         end
     end
 
-    %% Connections
-    NextAPI -->|Fetch Telemetry| Poller
-    Poller -->|Push Logs| RAM
+    NextAPI --> Poller
+    Poller --> RAM
     RAM --> TruthEngine
-    LS -->|Load Config| Core_Engine
+    LS --> Core_Engine
 
-    TruthEngine -->|Render Status| LiveStream
-    TruthEngine -->|Count Hits| FreqMon
+    TruthEngine --> LiveStream
+    TruthEngine --> FreqMon
     
-    FreqMon -->|Render Table| HitsReport
-    FreqMon -->|Threshold Exceeded| TelegramAPI
+    FreqMon --> HitsReport
+    FreqMon --> TelegramAPI
 
-    SettingsTab -->|Save & Throttle| LS
-    TouchNav -->|Switch Tab| UI_Layer
+    SettingsTab --> LS
+    TouchNav --> UI_Layer
 
 
 
