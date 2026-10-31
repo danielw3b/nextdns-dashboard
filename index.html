@@ -560,7 +560,7 @@
       div.className = `toast toast-${type}`;
       div.innerHTML = `<b>${safeText(title)}</b><div style="margin-top:2px;color:#cbd5e1;">${msg}</div>`;
       container.appendChild(div);
-      setTimeout(() => { div.style.opacity = '0'; setTimeout(() => div.remove(), 300); }, 6000);
+      setTimeout(() => { div.style.opacity = '0'; setTimeout(() => div.remove(), 300); }, 4000);
     }
 
     let simTimer = null;
@@ -1605,21 +1605,21 @@
       btn.onclick = () => switchTab(btn.dataset.tab);
     });
 
-    // Classic Touch Events Swipe Gesture (Mobile Only - Desktop Mouse & Zoom fully preserved)
+    // Classic Touch Events Swipe Gesture (Mobile Only - Tables included, inputs excluded)
     let touchStartX = null;
     let touchStartY = null;
     const mainEl = document.querySelector('main');
 
     if (mainEl) {
       mainEl.addEventListener('touchstart', (e) => {
-        // Ignore swipe if user interacts with inputs or tables
-        if (e.target.closest('input') || e.target.closest('textarea') || e.target.closest('table') || e.target.closest('.table-container')) {
+        // Ignore swipe only if user interacts with text inputs, textareas, or select dropdowns
+        if (e.target.closest('input') || e.target.closest('textarea') || e.target.closest('select')) {
           touchStartX = null;
           return;
         }
         if (e.touches && e.touches.length === 1) {
-          touchStartX = e.touches[0].clientX;
-          touchStartY = e.touches[0].clientY;
+          touchStartX = e.touches.currentX || e.touches[0].clientX;
+          touchStartY = e.touches.currentY || e.touches[0].clientY;
         }
       }, { passive: true });
 
@@ -1774,7 +1774,7 @@
       const allowedVal = totalVal - blockedVal;
     
       let csvContent = '\uFEFF';
-      csvContent += `"# NextDNS Sentinel CSV Export (${STATE.selectedDevice}) - ${currentDate}"\n`;
+      csvContent += `"# NextDNS Live CSV Export (${STATE.selectedDevice}) - ${currentDate}"\n`;
       csvContent += `"Total Queries","Blocked","Allowed"\n`;
       csvContent += `"${totalVal}","${blockedVal}","${allowedVal}"\n\n`;
     
@@ -1863,7 +1863,7 @@
             if (saveBtn) {
               setTimeout(() => {
                 saveBtn.click();
-              }, 500);
+              }, 2000);
             }
           } else {
             throw new Error('Invalid JSON structure');
@@ -1991,7 +1991,7 @@
           saveBtn.disabled = false;
           saveBtn.style.opacity = '';
           saveBtn.style.cursor = '';
-        }, 1500);
+        }, 4000);
       };
     }
 
