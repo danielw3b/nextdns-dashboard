@@ -368,7 +368,7 @@
         <div class="form-grid-2col">
           <div class="form-group">
             <label>Cloudflare Pages Proxy</label>
-            <input type="text" id="cfg-proxy" placeholder="/api/nextdns" style="width: 100%;">
+            <input type="text" id="cfg-proxy" placeholder="/api/nextdns" value="/api/nextdns" style="width: 100%;">
           </div>
           <div class="form-group">
             <label>Hits Threshold</label>
@@ -378,7 +378,6 @@
         
         <div class="card-title">
           <span>Telegram Notification</span>
-          <a href="https://nextdns.io/?from=4ja3vp44" target="_blank" rel="noopener noreferrer" style="font-size: 0.75rem; color: #38bdf8; text-decoration: none; font-weight: 600;">Get NextDNS ↗</a>
         </div>
         <div class="form-grid-2col">
           <div class="form-group">
@@ -1635,7 +1634,7 @@
         const diffY = touchEndY - touchStartY;
 
         // Check if horizontal movement is dominant and exceeds 50px threshold
-        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 200) {
           const activeBtn = document.querySelector('.nav-tabs button.active');
           const currentTab = activeBtn ? activeBtn.dataset.tab : 'analytics';
           const currentIndex = TABS_ORDER.indexOf(currentTab);
