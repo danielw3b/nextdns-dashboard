@@ -315,26 +315,34 @@
     
     <!-- TAB: GUARDRAILS & RULES -->
     <section id="tab-blocking" class="tab-content">
-      <div class="card">
+      <!--<div class="card">
         <div class="card-title">
           <span>Frequent Hit Monitor & Guardrail</span>
           <span style="font-size: 0.7rem; color: var(--muted); font-family: monospace;" id="autoblock-threshold-badge">Threshold: 200 hits</span>
-        </div>
-        <div class="table-container compact-table-container">
-          <table id="tab-autoblock">
-            <thead>
-              <tr>
-                <th>Domain</th>
-                <th>Hits</th>
-                <th>Progress</th>
-                <th>Status</th>
-                <th style="text-align: right;">Action</th>
-              </tr>
-            </thead>
-            <tbody id="autoblock-hits-body"></tbody>
-          </table>
+        </div>-->
+
+      <div class="card" style="padding: 0.75rem 1rem;">
+        <div class="filter-bar">
+          <span>Frequent Hit Monitor & Guardrail</span>
+          <span style="font-size: 0.7rem; color: var(--muted); font-family: monospace;" id="autoblock-threshold-badge">Threshold: 200 hits</span>
         </div>
       </div>
+           
+      <div class="table-container compact-table-container">
+        <table id="tab-autoblock">
+          <thead>
+            <tr>
+              <th>Domain</th>
+              <th>Hits</th>
+              <th>Progress</th>
+              <th>Status</th>
+              <th style="text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="autoblock-hits-body"></tbody>
+        </table>
+      </div>
+      <!--</div>-->
     </section>
 
     <!-- TAB: CONFIGURATION -->
