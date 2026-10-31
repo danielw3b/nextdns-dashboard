@@ -316,12 +316,6 @@
     
     <!-- TAB: GUARDRAILS & RULES -->
     <section id="tab-blocking" class="tab-content">
-      <!--<div class="card">
-        <div class="card-title">
-          <span>Frequent Hit Monitor & Guardrail</span>
-          <span style="font-size: 0.7rem; color: var(--muted); font-family: monospace;" id="autoblock-threshold-badge">Threshold: 200 hits</span>
-        </div>-->
-
       <div class="card" style="padding: 0.75rem 1rem;">
         <div class="card-title">
           <span>Monitoring & Notification</span>
@@ -343,7 +337,6 @@
           <tbody id="autoblock-hits-body"></tbody>
         </table>
       </div>
-      <!--</div>-->
     </section>
 
     <!-- TAB: CONFIGURATION -->
@@ -1500,86 +1493,6 @@
         console.error('Failed to send Telegram notification:', e);
       }
     }
-    
-    // Ordered list of all application tabs for sequential swiping
-    /*const TABS_ORDER = ['analytics', 'live', 'blocking', 'config'];
-
-    // Centralized tab switching function
-    function switchTab(tabName) {
-      const btn = document.querySelector(`.nav-tabs button[data-tab="${tabName}"]`);
-      if (!btn) return;
-
-      document.querySelectorAll('.nav-tabs button').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      
-      btn.classList.add('active');
-      const targetContent = document.getElementById('tab-' + tabName);
-      if (targetContent) targetContent.classList.add('active');
-
-      if (tabName === 'analytics') renderAnalyticsChart();
-      if (tabName === 'blocking') renderHitsTable();
-    }
-
-    // Bind click handlers to navigation buttons using switchTab
-    document.querySelectorAll('.nav-tabs button').forEach(btn => {
-      btn.onclick = () => switchTab(btn.dataset.tab);
-    });
-
-    // Unified Pointer Event Swipe Gesture (Supports Touch, Touchpad, Mouse Drag & Stylus)
-    let pointerStartX = null;
-    let pointerStartY = null;
-    let activePointerId = null;
-    const mainEl = document.querySelector('main');
-
-    if (mainEl) {
-      mainEl.addEventListener('pointerdown', (e) => {
-        // Ignore swipe if user interacts with text inputs, textareas, or tables (allowing text selection)
-        if (e.target.closest('input') || e.target.closest('textarea') || e.target.closest('table') || e.target.closest('.table-container')) {
-          pointerStartX = null;
-          return;
-        }
-        pointerStartX = e.clientX;
-        pointerStartY = e.clientY;
-        activePointerId = e.pointerId;
-      });
-
-      mainEl.addEventListener('pointerup', (e) => {
-        if (pointerStartX === null || pointerStartY === null) return;
-        if (activePointerId !== null && e.pointerId !== activePointerId) return;
-
-        const diffX = e.clientX - pointerStartX;
-        const diffY = e.clientY - pointerStartY;
-
-        // Check if horizontal movement is dominant and exceeds 50px threshold
-        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
-          const activeBtn = document.querySelector('.nav-tabs button.active');
-          const currentTab = activeBtn ? activeBtn.dataset.tab : 'analytics';
-          const currentIndex = TABS_ORDER.indexOf(currentTab);
-
-          if (currentIndex !== -1) {
-            if (diffX < 0) {
-              // Swiped Left -> Next Tab
-              const nextIndex = (currentIndex + 1) % TABS_ORDER.length;
-              switchTab(TABS_ORDER[nextIndex]);
-            } else {
-              // Swiped Right -> Previous Tab
-              const prevIndex = (currentIndex - 1 + TABS_ORDER.length) % TABS_ORDER.length;
-              switchTab(TABS_ORDER[prevIndex]);
-            }
-          }
-        }
-
-        pointerStartX = null;
-        pointerStartY = null;
-        activePointerId = null;
-      });
-
-      mainEl.addEventListener('pointercancel', () => {
-        pointerStartX = null;
-        pointerStartY = null;
-        activePointerId = null;
-      });
-    }*/
 
     // Ordered list of all application tabs for sequential swiping
     const TABS_ORDER = ['analytics', 'live', 'blocking', 'config'];
@@ -1634,7 +1547,7 @@
         const diffY = touchEndY - touchStartY;
 
         // Check if horizontal movement is dominant and exceeds 50px threshold
-        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 100) {
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 150) {
           const activeBtn = document.querySelector('.nav-tabs button.active');
           const currentTab = activeBtn ? activeBtn.dataset.tab : 'analytics';
           const currentIndex = TABS_ORDER.indexOf(currentTab);
@@ -1898,46 +1811,6 @@
       badge.textContent = STATE.isStreaming ? (STATE.mode === 'api' ? 'Live' : 'Demo') : 'Paused';
       badge.className = STATE.isStreaming ? (STATE.mode === 'api' ? 'badge live' : 'badge sim') : 'badge paused';
     };
-
-    /*document.getElementById('btn-save-cfg').onclick = () => {
-      const newProfile = document.getElementById('cfg-profile').value.trim();
-      const newApiKey = document.getElementById('cfg-apikey').value.trim();
-      const wasSimMode = STATE.mode === 'sim';
-      const isNowApiMode = Boolean(newProfile && newApiKey);
-
-      STATE.config.profile = newProfile;
-      STATE.config.apiKey = newApiKey;
-      STATE.config.proxy = document.getElementById('cfg-proxy').value.trim();
-      STATE.config.threshold = Number(document.getElementById('cfg-threshold').value) || 200;
-      STATE.config.telegramBotToken = document.getElementById('cfg-telegramBotToken').value.trim() || '';
-      STATE.config.telegramChatId = document.getElementById('cfg-telegramChatId').value.trim() || '';
-      STATE.config.protectSystem = document.getElementById('cfg-protect').checked;
-      saveState();
-      updateThresholdBadge();
-
-      // Wipe simulation data when switching to API mode to prevent data mixing
-      if (wasSimMode && isNowApiMode) {
-        if (simTimer) clearInterval(simTimer);
-        //clearDatabase();
-        STATE.logs = [];
-        STATE.totalQueriesCounter = 0;
-        STATE.devices.clear();
-        STATE.hits = {};
-        document.getElementById('global-device-select').innerHTML = '<option value="all">All Devices</option>';
-        
-        STATE.mode = 'api';
-        document.getElementById('btn-toggle-stream').textContent = 'Live';
-        document.getElementById('btn-toggle-stream').className = 'badge live';
-        fetchNextDNSLogs();
-        if (apiPollTimer) clearInterval(apiPollTimer);
-        apiPollTimer = setInterval(fetchNextDNSLogs, 10000);
-        showToast('API Mode Activated', 'Simulation data wiped. Fetching fresh NextDNS API telemetry...', 'success');
-      } else {
-        showToast('Config Saved', 'Updated successfully', 'success');
-      }
-      renderFilteredLiveLogs();
-      updateAnalyticsKPIs();
-    };*/
 
     const saveBtn = document.getElementById('btn-save-cfg');
     if (saveBtn) {
