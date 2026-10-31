@@ -15,84 +15,9 @@
 
 ## Architecture
 
-The diagram below illustrates the data flow, state management, and separation of concerns within the application:
-
-```mermaid
-graph TD
-    A[NextDNS API / Live Simulator] -->|Batch / Stream| B(Central Handler: handleIncomingLog)
-    
-    subgraph RAM Buffers (Volatile State)
-        B -->|Max 500 entries| C[STATE.logs <br> Live Stream Table]
-        B -->|Rolling 60 Min| D[STATE.chartLogs <br> Canvas Analytics Chart]
-        B -->|Infinite Session| E[STATE.sessionLogs <br> KPIs & Device Filters]
-    end
-
-    subgraph Guardrails & Notifications
-        E --> F[Frequency Monitor & Guardrail]
-        F -->|Threshold Exceeded| G[Local Toast Alert]
-        F -->|Threshold Exceeded| H[Telegram Notification API]
-    end
-
-    subgraph User Actions
-        I[Interactive Status Badge] -->|Click Allowed/Blocked| J[Quick Deny / Quick Remove]
-        J -->|API POST / RAM Set| K[NextDNS Profile / Runtime State]
-    end
-```
-
----
-
-
----
-
-## 🏗️ Architecture & Data Flow
-
-The diagram below illustrates the single-file PWA architecture, including volatile RAM buffers, the dual-source status logic, and the Telegram alert dispatcher:
-
-```mermaid
-flowchart TD
-    classDef cloud fill:#0f172a,stroke:#38bdf8,stroke-width:1.5px,color:#f1f5f9
-    classDef client fill:#1e293b,stroke:#334155,stroke-width:1px,color:#f1f5f9
-    classDef engine fill:#060911,stroke:#38bdf8,stroke-width:1.5px,color:#f1f5f9
-    classDef alert fill:#2a1215,stroke:#f87171,stroke-width:1.5px,color:#f1f5f9
-
-    subgraph External_Cloud [External Services]
-        NextAPI[NextDNS REST API]:::cloud
-        TelegramAPI[Telegram Bot API]:::alert
-    end
-
-    subgraph Single_File_PWA [Single-File PWA Architecture]
-        subgraph Data_Storage [State and Storage]
-            LS[LocalStorage Config]:::client
-            RAM[STATE.logs Buffer]:::client
-        end
-
-        subgraph Core_Engine [Core Guardrail Logic]
-            Poller[API Poller Stream]:::engine
-            TruthEngine[Source of Truth Engine]:::engine
-            FreqMon[Frequency Monitor]:::engine
-        end
-
-        subgraph UI_Layer [User Interface Layer]
-            TouchNav[Touch Swipe API]:::client
-            LiveStream[Live Log Stream]:::client
-            HitsReport[Frequency Report]:::client
-        end
-    end
-
-    NextAPI --> Poller
-    Poller --> RAM
-    RAM --> TruthEngine
-    LS --> Core_Engine
-
-    TruthEngine --> LiveStream
-    TruthEngine --> FreqMon
-
-    FreqMon --> HitsReport
-    FreqMon --> TelegramAPI
-
-    TouchNav --> UI_Layer
-
-
+<p align="center">
+  <img src="NextDNS-Live-PWA-Architecture.svg" alt="NextDNS Live PWA Architecture" width="100%" style="max-width: 600px; border-radius: 8px; border: 1px solid #334155;">
+</p>
 
 
 ## Key Features
