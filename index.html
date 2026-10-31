@@ -322,8 +322,8 @@
         </div>-->
 
       <div class="card" style="padding: 0.75rem 1rem;">
-        <div class="filter-bar">
-          <span>Frequent Hit Monitor & Guardrail</span>
+        <div class="card-title">
+          <span>Monitoring & Notification</span>
           <span style="font-size: 0.7rem; color: var(--muted); font-family: monospace;" id="autoblock-threshold-badge">Threshold: 200 hits</span>
         </div>
       </div>
@@ -374,7 +374,11 @@
             <input type="number" id="cfg-threshold" value="200" style="width: 100%;">
           </div>
         </div>
-
+        
+        <div class="card-title">
+          <span>Telegram Notification</span>
+          <a href="https://nextdns.io/?from=4ja3vp44" target="_blank" rel="noopener noreferrer" style="font-size: 0.75rem; color: #38bdf8; text-decoration: none; font-weight: 600;">Get NextDNS ↗</a>
+        </div>
         <div class="form-grid-2col">
           <div class="form-group">
             <label>Telegram Bot-Token</label>
@@ -1895,7 +1899,7 @@
       badge.className = STATE.isStreaming ? (STATE.mode === 'api' ? 'badge live' : 'badge sim') : 'badge paused';
     };
 
-    document.getElementById('btn-save-cfg').onclick = () => {
+    /*document.getElementById('btn-save-cfg').onclick = () => {
       const newProfile = document.getElementById('cfg-profile').value.trim();
       const newApiKey = document.getElementById('cfg-apikey').value.trim();
       const wasSimMode = STATE.mode === 'sim';
@@ -1933,7 +1937,63 @@
       }
       renderFilteredLiveLogs();
       updateAnalyticsKPIs();
-    };
+    };*/
+
+    const saveBtn = document.getElementById('btn-save-cfg');
+    if (saveBtn) {
+      saveBtn.onclick = () => {
+        // Prevent spam clicking while save action is processing
+        if (saveBtn.disabled) return;
+        
+        saveBtn.disabled = true;
+        saveBtn.style.opacity = '0.6';
+        saveBtn.style.cursor = 'not-allowed';
+
+        const newProfile = document.getElementById('cfg-profile').value.trim();
+        const newApiKey = document.getElementById('cfg-apikey').value.trim();
+        const wasSimMode = STATE.mode === 'sim';
+        const isNowApiMode = Boolean(newProfile && newApiKey);
+
+        STATE.config.profile = newProfile;
+        STATE.config.apiKey = newApiKey;
+        STATE.config.proxy = document.getElementById('cfg-proxy').value.trim();
+        STATE.config.threshold = Number(document.getElementById('cfg-threshold').value) || 200;
+        STATE.config.telegramBotToken = document.getElementById('cfg-telegramBotToken').value.trim() || '';
+        STATE.config.telegramChatId = document.getElementById('cfg-telegramChatId').value.trim() || '';
+        STATE.config.protectSystem = document.getElementById('cfg-protect').checked;
+        saveState();
+        updateThresholdBadge();
+
+        // Wipe simulation data when switching to API mode to prevent data mixing
+        if (wasSimMode && isNowApiMode) {
+          if (simTimer) clearInterval(simTimer);
+          STATE.logs = [];
+          STATE.totalQueriesCounter = 0;
+          STATE.devices.clear();
+          STATE.hits = {};
+          document.getElementById('global-device-select').innerHTML = '<option value="all">All Devices</option>';
+          
+          STATE.mode = 'api';
+          document.getElementById('btn-toggle-stream').textContent = 'Live';
+          document.getElementById('btn-toggle-stream').className = 'badge live';
+          fetchNextDNSLogs();
+          if (apiPollTimer) clearInterval(apiPollTimer);
+          apiPollTimer = setInterval(fetchNextDNSLogs, 10000);
+          showToast('API Mode Activated', 'Simulation data wiped. Fetching fresh NextDNS API telemetry...', 'success');
+        } else {
+          showToast('Config Saved', 'Updated successfully', 'success');
+        }
+        renderFilteredLiveLogs();
+        updateAnalyticsKPIs();
+
+        // Re-enable save button after a short cooldown matching toast duration
+        setTimeout(() => {
+          saveBtn.disabled = false;
+          saveBtn.style.opacity = '';
+          saveBtn.style.cursor = '';
+        }, 1500);
+      };
+    }
 
     const btnBackup = document.getElementById('btn-backup-json');
     if (btnBackup) {
