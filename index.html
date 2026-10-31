@@ -1634,7 +1634,7 @@
         const diffY = touchEndY - touchStartY;
 
         // Check if horizontal movement is dominant and exceeds 50px threshold
-        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 200) {
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 100) {
           const activeBtn = document.querySelector('.nav-tabs button.active');
           const currentTab = activeBtn ? activeBtn.dataset.tab : 'analytics';
           const currentIndex = TABS_ORDER.indexOf(currentTab);
