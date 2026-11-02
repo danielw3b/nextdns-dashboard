@@ -122,7 +122,7 @@
     #tab-live th, #tab-live td, #tab-autoblock th, #tab-autoblock td { padding: 0.5rem 0.75rem; text-align: left; white-space: nowrap; }
     tr:hover td { background: rgba(30, 41, 59, 0.4); }
 
-    #tab-live th:nth-child(4), #tab-live td:nth-child(4) { max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
+    #tab-live th:nth-child(4), #tab-live td:nth-child(4) { max-width: 90px; overflow: hidden; text-overflow: ellipsis; }
     #tab-live th:nth-child(2), #tab-live td:nth-child(2) { max-width: 400px; overflow: hidden; text-overflow: ellipsis; }
 
     #tab-autoblock th:nth-child(1), #tab-autoblock td:nth-child(1) { max-width: 400px; overflow: hidden; text-overflow: ellipsis; }
@@ -306,9 +306,9 @@
             <tr>
               <th>Time</th>
               <th>Domain</th>
-              <th>Status</th>
-              <th>Reason</th>
               <th>Device</th>
+              <th>Reason</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody id="live-log-body"></tbody>
@@ -722,15 +722,15 @@
             ${safeText(log.domain)}
           </td>
           <td>
-            ${badgeHTML}
+            <span style="color: #38bdf8; cursor: pointer; text-decoration: underline;" onclick="filterByDevice('${safeText(log.device)}')">
+              ${safeText(log.device)}
+            </span>
           </td>
           <td style="font-size: 0.75rem; color: ${isSys ? '#38bdf8' : 'var(--muted);'};">
             ${isSys ? 'System Domain' : safeText((log.reasons || []).join(', ') || '—')}
           </td>
           <td style="font-size: 0.75rem;">
-            <span style="color: #38bdf8; cursor: pointer; text-decoration: underline;" onclick="filterByDevice('${safeText(log.device)}')">
-              ${safeText(log.device)}
-            </span>
+            ${badgeHTML}
           </td>
         `;
         
