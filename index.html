@@ -845,7 +845,7 @@
     window.filterByDevice = function(dev) {
       // Prevent rapid spam clicking/filtering
       const now = Date.now();
-      if (now - lastFilterTime < 600) return;
+      if (now - lastFilterTime < 6000) return;
       lastFilterTime = now;
 
       STATE.selectedDevice = dev;
