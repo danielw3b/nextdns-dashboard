@@ -845,7 +845,7 @@
       }
     }
     
-    window.filterByDevice = function(dev) {
+    /*window.filterByDevice = function(dev) {
       STATE.selectedDevice = dev;
       const gSel = document.getElementById('global-device-select');
       if (gSel) gSel.value = dev;
@@ -853,9 +853,9 @@
       updateAnalyticsKPIs();
       renderHitsTable();
       showToast('Device Filter', `Filtered to ${safeText(dev)}`, 'success');
-    };
+    };*/
 
-    /*let lastFilterTime = 0;
+    let lastFilterTime = 0;
     window.filterByDevice = function(dev) {
       // Prevent rapid spam clicking/filtering
       const now = Date.now();
@@ -869,7 +869,7 @@
       updateAnalyticsKPIs();
       renderHitsTable();
       showToast('Device Filter', `Filtered to ${safeText(dev)}`, 'success');
-    };*/
+    };
 
     // Array containing common European mobile cellular carrier keywords
     const EUROPEAN_MOBILE_CARRIERS = [
