@@ -395,11 +395,11 @@
         <div class="form-grid-2col">
           <div class="form-group">
             <button class="btn" id="btn-backup-json" style="background: var(--surface-2);">Backup JSON</button>
-            <label class="btn" style="background: var(--surface-2); cursor: pointer; margin: 0;">
+            <label class="btn" style="background: var(--surface-2); cursor: pointer; margin: 0; display: inline;">
             Import JSON <input type="file" id="cfg-import-file" accept=".json" style="display: none;" onchange="importConfigJSON(event)">
             </label>
           </div>
-          <div class="form-group">
+          <div class="form-group" style="display: inline;">
             <button class="btn-primary" id="btn-save-cfg" style="flex: 1; justify-content: center;">Save Configuration</button>
           </div>
         </div>
@@ -823,16 +823,16 @@
           <td class="domain-cell" style="font-weight: 600; font-family: monospace; color: ${isManuallyBlocked ? '#fde047' : (isBlocked ? '#fca5a5' : '#f1f5f9')};">
             ${safeText(log.domain)}
           </td>
-          <td>
-            ${badgeHTML}
+          <td style="font-size: 0.75rem;"
+            <span style="color: #38bdf8; cursor: pointer; text-decoration: underline;" onclick="filterByDevice('${safeText(log.device)}')">
+              ${safeText(log.device)}
+            </span>
           </td>
           <td style="font-size: 0.75rem; color: ${isSys ? '#38bdf8' : 'var(--muted);'};">
             ${isSys ? 'System Domain' : safeText((log.reasons || []).join(', ') || '—')}
           </td>
-          <td style="font-size: 0.75rem;">
-            <span style="color: #38bdf8; cursor: pointer; text-decoration: underline;" onclick="filterByDevice('${safeText(log.device)}')">
-              ${safeText(log.device)}
-            </span>
+          <td>
+            ${badgeHTML}
           </td>
         `;
         
