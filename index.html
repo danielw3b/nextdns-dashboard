@@ -318,8 +318,8 @@
     
     <!-- TAB: GUARDRAILS & RULES -->
     <section id="tab-blocking" class="tab-content">
-      <div class="card" style="padding: 0.75rem 1rem;margin-bottom:0;">
-        <div class="card-title">
+      <div class="card" style="padding: 0.75rem 1rem;">
+        <div class="card-title" style="margin-bottom:0;">
           <span>Top 20 Monitoring & Notification</span>
           <span style="font-size: 0.7rem; color: var(--muted); font-family: monospace;" id="autoblock-threshold-badge">Threshold: 200 hits</span>
         </div>
@@ -842,11 +842,10 @@
     };*/
 
     let lastFilterTime = 0;
-
     window.filterByDevice = function(dev) {
       // Prevent rapid spam clicking/filtering
       const now = Date.now();
-      if (now - lastFilterTime < 300) return;
+      if (now - lastFilterTime < 600) return;
       lastFilterTime = now;
 
       STATE.selectedDevice = dev;
