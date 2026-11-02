@@ -561,7 +561,7 @@
     let lastToastTime = 0;
     
     function showToast(title, msg, type = 'warn') {
-      if (Date.now() - lastToastTime < 800) return; // Ignore rapid spam clicks
+      if (Date.now() - lastToastTime < 1000) return; // Ignore rapid spam clicks
       lastToastTime = Date.now();
     
       const container = document.getElementById('toast-container');
@@ -797,7 +797,7 @@
         const data = await res.json();*/
 
       try {
-        const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${profile}/logs?limit=100`, {
+        const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${profile}/logs?limit=50`, {
           headers: { 'X-Api-Key': apiKey, 'Accept': 'application/json' }
         });
     
@@ -815,7 +815,7 @@
         // Process logs from oldest to newest via central handler
         for (const item of logsArray.reverse()) {
           const clientObj = item.client || {};
-          const deviceName = clientObj.name || item.deviceName || item.device?.name || (typeof clientObj === 'string' ? clientObj : 'Unidentified');
+          const deviceName = clientObj.name || item.deviceName || item.device?.name || (typeof clientObj === 'string' ? clientObj : 'Unnamed');
           const ipVal = typeof clientObj === 'string' ? clientObj : (clientObj.ip || item.clientIp || '95.229.184.162');
           const statusVal = item.status || 'allowed';
           const timeVal = item.timestamp ? new Date(item.timestamp) : new Date();
@@ -833,7 +833,7 @@
             reasons: (item.reasons || []).map(r => typeof r === 'string' ? r : r.name),
             proto: item.protocol || 'DoT',
             //type: item.root?.queryType || 'A',
-            latency: STATE.currentLatency
+            latency: STATE.currentLatency // HTTPS/TLS, no dns latency available
           };
     
           handleIncomingLog(logObj);
