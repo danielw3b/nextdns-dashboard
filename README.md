@@ -1,4 +1,4 @@
-# NextDNS Live Viewer
+# NextDNS Live
 
 > A lightning-fast, stateless, and privacy-first real-time telemetry viewer and analytics dashboard for NextDNS.
 
@@ -7,7 +7,7 @@
 
 ## Overview
 
-**NextDNS Live Viewer** is a lightweight, single-file Progressive Web App (PWA) designed to provide instant, real-time insights and quick-action controls for your NextDNS traffic. Built with a pure RAM-first telemetry architecture, NextDNS remains the absolute **Single Source of Truth**, ensuring that historical logs remain true while allowing seamless runtime management.
+**NextDNS Live** is a lightweight, single-file Progressive Web App (PWA) designed to provide instant, real-time insights and quick-action controls for your NextDNS traffic. Built with a pure RAM-first telemetry architecture, NextDNS remains the absolute **Single Source of Truth**, ensuring that historical logs remain true while allowing seamless runtime management.
 
 🌐 **Live Demo:** [nextdns-dashboard-e3q.pages.dev](https://nextdns-dashboard-e3q.pages.dev/)
 
@@ -45,7 +45,7 @@
 ## Screenshot
 
 <p align="center">
-  <img src="screenshot.png" alt="NextDNS Live Viewer Dashboard" width="100%" style="max-width: 600px; border-radius: 8px; border: 1px solid #334155;">
+  <img src="screenshot.png" alt="NextDNS Live Dashboard" width="100%" style="max-width: 600px; border-radius: 8px; border: 1px solid #334155;">
 </p>
 
 ---
