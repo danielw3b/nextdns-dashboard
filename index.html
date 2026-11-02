@@ -588,9 +588,9 @@
       // 2. Add to 60-min rolling chart buffer
       STATE.chartLogs.push(log);
     
-      // 3. Add to live DOM table ring buffer (max 500 entries)
+      // 3. Add to live DOM table ring buffer (max 2000 entries)
       STATE.logs.unshift(log);
-      if (STATE.logs.length > 1000) STATE.logs.pop();
+      if (STATE.logs.length > 2000) STATE.logs.pop();
     
       // Global counter & device registration
       STATE.totalQueriesCounter++;
@@ -783,7 +783,7 @@
         const data = await res.json();*/
 
       try {
-        const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${profile}/logs?limit=50`, {
+        const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${profile}/logs?limit=100`, {
           headers: { 'X-Api-Key': apiKey, 'Accept': 'application/json' }
         });
     
@@ -1069,7 +1069,7 @@
         ipMap[l.clientIp || '198.51.100.1'] = (ipMap[l.clientIp || '198.51.100.1'] || 0) + 1;
       }
 
-      const topB = Object.entries(blockedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
+      /*const topB = Object.entries(blockedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
       document.getElementById('analytics-top-blocked').innerHTML = topB.length ? topB.map(([d, c]) => `
         <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-family:monospace;">
           <span style="color:#fca5a5;" class="truncate">${safeText(d)}</span>
@@ -1094,9 +1094,9 @@
           </div>
           <div class="bar-bg"><div class="bar-fill" style="width:${total > 0 ? Math.min(100, Math.round((c/total)*100)) : 0}%; background:#a855f7;"></div></div>
         </div>
-      `).join('');
+      `).join('');*/
 
-      /*const topB = Object.entries(blockedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
+      const topB = Object.entries(blockedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
       document.getElementById('analytics-top-blocked').innerHTML = topB.length ? topB.map(([d, c]) => `
         <div style="display:flex; justify-content:space-between; gap:0.5rem; margin-bottom:4px; font-family:monospace; min-width:0;">
           <span style="color:#fca5a5; flex:1;" class="truncate">${safeText(d)}</span>
@@ -1121,7 +1121,7 @@
           </div>
           <div class="bar-bg"><div class="bar-fill" style="width:${total > 0 ? Math.min(100, Math.round((c/total)*100)) : 0}%; background:#a855f7;"></div></div>
         </div>
-      `).join('');*/
+      `).join('');
 
       
 
@@ -1151,19 +1151,6 @@
 
       renderAnalyticsChart();
     }
-
-/*
-            <div style="margin-bottom:10px;">
-              <div style="display:flex; justify-content:space-between; font-family:monospace; font-size: 0.72rem; margin-bottom: 2px;">
-                <div>
-                  <span style="color:#38bdf8;" class="truncate">${safeText(ip)}</span>
-                  <div style="color:var(--muted); font-size: 0.68rem; margin-top: 1px;">${safeText(info.isp)} | ${safeText(info.location)}</div>
-                </div>
-                <span style="color:var(--text);">${c} (${total > 0 ? Math.round((c/total)*100) : 0}%)</span>
-              </div>
-              <div class="bar-bg"><div class="bar-fill" style="width:${total > 0 ? Math.min(100, Math.round((c/total)*100)) : 0}%; background:#38bdf8;"></div></div>
-            </div>
-*/
     
     let currentChartBuckets = [];
     let currentChartMetrics = {};
