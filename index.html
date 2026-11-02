@@ -34,7 +34,7 @@
     }
       .brand { display: flex; align-items: center; gap: 0.6rem; }
         .brand svg { width: 48px; height: 48px; }
-        .brand h1 { font-size: 1rem; font-weight: 600; letter-spacing: -0.02em; }
+        .brand h1 { display: inline; margin: 0; font-size: 1rem; font-weight: 600; letter-spacing: -0.02em; }
 
       .badge {
         font-size: 0.7rem; padding: 0.6rem 0.6rem; border-radius: var(--radius); background: var(--surface-2);
@@ -199,6 +199,7 @@
       </svg>
       <div>
         <h1>NextDNS Live</h1>
+        <span id="stream-timer" class="text-muted" style="font-size: 0.8rem; margin-left: 8px; opacity: 0.7;">0:00</span>
         <div style="font-size: 0.68rem; color: var(--muted);">Real-time telemetry, analytics & guardrails</div>
       </div>
     </div>
@@ -2006,6 +2007,29 @@
       startSimulation();
     }
 
+    let streamSeconds = 0;
+    
+    // Dynamic m:ss, or h:mm:ss
+    function formatStreamTime(totalSeconds) {
+      const h = Math.floor(totalSeconds / 3600);
+      const m = Math.floor((totalSeconds % 3600) / 60);
+      const s = totalSeconds % 60;
+      const pad = (n) => String(n).padStart(2, '0');
+    
+      return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+    }
+    
+    // Timer-intervall
+    setInterval(() => {
+      if (STATE.isStreaming) {
+        streamSeconds++;
+        const timerEl = document.getElementById('stream-timer');
+        if (timerEl) {
+          timerEl.textContent = formatStreamTime(streamSeconds);
+        }
+      }
+    }, 1000);
+    
     // window resize or tablet rotation
     window.addEventListener('resize', () => {
       const canvas = document.getElementById('analytics-canvas');
