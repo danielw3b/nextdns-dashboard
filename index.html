@@ -159,7 +159,7 @@
 
     input[type="text"], input[type="password"], input[type="number"], select {
       background: #060911; border: 1px solid var(--border); color: var(--text);
-      padding: 0.45rem 0.65rem; border-radius: 6px; font-size: 0.75rem; font-family: monospace;
+      padding: 0.45rem 0.65rem; border-radius: 6px; font-size: 0.75rem; font-family: inherit;
     }
     input[type="text"]:focus, select:focus { outline: none; border-color: var(--accent); }
 
@@ -174,7 +174,7 @@
       }
       .toast-warn { border-color: rgba(245, 158, 11, 0.5); }
       .toast-danger { border-color: rgba(239, 68, 68, 0.5); }
-      .toast-success { border-color: rgba(34, 197, 94, 0.5); }
+      .toast-success { /*border-color: rgba(34, 197, 94, 0.5);*/ var(--accent); }
 
     @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
@@ -549,7 +549,21 @@
       } catch(e) {}
     }
 
+    /*function showToast(title, msg, type = 'warn') {
+      const container = document.getElementById('toast-container');
+      const div = document.createElement('div');
+      div.className = `toast toast-${type}`;
+      div.innerHTML = `<b>${safeText(title)}</b><div style="margin-top:2px;color:#cbd5e1;">${msg}</div>`;
+      container.appendChild(div);
+      setTimeout(() => { div.style.opacity = '0'; setTimeout(() => div.remove(), 300); }, 4000);
+    }*/
+
+    let lastToastTime = 0;
+    
     function showToast(title, msg, type = 'warn') {
+      if (Date.now() - lastToastTime < 800) return; // Ignore rapid spam clicks
+      lastToastTime = Date.now();
+    
       const container = document.getElementById('toast-container');
       const div = document.createElement('div');
       div.className = `toast toast-${type}`;
@@ -557,7 +571,7 @@
       container.appendChild(div);
       setTimeout(() => { div.style.opacity = '0'; setTimeout(() => div.remove(), 300); }, 4000);
     }
-
+    
     let simTimer = null;
     let apiPollTimer = null;
     let renderScheduled = false;
@@ -831,7 +845,7 @@
       }
     }
     
-    /*window.filterByDevice = function(dev) {
+    window.filterByDevice = function(dev) {
       STATE.selectedDevice = dev;
       const gSel = document.getElementById('global-device-select');
       if (gSel) gSel.value = dev;
@@ -839,13 +853,13 @@
       updateAnalyticsKPIs();
       renderHitsTable();
       showToast('Device Filter', `Filtered to ${safeText(dev)}`, 'success');
-    };*/
+    };
 
-    let lastFilterTime = 0;
+    /*let lastFilterTime = 0;
     window.filterByDevice = function(dev) {
       // Prevent rapid spam clicking/filtering
       const now = Date.now();
-      if (now - lastFilterTime < 6000) return;
+      if (now - lastFilterTime < 600) return;
       lastFilterTime = now;
 
       STATE.selectedDevice = dev;
@@ -855,7 +869,7 @@
       updateAnalyticsKPIs();
       renderHitsTable();
       showToast('Device Filter', `Filtered to ${safeText(dev)}`, 'success');
-    };
+    };*/
 
     // Array containing common European mobile cellular carrier keywords
     const EUROPEAN_MOBILE_CARRIERS = [
