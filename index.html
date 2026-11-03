@@ -720,7 +720,7 @@
           <td style="white-space: nowrap; font-size: 0.75rem; color: var(--muted);">
             ${log.time instanceof Date ? log.time.toLocaleTimeString() : new Date(log.time).toLocaleTimeString()}
           </td>
-          <td class="domain-cell" style="font-weight: 600; font-family: monospace; color: ${isDenylistBlocked ? '#fde047' : (isBlocked ? '#fca5a5' : '#f1f5f9')};">
+          <td class="domain-cell" style="/*font-weight: 600; font-family: monospace;*/ color: ${isDenylistBlocked ? '#fde047' : (isBlocked ? '#fca5a5' : '#f1f5f9')};">
             ${safeText(log.domain)}
           </td>
           <td style="font-size: 0.75rem;">
