@@ -1571,6 +1571,54 @@
       });
     }
 
+    // Adds a domain to NextDNS denylist and local manual block state
+    window.addQuickDeny = async function(domain) {
+      const cleanDomain = domain.trim().toLowerCase();
+      if (!cleanDomain) return;
+
+      // Check if system protection feature is enabled in settings
+      const protectSystemEnabled = STATE.config && STATE.config.protectSystem === true;
+    
+      // Guard: Block system-protected domains only if protection is enabled in settings
+      if (protectSystemEnabled && typeof isProtected === 'function' && isProtected(cleanDomain)) {
+        showToast('⚠️ Protected Domain', `Cannot block system-protected domain <code>${safeText(cleanDomain)}</code>`, 'warning');
+        return;
+      }
+
+      // 1. Send POST request to NextDNS API if in API mode
+      if (STATE.mode === 'api' && STATE.config.profile && STATE.config.apiKey) {
+        const proxy = STATE.config.proxy || 'https://api.nextdns.io';
+        try {
+          const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${STATE.config.profile}/denylist`, {
+            method: 'POST',
+            headers: { 
+              'X-Api-Key': STATE.config.apiKey, 
+              'Content-Type': 'application/json',
+              'Accept': 'application/json' 
+            },
+            body: JSON.stringify({ id: cleanDomain, active: true })
+          });
+
+          if (!res.ok) throw new Error(`API sync failed with status ${res.status}`);
+          showToast('🚫 NextDNS Blocked', `Successfully blocked ${safeText(cleanDomain)} on profile`, 'danger');
+        } catch (e) {
+          console.error('Failed to sync denylist to NextDNS API:', e);
+          showToast('⚠️ API Error', `Could not block via API: ${e.message}`, 'warning');
+          return;
+        }
+      } else {
+        showToast('Info', `Blocked simulation domain ${safeText(cleanDomain)}`, 'danger');
+      }
+
+      // 2. Mark domain as manually blocked in volatile RAM
+      if (!STATE.manuallyBlocked) STATE.manuallyBlocked = new Set();
+      STATE.manuallyBlocked.add(cleanDomain);
+
+      // 3. Instantly re-render UI tables to reflect the new state
+      if (typeof renderFilteredLiveLogs === 'function') renderFilteredLiveLogs();
+      if (typeof renderHitsTable === 'function') renderHitsTable();
+    };
+    
     // Removes a domain from NextDNS denylist and local manual block state
     window.removeQuickDeny = async function(domain) {
       const cleanDomain = domain.trim().toLowerCase();
