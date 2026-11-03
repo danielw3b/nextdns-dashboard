@@ -773,7 +773,7 @@
         .map(([domain, count]) => ({ domain, count }))
         .sort((a, b) => b.count - a.count);
     
-      tbody.innerHTML = items.length ? items.slice(0, 15).map(i => {
+      tbody.innerHTML = items.length ? items.slice(0, 20).map(i => {
         const pct = Math.min(100, Math.round((i.count / (STATE.config.threshold || 10)) * 100));
         const cleanDomain = i.domain.toLowerCase();
         const isSys = protectSystemEnabled && (typeof isProtected === 'function' ? isProtected(cleanDomain) : false);
