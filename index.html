@@ -1572,58 +1572,12 @@
     }
 
     // Removes a domain from NextDNS denylist and local manual block state
-    /*window.removeQuickDeny = async function(domain) {
-      const cleanDomain = domain.trim().toLowerCase();
-      if (!cleanDomain) return;
-
-      // Guard: Never modify system-protected domains
-      if (typeof isProtected === 'function' && isProtected(cleanDomain)) {
-        showToast('⚠️ Protected Domain', `Cannot modify system-protected domain <code>${safeText(cleanDomain)}</code>`, 'warning');
-        return;
-      }
-
-      // 1. Send DELETE request to NextDNS API
-      if (STATE.mode === 'api' && STATE.config.profile && STATE.config.apiKey) {
-        const proxy = STATE.config.proxy || 'https://api.nextdns.io';
-        try {
-          const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${STATE.config.profile}/denylist/${encodeURIComponent(cleanDomain)}`, {
-            method: 'DELETE',
-            headers: {
-              'X-Api-Key': STATE.config.apiKey,
-              'Accept': 'application/json'
-            }
-          });
-
-          if (!res.ok) throw new Error(`API remove failed with status ${res.status}`);
-          showToast('✅ NextDNS Unblocked', `Successfully removed ${safeText(cleanDomain)} from denylist`, 'success');
-        } catch (e) {
-          console.error('Failed to remove from NextDNS denylist API:', e);
-          showToast('⚠️ API Error', `Could not remove via API: ${e.message}`, 'warning');
-          return;
-        }
-      } else {
-        showToast('Info', `Removed simulation domain ${safeText(cleanDomain)} from local denylist`, 'success');
-      }
-
-      // 2. Remove domain from volatile RAM manually blocked set
-      if (STATE.manuallyBlocked) {
-        STATE.manuallyBlocked.delete(cleanDomain);
-      }
-
-      // 3. Instantly re-render UI tables to reflect allowed state
-      if (typeof renderFilteredLiveLogs === 'function') renderFilteredLiveLogs();
-      if (typeof renderHitsTable === 'function') renderHitsTable();
-    };*/
-
-    // Removes a domain from NextDNS denylist and local manual block state
     window.removeQuickDeny = async function(domain) {
       const cleanDomain = domain.trim().toLowerCase();
       if (!cleanDomain) return;
     
-      // Check if system protection feature is enabled in settings
       const protectSystemEnabled = STATE.config && STATE.config.protectSystem === true;
     
-      // Guard: Never modify system-protected domains only if protection is enabled
       if (protectSystemEnabled && typeof isProtected === 'function' && isProtected(cleanDomain)) {
         showToast('⚠️ Protected Domain', `Cannot modify system-protected domain <code>${safeText(cleanDomain)}</code>`, 'warning');
         return;
@@ -1641,54 +1595,7 @@
             }
           });
     
-          if (!res.ok) throw new Error(`API remove failed with status ${res.status}`);
-          showToast('✅ NextDNS Unblocked', `Successfully removed ${safeText(cleanDomain)} from denylist`, 'success');
-        } catch (e) {
-          console.error('Failed to remove from NextDNS denylist API:', e);
-          showToast('⚠️ API Error', `Could not remove via API: ${e.message}`, 'warning');
-          return;
-        }
-      } else {
-        showToast('Info', `Removed simulation domain ${safeText(cleanDomain)} from local denylist`, 'success');
-      }
-    
-      // 2. Remove domain from volatile RAM manually blocked set
-      if (STATE.manuallyBlocked) {
-        STATE.manuallyBlocked.delete(cleanDomain);
-      }
-    
-      // 3. Instantly re-render UI tables to reflect allowed state
-      if (typeof renderFilteredLiveLogs === 'function') renderFilteredLiveLogs();
-      if (typeof renderHitsTable === 'function') renderHitsTable();
-    };
-
-    
-    window.addQuickDeny = async function(domain) {
-      const cleanDomain = domain.trim().toLowerCase();
-      if (!cleanDomain) return;
-
-      // Check if system protection feature is enabled in settings
-      const protectSystemEnabled = STATE.config && STATE.config.protectSystem === true;
-    
-      // Guard: Block system-protected domains only if protection is enabled in settings
-      if (protectSystemEnabled && typeof isProtected === 'function' && isProtected(cleanDomain)) {
-        showToast('⚠️ Protected Domain', `Cannot block system-protected domain <code>${safeText(cleanDomain)}</code>`, 'warning');
-        return;
-      }
-
-      // 1. Send DELETE request to NextDNS API if in API mode
-      if (STATE.mode === 'api' && STATE.config.profile && STATE.config.apiKey) {
-        const proxy = STATE.config.proxy || 'https://api.nextdns.io';
-        try {
-          const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${STATE.config.profile}/denylist/${encodeURIComponent(cleanDomain)}`, {
-            method: 'DELETE',
-            headers: {
-              'X-Api-Key': STATE.config.apiKey,
-              'Accept': 'application/json'
-            }
-          });
-    
-          // Treat 404 as successfully removed or already gone, throw for other errors
+          // Treat 404 as successfully removed or already gone
           if (!res.ok && res.status !== 404) {
             throw new Error(`API remove failed with status ${res.status}`);
           }
@@ -1696,7 +1603,6 @@
         } catch (e) {
           console.error('Failed to remove from NextDNS denylist API:', e);
           showToast('⚠️ API Error', `Could not remove via API: ${e.message}`, 'warning');
-          // NOTE: We no longer 'return' here blindly, ensuring local RAM sync still runs below!
         }
       } else {
         showToast('Info', `Removed simulation domain ${safeText(cleanDomain)} from local denylist`, 'success');
@@ -1710,7 +1616,7 @@
       // 3. Instantly re-render UI tables to reflect allowed state
       if (typeof renderFilteredLiveLogs === 'function') renderFilteredLiveLogs();
       if (typeof renderHitsTable === 'function') renderHitsTable();
-    }; 
+    };
 
     // Export session logs and header KPIs to a CSV file
     function exportLiveLogsToCSV() {
