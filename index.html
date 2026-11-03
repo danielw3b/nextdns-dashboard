@@ -1676,40 +1676,41 @@
         return;
       }
 
-      // 1. Send POST request to NextDNS API
+      // 1. Send DELETE request to NextDNS API if in API mode
       if (STATE.mode === 'api' && STATE.config.profile && STATE.config.apiKey) {
         const proxy = STATE.config.proxy || 'https://api.nextdns.io';
         try {
-          const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${STATE.config.profile}/denylist`, {
-            method: 'POST',
+          const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${STATE.config.profile}/denylist/${encodeURIComponent(cleanDomain)}`, {
+            method: 'DELETE',
             headers: {
               'X-Api-Key': STATE.config.apiKey,
-              'Content-Type': 'application/json',
               'Accept': 'application/json'
-            },
-            body: JSON.stringify({ id: cleanDomain, active: true })
+            }
           });
-
-          if (!res.ok) throw new Error(`API sync failed with status ${res.status}`);
-          showToast('🚫 NextDNS Blocked', `Successfully blocked ${safeText(cleanDomain)} on profile`, 'danger');
+    
+          // Treat 404 as successfully removed or already gone, throw for other errors
+          if (!res.ok && res.status !== 404) {
+            throw new Error(`API remove failed with status ${res.status}`);
+          }
+          showToast('✅ NextDNS Unblocked', `Successfully removed ${safeText(cleanDomain)} from denylist`, 'success');
         } catch (e) {
-          console.error('Failed to sync denylist to NextDNS API:', e);
-          showToast('⚠️ API Error', `Could not block via API: ${e.message}`, 'warning');
-          return;
+          console.error('Failed to remove from NextDNS denylist API:', e);
+          showToast('⚠️ API Error', `Could not remove via API: ${e.message}`, 'warning');
+          // NOTE: We no longer 'return' here blindly, ensuring local RAM sync still runs below!
         }
       } else {
-        showToast('Info', `Blocked simulation domain ${safeText(cleanDomain)}`, 'danger');
+        showToast('Info', `Removed simulation domain ${safeText(cleanDomain)} from local denylist`, 'success');
       }
-
-      // 2. Mark domain as manually blocked in volatile RAM (preserves historical logs unchanged)
-      if (!STATE.manuallyBlocked) STATE.manuallyBlocked = new Set();
-      STATE.manuallyBlocked.add(cleanDomain);
-
-      // 3. Instantly re-render UI tables to reflect the new state in present/future rows
+    
+      // 2. Remove domain from volatile RAM manually blocked set (Always executed to prevent orphan entries)
+      if (STATE.manuallyBlocked) {
+        STATE.manuallyBlocked.delete(cleanDomain);
+      }
+    
+      // 3. Instantly re-render UI tables to reflect allowed state
       if (typeof renderFilteredLiveLogs === 'function') renderFilteredLiveLogs();
       if (typeof renderHitsTable === 'function') renderHitsTable();
-    };
-    
+    }; 
 
     // Export session logs and header KPIs to a CSV file
     function exportLiveLogsToCSV() {
