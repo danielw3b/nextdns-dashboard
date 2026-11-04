@@ -605,9 +605,9 @@
       // 2. Add to 60-min rolling chart buffer
       STATE.chartLogs.push(log);
     
-      // 3. Add to live DOM table ring buffer (max 2000 entries)
+      // 3. Add to live DOM table ring buffer (max 1000 entries)
       STATE.logs.unshift(log);
-      if (STATE.logs.length > 2000) STATE.logs.pop();
+      if (STATE.logs.length > 1000) STATE.logs.pop();
     
       // Global counter & device registration
       STATE.totalQueriesCounter++;
@@ -689,7 +689,7 @@
       });
     
       const fragment = document.createDocumentFragment();
-      for (const log of filtered.slice(0, 100)) {
+      for (const log of filtered.slice(0, 1000)) {
         const tr = document.createElement('tr');
         
         const cleanDomain = log.domain.toLowerCase();
