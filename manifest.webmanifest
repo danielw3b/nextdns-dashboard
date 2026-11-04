@@ -1,7 +1,7 @@
 {
-  "name": "NextDNS Live Viewer",
-  "short_name": "NextDNS Live Viewer",
-  "description": "Real-time NextDNS log monitor, analytics, custom domain blocking toggles, and security auditor",
+  "name": "NextDNS Live",
+  "short_name": "NextDNS Live",
+  "description": "Real-time NextDNS log monitor, analytics, domain blocking toggles, and security auditor",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#090d16",
