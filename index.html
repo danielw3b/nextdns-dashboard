@@ -689,7 +689,7 @@
       });
     
       const fragment = document.createDocumentFragment();
-      for (const log of filtered.slice(0, 500)) {
+      for (const log of filtered.slice(0, 200)) {
         const tr = document.createElement('tr');
         
         const cleanDomain = log.domain.toLowerCase();
