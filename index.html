@@ -720,7 +720,7 @@
           <td style="white-space: nowrap; font-size: 0.75rem; color: var(--muted);">
             ${log.time instanceof Date ? log.time.toLocaleTimeString() : new Date(log.time).toLocaleTimeString()}
           </td>
-          <td class="domain-cell" style="/*font-weight: 600; font-family: monospace;*/ color: ${isDenylistBlocked ? '#fde047' : (isBlocked ? '#fca5a5' : '#f1f5f9')};">
+          <td class="domain-cell" style="color: ${isDenylistBlocked ? '#fde047' : (isBlocked ? '#fca5a5' : '#f1f5f9')};" title="${safeText(log.domain)}">
             ${safeText(log.domain)}
           </td>
           <td style="font-size: 0.75rem;">
@@ -728,7 +728,7 @@
               ${safeText(log.device)}
             </span>
           </td>
-          <td style="font-size: 0.75rem; color: ${isSys ? '#38bdf8' : (isDenylistBlocked ? '#fde047' : 'var(--muted);')};">
+          <td style="font-size: 0.75rem; color: ${isSys ? '#38bdf8' : (isDenylistBlocked ? '#fde047' : 'var(--muted);')};" title="${reasonText}">
             ${reasonText}
           </td>
           <td>
@@ -808,7 +808,7 @@
     
         return `
           <tr>
-            <td class="domain-cell">${safeText(i.domain)}</td>
+            <td class="domain-cell" title="${safeText(i.domain)}">${safeText(i.domain)}</td>
             <td style="color: var(--warn); font-weight: bold; font-family: monospace;">${i.count}</td>
             <td style="width: 140px;">
               <div class="bar-bg"><div class="bar-fill" style="width:${pct}%; background:${isBlocked ? (isDenylistBlocked ? 'var(--warn, #f59e0b)' : 'var(--blocked)') : 'var(--warn)'}"></div></div>
