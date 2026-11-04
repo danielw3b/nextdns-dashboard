@@ -112,10 +112,10 @@
 
 
     /* --- TABLES & DATA VIEWS --- */
-    .table-container { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; background: #060911; height: calc(100vh - 290px); min-height: 260px; overflow-y: auto; }
-    .compact-table-container { overflow-x: hidden; overflow-y: auto; }
+    .table-container { overflow: auto; border: 1px solid var(--border); border-radius: 8px; background: #060911; height: calc(100vh - 270px); min-height: 260px; }
+    /*.compact-table-container { overflow-x: hidden; overflow-y: auto; }*/
     
-    .compact-table-container table, #tab-live, #tab-autoblock { width: 100%; border-collapse: collapse; }
+    .table-container table, #tab-live, #tab-autoblock { width: 100%; border-collapse: collapse; }
 
     th { background: var(--surface); color: var(--muted); font-weight: 600; position: sticky; top: 0; z-index: 10; text-transform: uppercase; font-size: 0.64rem; letter-spacing: 0.03em; }
     
@@ -138,7 +138,7 @@
     .bar-fill { height: 100%; border-radius: 99px; transition: width 0.3s ease; }
 
     @media (max-width: 800px) {
-      .compact-table-container { overflow-x: auto; }
+      .table-container { overflow-x: auto; }
       #tab-live th:nth-child(2), #tab-live td:nth-child(2), #tab-autoblock th:nth-child(1), #tab-autoblock td:nth-child(1) { max-width: 200px; }
       #tab-live th, #tab-live td, #tab-live .domain-cell, #tab-autoblock th, #tab-autoblock td { overflow-wrap: anywhere; font-size: 0.7rem; }
       #tab-live td, #tab-autoblock td { padding: 0.35rem 0.4rem; }
@@ -300,7 +300,7 @@
         </div>
       </div>
 
-      <div class="table-container compact-table-container">
+      <div class="table-container">
         <table id="tab-live">
           <thead>
             <tr>
@@ -325,7 +325,7 @@
         </div>
       </div>
            
-      <div class="table-container compact-table-container">
+      <div class="table-container">
         <table id="tab-autoblock">
           <thead>
             <tr>
