@@ -730,7 +730,7 @@
     }
 
     // Render DNS hits monitoring table with slim code and action-only tooltips
-    function renderHitsTable() {
+    /*function renderHitsTable() {
       const tbody = document.getElementById('autoblock-hits-body');
       if (!tbody) return;
     
@@ -789,6 +789,103 @@
           statusText = 'Blocked';
           badgeStyle = 'color: var(--blocked, #ef4444); font-weight: 600;';
           actionBtnHTML = `<button class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; opacity: 0.5; cursor: not-allowed;" disabled title="Blocked by NextDNS Security/Parental">Blocked</button>`;
+        } else {
+          actionBtnHTML = `<button onclick="addQuickDeny('${safeText(i.domain)}')" class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;" title="Click to Deny">Deny</button>`;
+        }
+    
+        return `
+          <tr>
+            <td class="domain-cell" title="${safeText(i.domain)}">${safeText(i.domain)}</td>
+            <td style="color: var(--warn); font-weight: bold; font-family: monospace;">${i.count}</td>
+            <td style="width: 140px;">
+              <div class="bar-bg"><div class="bar-fill" style="width:${pct}%; background:${isBlocked ? (isDenylistBlocked ? 'var(--warn, #f59e0b)' : 'var(--blocked)') : 'var(--warn)'}"></div></div>
+            </td>
+            <td><span style="${badgeStyle} font-size: 0.7rem;">${statusText}</span></td>
+            <td style="text-align: right;">
+              ${actionBtnHTML}
+            </td>
+          </tr>
+        `;
+      }).join('') : `<tr><td colspan="5" style="text-align:center; color:var(--muted);">No frequency data for this selection.</td></tr>`;
+    }*/
+
+    // Render DNS hits monitoring table with threshold reporting, Telegram notifications and slim code
+    function renderHitsTable() {
+      const tbody = document.getElementById('autoblock-hits-body');
+      if (!tbody) return;
+    
+      const protectSystemEnabled = STATE.config && STATE.config.protectSystem === true;
+      const thresholdLimit = Number(STATE.config.threshold) || 200;
+      
+      const sessionLogs = STATE.sessionLogs || [];
+      const activeLogs = STATE.selectedDevice === 'all' 
+        ? sessionLogs 
+        : sessionLogs.filter(l => l.device === STATE.selectedDevice);
+    
+      const deviceHits = {};
+      const deviceLatestLog = {};
+      
+      activeLogs.forEach(l => { 
+        const d = (l.domain || 'unknown').toLowerCase(); 
+        deviceHits[d] = (deviceHits[d] || 0) + 1; 
+        const logTime = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
+        if (!deviceLatestLog[d] || logTime >= deviceLatestLog[d].timeVal) {
+          deviceLatestLog[d] = {
+            status: l.status,
+            reasons: l.reasons || [],
+            timeVal: isNaN(logTime) ? 0 : logTime
+          };
+        }
+      });
+    
+      const items = Object.entries(deviceHits)
+        .map(([domain, count]) => ({ domain, count }))
+        .sort((a, b) => b.count - a.count);
+    
+      tbody.innerHTML = items.length ? items.slice(0, 20).map(i => {
+        const pct = Math.min(100, Math.round((i.count / thresholdLimit) * 100));
+        const cleanDomain = i.domain.toLowerCase();
+        const isSys = protectSystemEnabled && (typeof isProtected === 'function' ? isProtected(cleanDomain) : false);
+        
+        const latestLog = deviceLatestLog[cleanDomain];
+        const lStatusLower = String(latestLog?.status || 'allowed').toLowerCase();
+        const reasons = (latestLog?.reasons || []).map(r => r.toLowerCase());
+        
+        const isDenylistBlocked = reasons.includes('denylist') || (STATE.manuallyBlocked && STATE.manuallyBlocked.has(cleanDomain));
+        const isApiBlocked = (lStatusLower === 'blocked' || lStatusLower === 'security' || lStatusLower === 'parental') && !isDenylistBlocked;
+        const isBlocked = isApiBlocked || isDenylistBlocked;
+    
+        // Check if threshold limit is reached
+        const isThresholdReached = i.count >= thresholdLimit && !isSys && !isBlocked;
+        
+        // Trigger Telegram notification once per threshold breach
+        if (isThresholdReached && STATE.reportedThresholdDomains && !STATE.reportedThresholdDomains.has(cleanDomain)) {
+          STATE.reportedThresholdDomains.add(cleanDomain);
+          if (typeof sendTelegramNotification === 'function') {
+            sendTelegramNotification(i.domain, i.count);
+          }
+        }
+    
+        let statusText = 'Monitoring';
+        let badgeStyle = 'color: var(--muted);';
+        let actionBtnHTML = '';
+    
+        if (isSys) {
+          statusText = 'Protected';
+          badgeStyle = 'color: var(--info, #38bdf8); font-weight: 600;';
+          actionBtnHTML = `<button class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; opacity: 0.5; cursor: not-allowed;" disabled title="Protected System Domain">Protected</button>`;
+        } else if (isDenylistBlocked) {
+          statusText = 'Denylist';
+          badgeStyle = 'color: var(--warn, #f59e0b); font-weight: 600;';
+          actionBtnHTML = `<button onclick="removeQuickDeny('${safeText(i.domain)}')" class="btn" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; background: rgba(245, 158, 11, 0.2); color: #fde047; border-color: rgba(245, 158, 11, 0.4);" title="Click to Unblock">Unblock</button>`;
+        } else if (isApiBlocked) {
+          statusText = 'Blocked';
+          badgeStyle = 'color: var(--blocked, #ef4444); font-weight: 600;';
+          actionBtnHTML = `<button class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; opacity: 0.5; cursor: not-allowed;" disabled title="Blocked by NextDNS Security/Parental">Blocked</button>`;
+        } else if (isThresholdReached) {
+          statusText = 'Report';
+          badgeStyle = 'color: var(--warn, #fbbf24); font-weight: 600;';
+          actionBtnHTML = `<button onclick="addQuickDeny('${safeText(i.domain)}')" class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;" title="Threshold reached - Click to Deny">Deny</button>`;
         } else {
           actionBtnHTML = `<button onclick="addQuickDeny('${safeText(i.domain)}')" class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;" title="Click to Deny">Deny</button>`;
         }
