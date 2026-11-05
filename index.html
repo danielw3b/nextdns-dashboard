@@ -95,6 +95,11 @@
       #analytics-canvas { width: 100% !important; height: 180px !important; display: block; }
       #chart-tooltip { position: absolute; display: none; background: #0b1324; border: 1px solid var(--border); padding: 6px 10px; border-radius: 6px; font-size: 11px; pointer-events: none; z-index: 20; box-shadow: 0 4px 12px rgba(0,0,0,0.4); color: #f1f5f9; font-family: monospace;}
 
+      .legend {display: flex; gap: 1rem; justify-content: center; margin-top: 0.5rem; font-size: 0.7rem; color: var(--muted); flex-wrap: wrap; }
+      .legend span {display:inline-flex; align-items:center; gap:0.3rem;}
+      .legend-bar {width:8px; height:8px;  border-radius:2px;}
+      .legend-ratio {width:12px; height:2px; background: #38bdf8;}
+  
       .kpi-grid {
         display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; margin-bottom: 1.25rem; width: 100%;
       }
@@ -113,8 +118,6 @@
 
     /* --- TABLES & DATA VIEWS --- */
     .table-container { overflow: auto; border: 1px solid var(--border); border-radius: 8px; background: #060911; height: calc(100vh - 270px); min-height: 260px; }
-    /*.compact-table-container { overflow-x: hidden; overflow-y: auto; }*/
-    
     .table-container table, #tab-live, #tab-autoblock { width: 100%; border-collapse: collapse; }
 
     th { background: var(--surface); color: var(--muted); font-weight: 600; position: sticky; top: 0; z-index: 10; text-transform: uppercase; font-size: 0.64rem; letter-spacing: 0.03em; }
@@ -144,7 +147,6 @@
       #tab-live td, #tab-autoblock td { padding: 0.35rem 0.4rem; }
     }
 
-
     /* --- CONTROLS & BUTTONS --- */
     button, .btn {
       font-family: inherit; font-size: 0.75rem; font-weight: 600; padding: 0.4rem 0.75rem;
@@ -163,7 +165,6 @@
     }
     input[type="text"]:focus, select:focus { outline: none; border-color: var(--accent); }
 
-
     /* --- TOAST NOTIFICATIONS --- */
     .toast-container {
       position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 100; max-width: 360px; display: flex; flex-direction: column; gap: 0.5rem;
@@ -177,7 +178,6 @@
       .toast-success { /*border-color: rgba(34, 197, 94, 0.5);*/ var(--accent); }
 
     @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
 
     /* --- FOOTER --- */
     footer {
@@ -251,17 +251,17 @@
 
       <div class="card" style="margin-bottom: 1.25rem;">
         <div class="card-title">
-          <span>Last Queries</span>
+          <span>Queries & Block Ratio</span>
           <span style="font-size: 0.7rem; color: var(--muted);" id="analytics-chart-subtitle">60-MIN</span>
         </div>
         <div style="position: relative; height: 180px; width: 100%;">
           <canvas id="analytics-canvas" style="width: 100%; height: 100%; display: block; cursor: default;"></canvas>
           <div id="chart-tooltip"></div>
         </div>
-        <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 0.5rem; font-size: 0.7rem; color: var(--muted); flex-wrap: wrap;">
-          <span style="display:inline-flex; align-items:center; gap:0.3rem;"><span style="width:8px; height:8px; background:#f87171; border-radius:2px;"></span> Blocked</span>
-          <span style="display:inline-flex; align-items:center; gap:0.3rem;"><span style="width:8px; height:8px; background:#4ade80; border-radius:2px;"></span> Allowed</span>
-          <span style="display:inline-flex; align-items:center; gap:0.3rem;"><span style="width:12px; height:2px; background:#38bdf8;"></span> Block Ratio %</span>
+        <div class="legend">
+          <span><span class="legend-bar" style="background:#f87171;"></span> Blocked</span>
+          <span><span class="legend-bar" style="background:#4ade80;"></span> Allowed</span>
+          <span><span class="legend-ratio"></span> Block Ratio %</span>
         </div>
       </div>
 
@@ -416,7 +416,7 @@
   <div class="toast-container" id="toast-container"></div>
 
   <script>
-    // Sanitize
+    // Sanitizer
     function safeText(str) {
       if (str == null) return '';
       return String(str)
@@ -535,12 +535,9 @@
         if (document.getElementById('cfg-apikey')) document.getElementById('cfg-apikey').value = STATE.config.apiKey || '';
         if (document.getElementById('cfg-proxy')) document.getElementById('cfg-proxy').value = STATE.config.proxy || '';
         if (document.getElementById('cfg-threshold')) document.getElementById('cfg-threshold').value = STATE.config.threshold || 200;
-        //if (document.getElementById('cfg-retention')) document.getElementById('cfg-retention').value = STATE.config.retentionDays || 7;
-        // Notification->telegramBotToken
+        // Notification-> TelegramBotToken
         if (document.getElementById('cfg-telegramBotToken')) document.getElementById('cfg-telegramBotToken').value = STATE.config.telegramBotToken || '';
         if (document.getElementById('cfg-telegramChatId')) document.getElementById('cfg-telegramChatId').value = STATE.config.telegramChatId || '';
-
-        //if (document.getElementById('cfg-autoblock')) document.getElementById('cfg-autoblock').checked = !!STATE.config.autoBlock;
         if (document.getElementById('cfg-protect')) document.getElementById('cfg-protect').checked = !!STATE.config.protectSystem;
         updateThresholdBadge();
       } catch(e) {}
@@ -552,17 +549,7 @@
       } catch(e) {}
     }
 
-    /*function showToast(title, msg, type = 'warn') {
-      const container = document.getElementById('toast-container');
-      const div = document.createElement('div');
-      div.className = `toast toast-${type}`;
-      div.innerHTML = `<b>${safeText(title)}</b><div style="margin-top:2px;color:#cbd5e1;">${msg}</div>`;
-      container.appendChild(div);
-      setTimeout(() => { div.style.opacity = '0'; setTimeout(() => div.remove(), 300); }, 4000);
-    }*/
-
     let lastToastTime = 0;
-    
     function showToast(title, msg, type = 'warn') {
       if (Date.now() - lastToastTime < 2000) return; // Ignore rapid spam clicks
       lastToastTime = Date.now();
@@ -860,23 +847,6 @@
       if (!profile || !apiKey) return;
     
       const startTime = performance.now();
-    
-      /*try {
-        const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${profile}/logs?limit=50`, {
-          headers: { 'X-Api-Key': apiKey, 'Accept': 'application/json' }
-        });
-    
-        //const duration = Math.round(performance.now() - startTime);
-        //STATE.currentLatency = Math.max(12, duration);
-        if (res.ok) {
-          const duration = Math.round(performance.now() - startTime);
-          STATE.currentLatency = Math.max(12, duration);
-        } else {
-          STATE.currentLatency = null;
-        }   
-    
-        if (!res.ok) throw new Error(`API error: ${res.status}`);
-        const data = await res.json();*/
 
       try {
         const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${profile}/logs?limit=50`, {
@@ -926,16 +896,6 @@
         STATE.currentLatency = null;
       }
     }
-    
-    /*window.filterByDevice = function(dev) {
-      STATE.selectedDevice = dev;
-      const gSel = document.getElementById('global-device-select');
-      if (gSel) gSel.value = dev;
-      renderFilteredLiveLogs();
-      updateAnalyticsKPIs();
-      renderHitsTable();
-      showToast('Device Filter', `Filtered to ${safeText(dev)}`, 'success');
-    };*/
 
     let lastFilterTime = 0;
     window.filterByDevice = function(dev) {
@@ -1014,7 +974,6 @@
       return { isp: 'ᯤ Resolving Network...', location: '🔍 Fetching...' };
     }
 
-
     // Queue management variables to smooth out rapid parallel API lookups
     let ipRequestQueue = [];
     let isQueueProcessing = false;
@@ -1086,9 +1045,7 @@
             });
           }
     
-          if (isMobile) {
-            networkIcon = '📶'; 
-          }
+          if (isMobile) { networkIcon = '📶';}
     
           // Populate fresh data safely into memory state
           IP_CACHE[currentIp] = {
@@ -1126,13 +1083,10 @@
         ? sessionLogs
         : sessionLogs.filter(l => l.device === STATE.selectedDevice);
 
-
       // Total queries (global counter for 'all', filtered count for devices)
       const total = STATE.selectedDevice === 'all' 
         ? Math.max(STATE.totalQueriesCounter || 0, sessionLogs.length) 
         : activeLogs.length;
-      //const total = activeLogs.length;
-      //const total = STATE.totalQueriesCounter;
       const blocked = activeLogs.filter(l => String(l.status).toLowerCase() === 'blocked').length;
       const allowed = total - blocked;
       const rate = total > 0 ? Math.round((blocked / total) * 100) : 0;
@@ -1165,33 +1119,6 @@
         ipMap[l.clientIp || '198.51.100.1'] = (ipMap[l.clientIp || '198.51.100.1'] || 0) + 1;
       }
 
-      /*const topB = Object.entries(blockedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
-      document.getElementById('analytics-top-blocked').innerHTML = topB.length ? topB.map(([d, c]) => `
-        <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-family:monospace;">
-          <span style="color:#fca5a5;" class="truncate">${safeText(d)}</span>
-          <span style="color:var(--muted);">${c}</span>
-        </div>
-      `).join('') : '<div style="color:var(--muted);">No blocked queries.</div>';
-
-      const topA = Object.entries(allowedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
-      document.getElementById('analytics-top-allowed').innerHTML = topA.length ? topA.map(([d, c]) => `
-        <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-family:monospace;">
-          <span style="color:#86efac;" class="truncate">${safeText(d)}</span>
-          <span style="color:var(--muted);">${c}</span>
-        </div>
-      `).join('') : '<div style="color:var(--muted);">No allowed queries.</div>';
-
-      const devList = Object.entries(devMap).sort((a,b)=>b[1]-a[1]);
-      document.getElementById('analytics-devices').innerHTML = devList.map(([d, c]) => `
-        <div style="margin-bottom:4px; cursor:pointer;" onclick="filterByDevice('${safeText(d)}')">
-          <div style="display:flex; justify-content:space-between;">
-            <span style="color:${d===STATE.selectedDevice?'#38bdf8':'#f1f5f9'};" class="truncate">${safeText(d)}</span>
-            <span style="color:var(--muted); font-family:monospace;">${c}</span>
-          </div>
-          <div class="bar-bg"><div class="bar-fill" style="width:${total > 0 ? Math.min(100, Math.round((c/total)*100)) : 0}%; background:#a855f7;"></div></div>
-        </div>
-      `).join('');*/
-
       const topB = Object.entries(blockedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
       document.getElementById('analytics-top-blocked').innerHTML = topB.length ? topB.map(([d, c]) => `
         <div style="display:flex; justify-content:space-between; gap:0.5rem; margin-bottom:4px; font-family:monospace; min-width:0;">
@@ -1217,9 +1144,7 @@
           </div>
           <div class="bar-bg"><div class="bar-fill" style="width:${total > 0 ? Math.min(100, Math.round((c/total)*100)) : 0}%; background:#a855f7;"></div></div>
         </div>
-      `).join('');
-
-      
+      `).join('');    
 
       const ipList = Object.entries(ipMap).sort((a,b)=>b[1]-a[1]);
       const ipElem = document.getElementById('analytics-ips');
