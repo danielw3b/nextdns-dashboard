@@ -559,7 +559,7 @@
 
     let lastToastTime = 0;
     function showToast(title, msg, type = 'warn') {
-      if (Date.now() - lastToastTime < 2000) return; // Ignore rapid spam clicks
+      if (Date.now() - lastToastTime < 800) return; // Ignore rapid spam clicks
       lastToastTime = Date.now();
     
       const container = document.getElementById('toast-container');
