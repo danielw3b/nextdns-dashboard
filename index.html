@@ -416,18 +416,8 @@
   <div class="toast-container" id="toast-container"></div>
 
   <script>
-    // Sanitizer
-    /*function safeText(str) {
-      if (str == null) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }*/
 
-    // Sanitizer
+    // Sanitize
     function safeText(str) {
       if (str == null) return '';
       const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -476,7 +466,7 @@
       'ocsp.godaddy.com',
       'ocsp.entrust.net',
       
-      // Local / LAN environment
+      // Local
       'local',
       'lan'
     ];
@@ -507,9 +497,6 @@
         threshold: 200,
         telegramBotToken: '',
         telegramChatId: '',
-        //retentionDays: 7,
-        //cooldown: 60,
-        //autoBlock: false,
         protectSystem: true
       }
     };
@@ -523,11 +510,8 @@
         STATE.config.apiKey = parsed.apiKey || '';
         STATE.config.proxy = parsed.proxy || parsed.proxyUrl || '';
         STATE.config.threshold = parsed.threshold || parsed.autoBlockThreshold || 200;
-        //STATE.config.retentionDays = parsed.retentionDays || 7;
         STATE.config.telegramBotToken = parsed.telegramBotToken || '';
         STATE.config.telegramChatId = parsed.telegramChatId || '';
-        
-        //STATE.config.autoBlock = parsed.autoBlock ?? parsed.autoBlockEnabled ?? false;
         STATE.config.protectSystem = parsed.protectSystem ?? true;
       }
     } catch(e) {}
@@ -909,8 +893,7 @@
             status: statusVal,
             reasons: (item.reasons || []).map(r => typeof r === 'string' ? r : r.name),
             proto: item.protocol || 'DoT',
-            //type: item.root?.queryType || 'A',
-            latency: STATE.currentLatency // HTTPS/TLS, no dns latency available
+            latency: STATE.currentLatency // only HTTPS/TLS available
           };
     
           handleIncomingLog(logObj);
@@ -1959,6 +1942,7 @@
       apiPollTimer = setInterval(fetchNextDNSLogs, 10000);
     } else {
       document.getElementById('btn-toggle-stream').textContent = 'Demo';
+      document.getElementById('btn-toggle-stream').className = 'badge sim';
       startSimulation();
     }
 
