@@ -1794,6 +1794,9 @@
         if (wasSimMode && isNowApiMode) {
           if (simTimer) clearInterval(simTimer);
           STATE.logs = [];
+          STATE.sessionLogs = [];
+          STATE.chartLogs = [];  
+
           STATE.totalQueriesCounter = 0;
           STATE.devices.clear();
           STATE.hits = {};
@@ -1809,8 +1812,8 @@
         } else {
           showToast('Config Saved', 'Updated successfully', 'success');
         }
-        renderFilteredLiveLogs();
         updateAnalyticsKPIs();
+        renderFilteredLiveLogs();
 
         // Re-enable save button after a short cooldown matching toast duration
         setTimeout(() => {
