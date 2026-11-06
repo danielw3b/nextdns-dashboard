@@ -320,8 +320,8 @@
     <section id="tab-blocking" class="tab-content">
       <div class="card" style="padding: 0.75rem 1rem;">
         <div class="card-title" style="margin-bottom:0;">
-          <span>Top 20 Monitoring & Notification</span>
-          <span style="font-size: 0.7rem; color: var(--muted); font-family: monospace;" id="threshold-badge">Threshold: 200 hits</span>
+          <span>Top 20 Status Report</span>
+          <span style="font-size: 0.7rem; color: var(--muted);" id="threshold-badge">Threshold: 200 Hits</span>
         </div>
       </div>
            
@@ -518,7 +518,7 @@
 
     function updateThresholdBadge() {
       const badge = document.getElementById('threshold-badge');
-      if (badge) badge.textContent = `Threshold: ${STATE.config.threshold} hits`;
+      if (badge) badge.textContent = `Threshold: ${STATE.config.threshold} Hits`;
     }
 
     function loadConfigToUI() {
