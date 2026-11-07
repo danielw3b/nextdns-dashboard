@@ -50,7 +50,7 @@
     #live-status-filter,
     #global-device-select { appearance: base-select; -webkit-appearance: base-select;
       color: var(--text); background-color: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); 
-      cursor: pointer; transition: border-color 0.15s ease; min-width: 130px;}
+      cursor: pointer; transition: border-color 0.15s ease;}
     #global-device-select::picker-icon, #live-status-filter::picker-icon { display: none !important; content: none !important; }
     #global-device-select::picker(select), #live-status-filter::picker(select) { appearance: base-select; background-color: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); }
     #global-device-select option, #live-status-filter option { background-color: var(--surface-2); color: var(--text); padding: 0.5rem 0.8rem; border-radius: 6px; cursor: pointer; }
@@ -211,7 +211,7 @@
     </div>
 
     <div class="header-actions">
-      <select id="global-device-select" style="padding: 0.65rem 1.2rem; font-size: 13px;" title="Filter all logs and analytics by device">
+      <select id="global-device-select" style="padding: 0.65rem 1.2rem; font-size: 13px;min-width: 120px;" title="Filter all logs and analytics by device">
         <option value="all">All Devices</option>
       </select>
       <div class="badge live" id="btn-toggle-stream" title="Click to Pause / Resume" style="cursor: pointer; user-select: none;">Live</div>
