@@ -831,6 +831,7 @@
         }
       } catch (e) {
         console.error('Failed to fetch NextDNS logs:', e);
+        showToast('Failed to fetch NextDNS logs:', e);
         STATE.currentLatency = null;
       }
     }
@@ -1259,7 +1260,7 @@
         showToast('📲 Telegram Alert', `Successfully sent alert for <code>${safeText(domain)}</code> (${count} hits)`, 'success');
       } catch (e) {
         console.error('Failed to send Telegram notification:', e);
-        showToast('⚠️ Telegram Error', `Could not send notification: ${e.message}`, 'warning');
+        showToast('⚠️ Telegram Error', `Could not send notification: ${e.message}`, 'warn');
       }
     }
 
@@ -1330,7 +1331,7 @@
       if (!clean) return;
     
       if (isSystemProtected(clean)) {
-        showToast('⚠️ Protected Domain', `Cannot block system-protected domain <code>${safeText(clean)}</code>`, 'warning');
+        showToast('⚠️ Protected Domain', `Cannot block system-protected domain <code>${safeText(clean)}</code>`, 'warn');
         return;
       }
     
@@ -1346,7 +1347,7 @@
           showToast('🚫 NextDNS Blocked', `Successfully blocked ${safeText(clean)} on profile`, 'danger');
         } catch (e) {
           console.error('Failed to sync denylist:', e);
-          showToast('⚠️ API Error', `Could not block: ${e.message}`, 'warning');
+          showToast('⚠️ API Error', `Could not block: ${e.message}`, 'warn');
           return;
         }
       } else {
@@ -1364,7 +1365,7 @@
       if (!clean) return;
     
       if (isSystemProtected(clean)) {
-        showToast('⚠️ Protected Domain', `Cannot modify system-protected domain <code>${safeText(clean)}</code>`, 'warning');
+        showToast('⚠️ Protected Domain', `Cannot modify system-protected domain <code>${safeText(clean)}</code>`, 'warn');
         return;
       }
     
@@ -1379,7 +1380,7 @@
           showToast('✅ NextDNS Unblocked', `Successfully removed ${safeText(clean)} from denylist`, 'success');
         } catch (e) {
           console.error('Failed to remove from denylist:', e);
-          showToast('⚠️ API Error', `Could not remove: ${e.message}`, 'warning');
+          showToast('⚠️ API Error', `Could not remove: ${e.message}`, 'warn');
         }
       } else {
         showToast('Info', `Removed simulation domain ${safeText(clean)} from local denylist`, 'success');
@@ -1396,7 +1397,7 @@
       const active = dev === 'all' ? logs : logs.filter(l => l.device === dev);
     
       if (active.length === 0) {
-        showToast('⚠️ Export', 'No logs available for export with current device filter.', 'warning');
+        showToast('⚠️ Export', 'No logs available for export with current device filter.', 'warn');
         return;
       }
     
@@ -1498,7 +1499,14 @@
           
           // Direct execution instead of delayed saveBtn click simulation
           if (typeof saveStats === 'function') saveStats();
-    
+
+          const wasSim = STATE.mode === 'sim';
+          const isApi = Boolean(STATE.config.profile && STATE.config.apiKey);
+          if (wasSim && isApi) {
+            setTimeout(() => {
+              wasSimisApi(); // Wipes sim data and starts live API immediately!
+            }, 2000);
+          }
         } catch (err) {
           showToast('Import Error', 'Invalid JSON backup file: ' + err.message, 'danger');
         } finally {
@@ -1542,40 +1550,44 @@
     
         saveState();
         updateThresholdBadge();
-    
+
         const wasSim = STATE.mode === 'sim';
         const isApi = Boolean(cfg.profile && cfg.apiKey);
-    
-        if (wasSim && isApi) {
-          if (simTimer) clearInterval(simTimer);
-          if (apiPollTimer) clearInterval(apiPollTimer);
-          
-          STATE.logs = [];
-          STATE.sessionLogs = [];
-          STATE.chartLogs = [];
-          STATE.totalQueriesCounter = 0;
-          STATE.devices.clear();
-          STATE.hits = {};
-          
-          document.getElementById('global-device-select').innerHTML = '<option value="all">All Devices</option>';
-          
-          STATE.mode = 'api';
-          const streamBtn = document.getElementById('btn-toggle-stream');
-          streamBtn.textContent = 'Live';
-          streamBtn.className = 'badge live';
-          
-          fetchNextDNSLogs();
-          apiPollTimer = setInterval(fetchNextDNSLogs, 10000);
-          showToast('API Mode Activated', 'Simulation data wiped. Fetching fresh NextDNS API telemetry...', 'success');
-        } else {
-          showToast('Config Saved', 'Updated successfully', 'success');
-        }
-    
-        updateAnalyticsKPIs();
-        renderLiveLogs();
-    
-        setTimeout(() => saveBtn.style.cssText = '', 4000); // Re-enable handled via inline reset / logic if needed, or clear disabled
+        if (wasSim && isApi) wasSimisApi();
+        else showToast('Config Saved', 'Updated successfully', 'success');
+
+        setTimeout(() => {
+          saveBtn.disabled = false;
+          saveBtn.style.opacity = '';
+          saveBtn.style.cursor = '';
+        }, 4000);
       };
+    }
+
+    function wasSimisApi() {
+      if (simTimer) clearInterval(simTimer);
+      if (apiPollTimer) clearInterval(apiPollTimer);
+      
+      STATE.logs = [];
+      STATE.sessionLogs = [];
+      STATE.chartLogs = [];
+      STATE.totalQueriesCounter = 0;
+      STATE.devices.clear();
+      STATE.hits = {};
+      
+      document.getElementById('global-device-select').innerHTML = '<option value="all">All Devices</option>';
+      
+      STATE.mode = 'api';
+      const streamBtn = document.getElementById('btn-toggle-stream');
+      streamBtn.textContent = 'Live';
+      streamBtn.className = 'badge live';
+      
+      fetchNextDNSLogs();
+      apiPollTimer = setInterval(fetchNextDNSLogs, 10000);
+      showToast('API Mode Activated', 'Simulation data wiped. Fetching fresh NextDNS API telemetry...', 'success');
+  
+      updateAnalyticsKPIs();
+      renderLiveLogs();
     }
     
     // Bind backup button
