@@ -616,7 +616,10 @@
       const rList = (reasons || []).map(r => r.toLowerCase());
       
       const isSys = (cfg?.protectSystem ?? true) && (typeof isProtected === 'function' ? isProtected(clean) : false);
-      const isManual = rList.includes('denylist') || (STATE.manuallyBlocked && STATE.manuallyBlocked.has(clean));
+      // Respect explicit user unblocks to override historical log denylist reasons
+      const isExplicitUnblocked = STATE.manuallyUnblocked && STATE.manuallyUnblocked.has(clean);  
+      const isManual = (!isExplicitUnblocked && rList.includes('denylist')) || (STATE.manuallyBlocked && STATE.manuallyBlocked.has(clean));
+      //const isManual = rList.includes('denylist') || (STATE.manuallyBlocked && STATE.manuallyBlocked.has(clean));
       const isApi = lStat === 'blocked' || lStat === 'security' || lStat === 'parental';
       const isBlocked = isApi || isManual;
     
@@ -661,8 +664,13 @@
     
         // Automatically sync denylist reasons into manual block state
         if (log.reasons && log.reasons.map(r => r.toLowerCase()).includes('denylist')) {
-          if (!STATE.manuallyBlocked) STATE.manuallyBlocked = new Set();
-          STATE.manuallyBlocked.add(s.clean);
+          /*if (!STATE.manuallyBlocked) STATE.manuallyBlocked = new Set();
+          STATE.manuallyBlocked.add(s.clean);*/
+          const isExplicitlyUnblocked = STATE.manuallyUnblocked && STATE.manuallyUnblocked.has(s.clean);
+          if (!isExplicitlyUnblocked) {
+            if (!STATE.manuallyBlocked) STATE.manuallyBlocked = new Set();
+            STATE.manuallyBlocked.add(s.clean);
+          }
         }
     
         let badge = '';
@@ -1361,6 +1369,8 @@
     
       if (!STATE.manuallyBlocked) STATE.manuallyBlocked = new Set();
       STATE.manuallyBlocked.add(clean);
+      if (STATE.manuallyUnblocked) {
+      STATE.manuallyUnblocked.delete(clean);
       refreshTables();
     };
     
@@ -1392,6 +1402,8 @@
       }
     
       STATE.manuallyBlocked?.delete(clean);
+      if (!STATE.manuallyUnblocked) STATE.manuallyUnblocked = new Set();
+      STATE.manuallyUnblocked.add(clean);
       refreshTables();
     };
 
