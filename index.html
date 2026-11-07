@@ -702,7 +702,7 @@
         let badgeHTML = '';
         if (isSys) {
           badgeHTML = `<span class="status-pill" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; cursor: not-allowed; opacity: 0.8;" title="Protected System Domain">Protected</span>`;
-        } else if (isDenylistBlocked) {
+        } else if (isManuallyBlocked) {
           badgeHTML = `<span class="status-pill" style="background: rgba(245, 158, 11, 0.2); color: #fde047; border: 1px solid rgba(245, 158, 11, 0.4); cursor: pointer;" title="Denylist Block - Click to Unblock" onclick="removeQuickDeny('${safeText(log.domain)}')">Unblock</span>`;
         } else if (isApiBlocked) {
           badgeHTML = `<span class="status-pill status-blocked" title="Blocked by NextDNS Security/Parental">Blocked</span>`;
