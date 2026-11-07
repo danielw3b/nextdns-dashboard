@@ -621,7 +621,7 @@
     }
 
     // Render filtered live logs with search, status filters, and event delegation data attributes
-    function renderFilteredLiveLogs() {
+    /*function renderFilteredLiveLogs() {
       const tbody = document.getElementById('live-log-body');
       if (!tbody) return;
     
@@ -819,8 +819,167 @@
           </tr>
         `;
       }).join('') : `<tr><td colspan="5" style="text-align:center; color:var(--muted);">No frequency data for this selection.</td></tr>`;
-    }
+    }*/
 
+    // Helper to evaluate domain security & block states
+    function getDomainStatus(domain, status, reasons, cfg) {
+      const clean = (domain || '').toLowerCase().trim();
+      const lStat = String(status || 'allowed').toLowerCase();
+      const rList = (reasons || []).map(r => r.toLowerCase());
+      
+      const isSys = (cfg?.protectSystem ?? true) && (typeof isProtected === 'function' ? isProtected(clean) : false);
+      const isManual = rList.includes('denylist') || (STATE.manuallyBlocked && STATE.manuallyBlocked.has(clean));
+      const isApi = lStat === 'blocked' || lStat === 'security' || lStat === 'parental';
+      const isBlocked = isApi || isManual;
+    
+      return { clean, isSys, isManual, isApi, isBlocked, rList };
+    }
+    
+    // Render filtered live logs with search, status filters, and event delegation data attributes
+    function renderFilteredLiveLogs() {
+      const tbody = document.getElementById('live-log-body');
+      if (!tbody) return;
+    
+      const search = (document.getElementById('live-search')?.value || '').toLowerCase().trim();
+      const statFilter = (document.getElementById('live-status-filter')?.value || 'all').toLowerCase().trim();
+      const cfg = STATE.config;
+    
+      const filtered = STATE.logs.filter(l => {
+        if (STATE.selectedDevice !== 'all' && l.device !== STATE.selectedDevice) return false;
+        
+        const s = getDomainStatus(l.domain, l.status, l.reasons, cfg);
+    
+        if (statFilter === 'blocked' && !s.isBlocked) return false;
+        if (statFilter === 'allowed' && s.isBlocked) return false;
+    
+        if (search) {
+          const matchDom = s.clean.includes(search);
+          const matchDev = (l.device || '').toLowerCase().includes(search);
+          
+          let rCopy = [...s.rList];
+          if (s.isSys) rCopy.push('protected system domain', 'protected', 'system');
+          else if (s.isManual) rCopy.push('denylist');
+          else if (rCopy.length === 0) rCopy.push('—');
+    
+          if (!matchDom && !matchDev && !rCopy.some(r => r.includes(search))) return false;
+        }
+        return true;
+      });
+    
+      const fragment = document.createDocumentFragment();
+      for (const log of filtered.slice(0, 100)) {
+        const tr = document.createElement('tr');
+        const s = getDomainStatus(log.domain, log.status, log.reasons, cfg);
+    
+        // Automatically sync denylist reasons into manual block state
+        if (log.reasons && log.reasons.map(r => r.toLowerCase()).includes('denylist')) {
+          if (!STATE.manuallyBlocked) STATE.manuallyBlocked = new Set();
+          STATE.manuallyBlocked.add(s.clean);
+        }
+    
+        let badge = '';
+        if (s.isSys) {
+          badge = `<span class="status-pill" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; cursor: not-allowed; opacity: 0.8;" title="Protected System Domain">Protected</span>`;
+        } else if (s.isManual) {
+          badge = `<span class="status-pill" data-action="remove-deny" data-domain="${safeText(log.domain)}" style="background: rgba(245, 158, 11, 0.2); color: #fde047; border: 1px solid rgba(245, 158, 11, 0.4); cursor: pointer;" title="Denylist - Click to Unblock">Unblock</span>`;
+        } else if (s.isApi) {
+          badge = `<span class="status-pill status-blocked" title="Blocked by NextDNS Security/Parental">Blocked</span>`;
+        } else {
+          badge = `<span class="status-pill status-allowed" data-action="add-deny" data-domain="${safeText(log.domain)}" style="cursor: pointer;" title="Allowed - Click to Deny">Allowed</span>`;
+        }
+    
+        const rText = s.isSys ? 'System Domain' : (s.isManual ? 'Denylist' : safeText((log.reasons || []).join(', ') || '—'));
+    
+        tr.innerHTML = `
+          <td style="white-space: nowrap; font-size: 0.75rem; color: var(--muted);">
+            ${log.time instanceof Date ? log.time.toLocaleTimeString() : new Date(log.time).toLocaleTimeString()}
+          </td>
+          <td class="domain-cell" style="font-weight: 600; font-family: monospace; color: ${s.isManual ? '#fde047' : (s.isBlocked ? '#fca5a5' : '#f1f5f9')};">
+            ${safeText(log.domain)}
+          </td>
+          <td style="font-size: 0.75rem;">
+            <span data-action="filter-device" data-device="${safeText(log.device)}" style="color: #38bdf8; cursor: pointer; text-decoration: underline;">
+              ${safeText(log.device)}
+            </span>
+          </td>
+          <td style="font-size: 0.75rem; color: ${s.isSys ? '#38bdf8' : (s.isManual ? '#fde047' : 'var(--muted);')};">
+            ${rText}
+          </td>
+          <td>${badge}</td>
+        `;
+        fragment.appendChild(tr);
+      }
+      tbody.innerHTML = '';
+      tbody.appendChild(fragment);
+    }
+    
+    // Render DNS hits monitoring table with clean boolean flags and data attributes for Event Delegation
+    function renderHitsTable() {
+      const tbody = document.getElementById('autoblock-hits-body');
+      if (!tbody) return;
+    
+      const limit = Number(STATE.config.threshold) || 200;
+      const cfg = STATE.config;
+      const sessionLogs = STATE.sessionLogs || [];
+      const activeLogs = STATE.selectedDevice === 'all' 
+        ? sessionLogs 
+        : sessionLogs.filter(l => l.device === STATE.selectedDevice);
+    
+      const hits = {};
+      const latest = {};
+      
+      activeLogs.forEach(l => { 
+        const d = (l.domain || 'unknown').toLowerCase(); 
+        hits[d] = (hits[d] || 0) + 1; 
+        const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
+        if (!latest[d] || t >= latest[d].timeVal) {
+          latest[d] = { status: l.status, reasons: l.reasons || [], timeVal: isNaN(t) ? 0 : t };
+        }
+      });
+    
+      const items = Object.entries(hits)
+        .map(([domain, count]) => ({ domain, count }))
+        .sort((a, b) => b.count - a.count);
+    
+      tbody.innerHTML = items.length ? items.slice(0, 20).map(i => {
+        const pct = Math.min(100, Math.round((i.count / limit) * 100));
+        const lat = latest[i.domain.toLowerCase()];
+        const s = getDomainStatus(i.domain, lat?.status, lat?.reasons, cfg);
+    
+        const isThreshold = i.count >= limit && !s.isSys && !s.isBlocked;
+        if (isThreshold && STATE.reportedThresholdDomains && !STATE.reportedThresholdDomains.has(s.clean)) {
+          STATE.reportedThresholdDomains.add(s.clean);
+          if (typeof sendTelegramNotification === 'function') sendTelegramNotification(i.domain, i.count);
+        }
+    
+        let statTxt = 'Monitoring', bStyle = 'color: var(--muted);', btnHtml = '';
+        if (s.isSys) {
+          statTxt = 'Protected'; bStyle = 'color: var(--info, #38bdf8); font-weight: 600;';
+          btnHtml = `<button class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; opacity: 0.5; cursor: not-allowed;" disabled title="Protected System Domain">Protected</button>`;
+        } else if (s.isManual) {
+          statTxt = 'Denylist'; bStyle = 'color: var(--warn, #f59e0b); font-weight: 600;';
+          btnHtml = `<button data-action="remove-deny" data-domain="${safeText(i.domain)}" class="btn" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; background: rgba(245, 158, 11, 0.2); color: #fde047; border-color: rgba(245, 158, 11, 0.4);" title="Click to Unblock">Unblock</button>`;
+        } else if (s.isApi) {
+          statTxt = 'Blocked'; bStyle = 'color: var(--blocked, #ef4444); font-weight: 600;';
+          btnHtml = `<button class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; opacity: 0.5; cursor: not-allowed;" disabled title="Blocked by NextDNS Security/Parental">Blocked</button>`;
+        } else {
+          btnHtml = `<button data-action="add-deny" data-domain="${safeText(i.domain)}" class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;" title="Click to Deny">Deny</button>`;
+        }
+    
+        return `
+          <tr>
+            <td class="domain-cell" title="${safeText(i.domain)}">${safeText(i.domain)}</td>
+            <td style="color: var(--warn); font-weight: bold; font-family: monospace;">${i.count}</td>
+            <td style="width: 140px;">
+              <div class="bar-bg"><div class="bar-fill" style="width:${pct}%; background:${s.isBlocked ? (s.isManual ? 'var(--warn, #f59e0b)' : 'var(--blocked)') : 'var(--warn)'}"></div></div>
+            </td>
+            <td><span style="${bStyle} font-size: 0.7rem;">${statTxt}</span></td>
+            <td style="text-align: right;">${btnHtml}</td>
+          </tr>
+        `;
+      }).join('') : `<tr><td colspan="5" style="text-align:center; color:var(--muted);">No frequency data for this selection.</td></tr>`;
+    }
+    
     function startSimulation() {
       if (simTimer) clearInterval(simTimer);
       const SIM_CLIENTS = [
