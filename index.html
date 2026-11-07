@@ -422,27 +422,23 @@
   <div class="toast-container" id="toast-container"></div>
 
   <script>
-
-    // Sanitize
     function safeText(str) {
       if (str == null) return '';
       const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
       return String(str).replace(/[&<>"']/g, m => map[m]);
     }
     
-    
-    // List of core infrastructure and system domains protected from accidental blocking in the UI
     const PROTECTED_DOMAINS = [
-      // Apple Ecosystem & Connectivity
+      // Apple
       'apple.com','icloud.com','captive.apple.com','time.apple.com','ocsp.apple.com','mzstatic.com',
       
-      // Google & Android Ecosystem
+      // Google
       'google.com','googleapis.com','gstatic.com','googleusercontent.com','connectivitycheck.gstatic.com','clients3.google.com',
       
-      // Microsoft & Windows Ecosystem
+      // Microsoft
       'microsoft.com','windowsupdate.com','live.com','msftconnecttest.com','time.windows.com',
       
-      // Network Time & Core Infrastructure
+      // Network Time
       'pool.ntp.org','time.nist.gov','ntp.org',
       
       // Cloudflare & DNS Core
@@ -450,8 +446,6 @@
       
       // Certificate Authorities & OCSP (Essential for HTTPS/TLS certificate validation)
       'ocsp.sectigo.com','ocsp.digicert.com','ocsp.godaddy.com','ocsp.entrust.net',
-      
-      // Local
       'local','lan'
     ];
 
@@ -596,18 +590,17 @@
         return !isNaN(t) && (now - t) <= 3600000;
       });
     
-      // Batch UI updates using requestAnimationFrame
+      // Batch ALL UI and KPI updates using requestAnimationFrame
       if (!renderScheduled) {
         renderScheduled = true;
         requestAnimationFrame(() => {
           renderScheduled = false;
           renderLiveLogs();
           renderAnalyticsChart();
+          updateAnalyticsKPIs();
+          renderHitsTable();
         });
       }
-      
-      updateAnalyticsKPIs();
-      renderHitsTable();
     }
 
     // Helper to evaluate domain security & block states
@@ -665,8 +658,6 @@
     
         // Automatically sync denylist reasons into manual block state
         if (log.reasons && log.reasons.map(r => r.toLowerCase()).includes('denylist')) {
-          /*if (!STATE.manuallyBlocked) STATE.manuallyBlocked = new Set();
-          STATE.manuallyBlocked.add(s.clean);*/
           const isExplicitlyUnblocked = STATE.manuallyUnblocked && STATE.manuallyUnblocked.has(s.clean);
           if (!isExplicitlyUnblocked) {
             if (!STATE.manuallyBlocked) STATE.manuallyBlocked = new Set();
@@ -1344,11 +1335,6 @@
       const clean = (domain || '').trim().toLowerCase();
       if (!clean) return;
     
-      if (isSystemProtected(clean)) {
-        showToast('⚠️ Protected Domain', `Cannot block system-protected domain <code>${safeText(clean)}</code>`, 'warn');
-        return;
-      }
-    
       const { profile, apiKey, proxy = 'https://api.nextdns.io' } = STATE.config;
       if (STATE.mode === 'api' && profile && apiKey) {
         try {
@@ -1380,11 +1366,6 @@
     window.removeQuickDeny = async function(domain) {
       const clean = (domain || '').trim().toLowerCase();
       if (!clean) return;
-    
-      if (isSystemProtected(clean)) {
-        showToast('⚠️ Protected Domain', `Cannot modify system-protected domain <code>${safeText(clean)}</code>`, 'warn');
-        return;
-      }
     
       const { profile, apiKey, proxy = 'https://api.nextdns.io' } = STATE.config;
       if (STATE.mode === 'api' && profile && apiKey) {
@@ -1574,7 +1555,8 @@
         const isApi = Boolean(cfg.profile && cfg.apiKey);
         if (wasSim && isApi) wasSimisApi();
         else showToast('Config Saved', 'Updated successfully', 'success');
-
+        refreshTables();
+        
         setTimeout(() => {
           saveBtn.disabled = false;
           //saveBtn.style.opacity = '';
@@ -1606,7 +1588,7 @@
       showToast('API Mode Activated', 'Simulation data wiped. Fetching fresh NextDNS API telemetry...', 'success');
   
       updateAnalyticsKPIs();
-      renderLiveLogs();
+      refreshTables();
     }
     
     // Bind backup button
