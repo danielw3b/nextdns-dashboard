@@ -1156,117 +1156,6 @@
       processQueue();
     }
 
-    // Update analytic KPIs, top domain lists, device breakdowns, and IP telemetry
-    /*function updateAnalyticsKPIs() {
-      // Use sessionLogs for lifetime metrics since app start, with device filter
-      const sessionLogs = STATE.sessionLogs || [];
-      const activeLogs = STATE.selectedDevice === 'all'
-        ? sessionLogs
-        : sessionLogs.filter(l => l.device === STATE.selectedDevice);
-    
-      // Total queries (global counter for 'all', filtered count for devices)
-      const total = STATE.selectedDevice === 'all' 
-        ? Math.max(STATE.totalQueriesCounter || 0, sessionLogs.length) 
-        : activeLogs.length;
-      const blocked = activeLogs.filter(l => String(l.status).toLowerCase() === 'blocked').length;
-      const allowed = Math.max(0, total - blocked);
-      const rate = total > 0 ? Math.round((blocked / total) * 100) : 0;
-      
-      const nowMs = Date.now();
-      const qpmCount = activeLogs.filter(l => {
-        const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
-        return t >= (nowMs - 60000) && t <= nowMs;
-      }).length;
-      
-      const avgLatency = (typeof STATE.currentLatency === 'number' && !isNaN(STATE.currentLatency)) 
-        ? STATE.currentLatency 
-        : '--';
-      
-      // Update DOM KPI elements
-      document.getElementById('kpi-total').textContent = total;
-      document.getElementById('kpi-blocked').textContent = blocked;
-      document.getElementById('kpi-allowed').textContent = allowed;
-      document.getElementById('kpi-rate').textContent = `${rate}% (${STATE.selectedDevice === 'all' ? 'All' : STATE.selectedDevice})`;
-      document.getElementById('kpi-qpm').textContent = `${qpmCount} q/min`;
-      document.getElementById('kpi-latency').textContent = avgLatency === '--' ? '-- ms' : `${avgLatency} ms`;
-          
-      // Aggregate data for breakdowns and top lists
-      const blockedMap = {}, allowedMap = {}, devMap = {}, typeMap = {}, ipMap = {};
-      for (const l of activeLogs) {
-        if (String(l.status).toLowerCase() === 'blocked') blockedMap[l.domain] = (blockedMap[l.domain] || 0) + 1;
-        else allowedMap[l.domain] = (allowedMap[l.domain] || 0) + 1;
-        devMap[l.device] = (devMap[l.device] || 0) + 1;
-        typeMap[l.type || 'A'] = (typeMap[l.type || 'A'] || 0) + 1;
-        ipMap[l.clientIp || '198.51.100.1'] = (ipMap[l.clientIp || '198.51.100.1'] || 0) + 1;
-      }
-    
-      // Top Blocked Domains
-      const topB = Object.entries(blockedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
-      const topBlockedElem = document.getElementById('analytics-top-blocked');
-      if (topBlockedElem) {
-        topBlockedElem.innerHTML = topB.length ? topB.map(([d, c]) => `
-          <div style="display:flex; justify-content:space-between; gap:0.5rem; margin-bottom:4px; font-family:monospace; min-width:0;">
-            <span style="color:#fca5a5; flex:1;" class="truncate">${safeText(d)}</span>
-            <span style="color:var(--muted); white-space:nowrap;">${c}</span>
-          </div>
-        `).join('') : '<div style="color:var(--muted);">No blocked queries.</div>';
-      }
-    
-      // Top Allowed Domains
-      const topA = Object.entries(allowedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
-      const topAllowedElem = document.getElementById('analytics-top-allowed');
-      if (topAllowedElem) {
-        topAllowedElem.innerHTML = topA.length ? topA.map(([d, c]) => `
-          <div style="display:flex; justify-content:space-between; gap:0.5rem; margin-bottom:4px; font-family:monospace; min-width:0;">
-            <span style="color:#86efac; flex:1;" class="truncate">${safeText(d)}</span>
-            <span style="color:var(--muted); white-space:nowrap;">${c}</span>
-          </div>
-        `).join('') : '<div style="color:var(--muted);">No allowed queries.</div>';
-      }
-    
-      // Devices Breakdown (Using Event Delegation attributes)
-      const devList = Object.entries(devMap).sort((a,b)=>b[1]-a[1]);
-      const devElem = document.getElementById('analytics-devices');
-      if (devElem) {
-        devElem.innerHTML = devList.map(([d, c]) => `
-          <div style="margin-bottom:4px; cursor:pointer; min-width:0;" data-action="filter-device" data-device="${safeText(d)}">
-            <div style="display:flex; justify-content:space-between; gap:0.5rem; min-width:0;">
-              <span style="color:${d===STATE.selectedDevice?'#38bdf8':'#f1f5f9'}; flex:1;" class="truncate">${safeText(d)}</span>
-              <span style="color:var(--muted); font-family:monospace; white-space:nowrap;">${c}</span>
-            </div>
-            <div class="bar-bg"><div class="bar-fill" style="width:${total > 0 ? Math.min(100, Math.round((c/total)*100)) : 0}%; background:#a855f7;"></div></div>
-          </div>
-        `).join('');
-      }
-    
-      // IP Telemetry Breakdown
-      const ipList = Object.entries(ipMap).sort((a,b)=>b[1]-a[1]);
-      const ipElem = document.getElementById('analytics-ips');
-      if (ipElem) {
-        ipElem.innerHTML = ipList.length ? ipList.map(([ip, c]) => {
-          const info = typeof getNextDNSIPDetails === 'function' ? getNextDNSIPDetails(ip) : { isp: 'NextDNS', location: 'Global' };
-          return `
-            <div style="margin-bottom:12px; min-width:0;">
-              <div style="display:flex; justify-content:space-between; align-items:flex-start; font-family:monospace; font-size:0.72rem; margin-bottom:4px; gap:0.5rem; min-width:0;">
-                <div style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                  <div style="color:#38bdf8; font-weight:600;">${safeText(ip)}</div>
-                  <div style="color:var(--muted); font-size:0.65rem; margin-top:2px;">${safeText(info.isp)} | ${safeText(info.location)}</div>
-                </div>
-                <div style="color:var(--text); white-space:nowrap; text-align:right; font-size:0.7rem;">
-                  ${c} (${total > 0 ? Math.round((c/total)*100) : 0}%)
-                </div>
-              </div>
-              <div class="bar-bg">
-                <div class="bar-fill" style="width:${total > 0 ? Math.min(100, Math.round((c/total)*100)) : 0}%; background:#38bdf8;"></div>
-              </div>
-            </div>
-          `;
-        }).join('') : '<div style="color:var(--muted);">No IP telemetry.</div>';
-      }
-    
-      if (typeof renderAnalyticsChart === 'function') renderAnalyticsChart();
-    }*/
-
     // Update analytics KPIs, lists, breakdowns, and telemetry
     function updateAnalyticsKPIs() {
       const logs = STATE.sessionLogs || [];
@@ -1354,188 +1243,6 @@
     
       if (typeof renderAnalyticsChart === 'function') renderAnalyticsChart();
     }
-
-    /*function renderAnalyticsChart() {
-      const canvas = document.getElementById('analytics-canvas');
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      
-      const dpr = window.devicePixelRatio || 1;
-      
-      // Robust width detection preventing collapse or overflow during resizing
-      const parentWidth = canvas.parentElement ? (canvas.parentElement.clientWidth || canvas.parentElement.getBoundingClientRect().width) : 0;
-      const width = parentWidth > 0 ? parentWidth : (canvas.clientWidth || 800);
-      const height = 180;
-      
-      const targetWidth = Math.round(width * dpr);
-      const targetHeight = Math.round(height * dpr);
-      if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
-        canvas.width = targetWidth;
-        canvas.height = targetHeight;
-      }
-      
-      // Reset transform matrix to prevent cumulative scaling bugs on polling updates
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, width, height);
-    
-      // Use dedicated chart buffer filtered by active device
-      let activeLogs = STATE.chartLogs || STATE.logs || [];
-      if (STATE.selectedDevice !== 'all') {
-        activeLogs = activeLogs.filter(l => l.device === STATE.selectedDevice);
-      }
-    
-      // 30 buckets = 2-minute intervals for high resolution
-      const bucketsCount = 30;
-      const now = Date.now();
-      const windowMs = 60 * 60 * 1000;
-      const bucketSizeMs = windowMs / bucketsCount;
-      const startTime = now - windowMs;
-    
-      const buckets = Array.from({ length: bucketsCount }, (_, idx) => ({
-        index: idx,
-        startTime: startTime + (idx * bucketSizeMs),
-        allowed: 0,
-        blocked: 0,
-        total: 0,
-        ratio: 0
-      }));
-    
-      for (const l of activeLogs) {
-        const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
-        if (isNaN(t) || t < startTime || t > now) continue;
-    
-        const diff = t - startTime;
-        let idx = Math.floor(diff / bucketSizeMs);
-        if (idx < 0) idx = 0;
-        if (idx >= bucketsCount) idx = bucketsCount - 1;
-    
-        const status = String(l.status || 'allowed').toLowerCase();
-        if (status === 'blocked') {
-          buckets[idx].blocked++;
-        } else {
-          buckets[idx].allowed++;
-        }
-        buckets[idx].total++;
-      }
-    
-      buckets.forEach(b => {
-        b.ratio = b.total > 0 ? (b.blocked / b.total) * 100 : 0;
-      });
-    
-      currentChartBuckets = buckets;
-    
-      // Prevent duplicate integer steps on low traffic
-      const rawMaxVal = Math.max(0, ...buckets.map(b => Math.max(b.allowed, b.blocked, b.total)));
-      const maxVal = Math.max(4, rawMaxVal);
-    
-      //const padding = { top: 15, right: 42, bottom: 28, left: 40 };
-      const padding = { top: 15, right: 28, bottom: 28, left: 28 };
-      const chartWidth = width - padding.left - padding.right;
-      const chartHeight = height - padding.top - padding.bottom;
-      currentChartMetrics = { padding, chartWidth, chartHeight, maxVal, bucketsCount };
-    
-      // Draw background grid & Left Y-axis (Absolute queries in Green #4ade80)
-      for (let i = 0; i <= 4; i++) {
-        const y = padding.top + (chartHeight / 4) * i;
-        ctx.strokeStyle = '#1e293b';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(padding.left, y);
-        ctx.lineTo(width - padding.right, y);
-        ctx.stroke();
-    
-        ctx.fillStyle = '#4ade80';
-        ctx.font = '9px monospace';
-        ctx.textAlign = 'right';
-        ctx.fillText(Math.round(maxVal * (1 - i / 4)), padding.left - 6, y + 3);
-      }
-    
-      // Right Y-axis (Ratio % in Blue #38bdf8)
-      for (let i = 0; i <= 4; i++) {
-        const y = padding.top + (chartHeight / 4) * i;
-        ctx.fillStyle = '#38bdf8';
-        ctx.font = '9px monospace';
-        ctx.textAlign = 'left';
-        ctx.fillText(Math.round(100 * (1 - i / 4)) + '%', width - padding.right + 6, y + 3);
-      }
-    
-      const slotWidth = chartWidth / bucketsCount;
-      const barWidth = Math.max(2, Math.min(6, slotWidth - 4));
-    
-      // Draw stacked bars (Blocked at bottom in Red, Allowed on top in Blue)
-      buckets.forEach((b, i) => {
-        const x = padding.left + (i * slotWidth) + ((slotWidth - barWidth) / 2);
-        const allowedH = (b.allowed / maxVal) * chartHeight;
-        const blockedH = (b.blocked / maxVal) * chartHeight;
-    
-        if (blockedH > 0) {
-          ctx.fillStyle = '#f87171';
-          ctx.fillRect(x, padding.top + chartHeight - blockedH, barWidth, blockedH);
-        }
-        if (allowedH > 0) {
-          ctx.fillStyle = '#4ade80';
-          ctx.fillRect(x, padding.top + chartHeight - blockedH - allowedH, barWidth, allowedH);
-        }
-      });
-    
-      // Draw Block Ratio Trend Line (Green #4ade80 matching right axis)
-      const getX = (index) => padding.left + (index * slotWidth) + (slotWidth / 2);
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      let hasStartedLine = false;
-      buckets.forEach((b, i) => {
-        const x = getX(i);
-        const ratio = b.total > 0 ? (b.blocked / b.total) : 0;
-        const y = padding.top + chartHeight - (ratio * chartHeight);
-        if (!hasStartedLine) {
-          ctx.moveTo(x, y);
-          hasStartedLine = true;
-        } else {
-          ctx.lineTo(x, y);
-        }
-      });
-      ctx.stroke();
-    
-      // Draw Trend Line Data Points
-      buckets.forEach((b, i) => {
-        const x = getX(i);
-        const ratio = b.total > 0 ? (b.blocked / b.total) : 0;
-        const y = padding.top + chartHeight - (ratio * chartHeight);
-        ctx.fillStyle = '#38bdf8';
-        ctx.beginPath();
-        ctx.arc(x, y, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-      });
-    
-      // Draw X-axis time labels (adjusted for 30 buckets)
-      ctx.fillStyle = '#64748b';
-      ctx.font = '9px monospace';
-      ctx.textAlign = 'center';
-      const labelIndices = [0, 7, 15, 22, 29];
-      labelIndices.forEach(i => {
-        const x = getX(i);
-        const minutesAgo = Math.round((bucketsCount - 1 - i) * (60 / bucketsCount));
-        const label = minutesAgo === 0 ? 'Now' : `-${minutesAgo}m`;
-        ctx.fillText(label, x, height - 8);
-      });
-    
-      // Auto-refresh active tooltip dynamically using fresh chart metrics during polling updates
-      if (activeTooltipIndex !== null) {
-        const tooltip = document.getElementById('chart-tooltip');
-        if (tooltip && tooltip.style.display === 'block') {
-          const { padding, chartWidth, bucketsCount } = currentChartMetrics;
-          if (chartWidth > 0 && lastMouseX >= padding.left && lastMouseX <= padding.left + chartWidth) {
-            const slotWidth = chartWidth / bucketsCount;
-            const freshIndex = Math.floor((lastMouseX - padding.left) / slotWidth);
-            if (freshIndex >= 0 && freshIndex < bucketsCount && currentChartBuckets[freshIndex]) {
-              activeTooltipIndex = freshIndex;
-              updateTooltipContent(freshIndex, lastMouseX, lastMouseY, lastContainerWidth);
-            }
-          }
-        }
-      }
-    }*/
 
     // Render analytics telemetry chart on canvas
     function renderAnalyticsChart() {
@@ -1690,33 +1397,6 @@
     let lastMouseX = 0;
     let lastMouseY = 0;
     let lastContainerWidth = 400;
-    
-    // Helper function to render tooltip content dynamically
-    /*function updateTooltipContent(bucketIndex, mouseX, mouseY, containerWidth) {
-      const tooltip = document.getElementById('chart-tooltip');
-      const b = currentChartBuckets[bucketIndex];
-      if (!tooltip || !b) return;
-    
-      const blockRatio = b.total > 0 ? Math.round((b.blocked / b.total) * 100) : 0;
-      const timeStr = new Date(b.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
-      tooltip.innerHTML = `
-        <div style="font-weight:600; color:#38bdf8; margin-bottom:2px;">Time Slot: ${timeStr}</div>
-        <div>Total Queries: <b>${b.total}</b></div>
-        <div style="color:#f87171;">Blocked: ${b.blocked}</div>
-        <div style="color:#4ade80;">Allowed: ${b.allowed}</div>
-        <div style="color:#38bdf8; margin-top:2px; border-top:1px solid #334155; padding-top:2px;">Block Ratio: <b>${blockRatio}%</b></div>
-      `;
-    
-      tooltip.style.display = 'block';
-      const tooltipWidth = 160;
-      if (mouseX + tooltipWidth > containerWidth) {
-        tooltip.style.left = (mouseX - tooltipWidth - 10) + 'px';
-      } else {
-        tooltip.style.left = (mouseX + 15) + 'px';
-      }
-      tooltip.style.top = (mouseY - 40) + 'px';
-    }*/
 
     // Render tooltip content
     function updateTooltipContent(idx, x, y, maxW) {
@@ -1768,87 +1448,6 @@
       }
     }
 
-    // Ordered list of all application tabs for sequential swiping
-    /*const TABS_ORDER = ['analytics', 'live', 'blocking', 'config'];
-
-    // Centralized tab switching function
-    function switchTab(tabName) {
-      const btn = document.querySelector(`.nav-tabs button[data-tab="${tabName}"]`);
-      if (!btn) return;
-
-      document.querySelectorAll('.nav-tabs button').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      
-      btn.classList.add('active');
-      const targetContent = document.getElementById('tab-' + tabName);
-      if (targetContent) targetContent.classList.add('active');
-
-      if (tabName === 'analytics') renderAnalyticsChart();
-      if (tabName === 'blocking') renderHitsTable();
-    }
-
-    // Bind click handlers to navigation buttons using switchTab
-    document.querySelectorAll('.nav-tabs button').forEach(btn => {
-      btn.onclick = () => switchTab(btn.dataset.tab);
-    });
-
-    // Classic Touch Events Swipe Gesture (Mobile Only - Tables included, inputs excluded)
-    let touchStartX = null;
-    let touchStartY = null;
-    const mainEl = document.querySelector('main');
-
-    if (mainEl) {
-      mainEl.addEventListener('touchstart', (e) => {
-        // Ignore swipe only if user interacts with text inputs, textareas, or select dropdowns
-        if (e.target.closest('input') || e.target.closest('textarea') || e.target.closest('select')) {
-          touchStartX = null;
-          return;
-        }
-        if (e.touches && e.touches.length === 1) {
-          touchStartX = e.touches.currentX || e.touches[0].clientX;
-          touchStartY = e.touches.currentY || e.touches[0].clientY;
-        }
-      }, { passive: true });
-
-      mainEl.addEventListener('touchend', (e) => {
-        if (touchStartX === null || touchStartY === null) return;
-        if (!e.changedTouches || e.changedTouches.length === 0) return;
-
-        const touchEndX = e.changedTouches[0].clientX;
-        const touchEndY = e.changedTouches[0].clientY;
-
-        const diffX = touchEndX - touchStartX;
-        const diffY = touchEndY - touchStartY;
-
-        // Check if horizontal movement is dominant and exceeds 80px threshold
-        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 80) {
-          const activeBtn = document.querySelector('.nav-tabs button.active');
-          const currentTab = activeBtn ? activeBtn.dataset.tab : 'analytics';
-          const currentIndex = TABS_ORDER.indexOf(currentTab);
-
-          if (currentIndex !== -1) {
-            if (diffX < 0) {
-              // Swiped Left -> Next Tab
-              const nextIndex = (currentIndex + 1) % TABS_ORDER.length;
-              switchTab(TABS_ORDER[nextIndex]);
-            } else {
-              // Swiped Right -> Previous Tab
-              const prevIndex = (currentIndex - 1 + TABS_ORDER.length) % TABS_ORDER.length;
-              switchTab(TABS_ORDER[prevIndex]);
-            }
-          }
-        }
-
-        touchStartX = null;
-        touchStartY = null;
-      }, { passive: true });
-
-      mainEl.addEventListener('touchcancel', () => {
-        touchStartX = null;
-        touchStartY = null;
-      });
-    }*/
-
     const TABS_ORDER = ['analytics', 'live', 'blocking', 'config'];
     
     function switchTab(name) {
@@ -1899,7 +1498,7 @@
     }
   
     // Adds a domain to NextDNS denylist and local manual block state
-    window.addQuickDeny = async function(domain) {
+    /*window.addQuickDeny = async function(domain) {
       const cleanDomain = domain.trim().toLowerCase();
       if (!cleanDomain) return;
 
@@ -1991,61 +1590,139 @@
       // 3. Instantly re-render UI tables to reflect allowed state
       if (typeof renderLiveLogs === 'function') renderLiveLogs();
       if (typeof renderHitsTable === 'function') renderHitsTable();
+    };*/
+
+    // Helper to re-render UI tables after block/unblock actions
+    const refreshTables = () => {
+      if (typeof renderLiveLogs === 'function') renderLiveLogs();
+      if (typeof renderHitsTable === 'function') renderHitsTable();
+    };
+    
+    // Guard check for protected system domains
+    const isSystemProtected = (domain) => {
+      const protectEnabled = STATE.config?.protectSystem === true;
+      return protectEnabled && typeof isProtected === 'function' && isProtected(domain);
+    };
+    
+    // Add domain to NextDNS denylist and local state
+    window.addQuickDeny = async function(domain) {
+      const clean = (domain || '').trim().toLowerCase();
+      if (!clean) return;
+    
+      if (isSystemProtected(clean)) {
+        showToast('⚠️ Protected Domain', `Cannot block system-protected domain <code>${safeText(clean)}</code>`, 'warning');
+        return;
+      }
+    
+      const { profile, apiKey, proxy = 'https://api.nextdns.io' } = STATE.config;
+      if (STATE.mode === 'api' && profile && apiKey) {
+        try {
+          const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${profile}/denylist`, {
+            method: 'POST',
+            headers: { 'X-Api-Key': apiKey, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ id: clean, active: true })
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          showToast('🚫 NextDNS Blocked', `Successfully blocked ${safeText(clean)} on profile`, 'danger');
+        } catch (e) {
+          console.error('Failed to sync denylist:', e);
+          showToast('⚠️ API Error', `Could not block: ${e.message}`, 'warning');
+          return;
+        }
+      } else {
+        showToast('Info', `Blocked simulation domain ${safeText(clean)}`, 'danger');
+      }
+    
+      if (!STATE.manuallyBlocked) STATE.manuallyBlocked = new Set();
+      STATE.manuallyBlocked.add(clean);
+      refreshTables();
+    };
+    
+    // Remove domain from NextDNS denylist and local state
+    window.removeQuickDeny = async function(domain) {
+      const clean = (domain || '').trim().toLowerCase();
+      if (!clean) return;
+    
+      if (isSystemProtected(clean)) {
+        showToast('⚠️ Protected Domain', `Cannot modify system-protected domain <code>${safeText(clean)}</code>`, 'warning');
+        return;
+      }
+    
+      const { profile, apiKey, proxy = 'https://api.nextdns.io' } = STATE.config;
+      if (STATE.mode === 'api' && profile && apiKey) {
+        try {
+          const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${profile}/denylist/${encodeURIComponent(clean)}`, {
+            method: 'DELETE',
+            headers: { 'X-Api-Key': apiKey, 'Accept': 'application/json' }
+          });
+          if (!res.ok && res.status !== 404) throw new Error(`HTTP ${res.status}`);
+          showToast('✅ NextDNS Unblocked', `Successfully removed ${safeText(clean)} from denylist`, 'success');
+        } catch (e) {
+          console.error('Failed to remove from denylist:', e);
+          showToast('⚠️ API Error', `Could not remove: ${e.message}`, 'warning');
+        }
+      } else {
+        showToast('Info', `Removed simulation domain ${safeText(clean)} from local denylist`, 'success');
+      }
+    
+      STATE.manuallyBlocked?.delete(clean);
+      refreshTables();
     };
 
     // Export session logs and header KPIs to a CSV file
     function exportLiveLogsToCSV() {
-      const sessionLogs = STATE.sessionLogs || [];
-      
-      // Respect device filter for CSV export just like KPIs, charts, and frequency tables
-      const activeLogs = STATE.selectedDevice === 'all'
-        ? sessionLogs
-        : sessionLogs.filter(l => l.device === STATE.selectedDevice);
+      const logs = STATE.sessionLogs || [];
+      const dev = STATE.selectedDevice;
+      const active = dev === 'all' ? logs : logs.filter(l => l.device === dev);
     
-      if (activeLogs.length === 0) {
+      if (active.length === 0) {
         showToast('⚠️ Export', 'No logs available for export with current device filter.', 'warning');
         return;
       }
     
-      const currentDate = new Date().toISOString().slice(0, 10);
-      const deviceSlug = STATE.selectedDevice === 'all' ? 'all-devices' : STATE.selectedDevice.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      const date = new Date().toISOString().slice(0, 10);
+      const slug = dev === 'all' ? 'all-devices' : dev.replace(/[^a-z0-9]/gi, '_').toLowerCase();
       
-      const totalVal = activeLogs.length;
-      const blockedVal = activeLogs.filter(l => String(l.status || '').toLowerCase() === 'blocked').length;
-      const allowedVal = totalVal - blockedVal;
+      const total = active.length;
+      const blocked = active.filter(l => String(l.status || '').toLowerCase() === 'blocked').length;
+      const allowed = total - blocked;
     
-      let csvContent = '\uFEFF';
-      csvContent += `"# NextDNS Live CSV Export (${STATE.selectedDevice}) - ${currentDate}"\n`;
-      csvContent += `"Total Queries","Blocked","Allowed"\n`;
-      csvContent += `"${totalVal}","${blockedVal}","${allowedVal}"\n\n`;
+      const esc = (val) => `"${String(val || '').replace(/"/g, '""')}"`;
     
-      csvContent += `"Time","Status","Domain","Device","Client IP","Type","Protocol","Latency (ms)","Reasons"\n`;
+      let csv = '\uFEFF';
+      csv += `"# NextDNS Live CSV Export (${dev}) - ${date}"\n`;
+      csv += `"Total Queries","Blocked","Allowed"\n`;
+      csv += `${esc(total)},${esc(blocked)},${esc(allowed)}\n\n`;
+      csv += `"Time","Status","Domain","Device","Client IP","Type","Protocol","Latency (ms)","Reasons"\n`;
     
-      activeLogs.forEach(log => {
-        const timeStr = log.time instanceof Date ? log.time.toISOString() : new Date(log.time || Date.now()).toISOString();
-        const status = log.status || 'allowed';
-        const domain = (log.domain || '').replace(/"/g, '""');
-        const device = (log.device || '').replace(/"/g, '""');
-        const clientIp = log.clientIp || '';
-        const type = log.type || 'A';
-        const proto = log.proto || 'DoH';
-        const latency = log.latency || 0;
-        const reasons = Array.isArray(log.reasons) ? log.reasons.join(', ').replace(/"/g, '""') : '';
-    
-        csvContent += `"${timeStr}","${status}","${domain}","${device}","${clientIp}","${type}","${proto}","${latency}","${reasons}"\n`;
+      active.forEach(l => {
+        const time = l.time instanceof Date ? l.time.toISOString() : new Date(l.time || Date.now()).toISOString();
+        const reasons = Array.isArray(l.reasons) ? l.reasons.join(', ') : '';
+        
+        csv += [
+          time,
+          l.status || 'allowed',
+          l.domain || '',
+          l.device || '',
+          l.clientIp || '',
+          l.type || 'A',
+          l.proto || 'DoH',
+          l.latency || 0,
+          reasons
+        ].map(esc).join(',') + '\n';
       });
     
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `nextdns-${deviceSlug}-${currentDate}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `nextdns-${slug}-${date}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
     
-      showToast('📥 Export', `CSV export for "${STATE.selectedDevice}" completed.`, 'success');
+      showToast('📥 Export', `CSV export for "${dev}" completed.`, 'success');
     }
     
     // Bind to button element
