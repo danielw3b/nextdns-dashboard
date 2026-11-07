@@ -538,7 +538,7 @@
     const SAMPLE_ALLOWED = ['api.github.com', 'cloudflare.com', 'wikipedia.org', 'cdn.jsdelivr.net', 'developer.mozilla.org'];
     const SAMPLE_BLOCKED = ['telemetry.samsungcloud.com', 'pagead2.googlesyndication.com', 'graph.instagram.com', 'events.redditmedia.com'];
 
-    function registerDevice(deviceName) {
+    /*function registerDevice(deviceName) {
       if (!deviceName || STATE.devices.has(deviceName)) return;
       STATE.devices.add(deviceName);
       const gSel = document.getElementById('global-device-select');
@@ -546,6 +546,24 @@
         const opt = document.createElement('option');
         opt.value = deviceName;
         opt.textContent = deviceName;
+        gSel.appendChild(opt);
+      }
+    }*/
+
+    // Optimized device registration to prevent base-select layout thrashing
+    function registerDevice(deviceName) {
+      if (!deviceName) return;
+      const cleanDev = deviceName.trim();
+      if (STATE.devices.has(cleanDev)) return;
+      
+      STATE.devices.add(cleanDev);
+      
+      // Batch update the select element safely
+      const gSel = document.getElementById('global-device-select');
+      if (gSel) {
+        const opt = document.createElement('option');
+        opt.value = cleanDev;
+        opt.textContent = cleanDev;
         gSel.appendChild(opt);
       }
     }
