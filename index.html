@@ -2198,20 +2198,23 @@
       // Central Event Delegation for Tables and Breakdown Actions
       function setupTableEventDelegation() {
         const containerIds = ['autoblock-hits-body', 'live-log-body', 'analytics-devices'];
-
+      
         containerIds.forEach(id => {
           const container = document.getElementById(id);
           if (!container) return;
-
+      
+          // Verhindert doppelte Listener bei mehrfachem Aufruf
+          if (container.dataset.delegated) return;
+          container.dataset.delegated = 'true';
+      
           container.addEventListener('click', (e) => {
-            // Find element with data-action attribute (button, badge, or breakdown item)
             const target = e.target.closest('[data-action]');
             if (!target) return;
-
+      
             const action = target.dataset.action;
             const domain = target.dataset.domain;
             const device = target.dataset.device;
-
+      
             if (action === 'add-deny' && domain) {
               addQuickDeny(domain);
             } else if (action === 'remove-deny' && domain) {
@@ -2222,6 +2225,7 @@
           });
         });
       }
+      setupTableEventDelegation();
     });
     
     document.addEventListener("visibilitychange", () => {
