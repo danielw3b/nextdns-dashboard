@@ -538,18 +538,6 @@
     const SAMPLE_ALLOWED = ['api.github.com', 'cloudflare.com', 'wikipedia.org', 'cdn.jsdelivr.net', 'developer.mozilla.org'];
     const SAMPLE_BLOCKED = ['telemetry.samsungcloud.com', 'pagead2.googlesyndication.com', 'graph.instagram.com', 'events.redditmedia.com'];
 
-    /*function registerDevice(deviceName) {
-      if (!deviceName || STATE.devices.has(deviceName)) return;
-      STATE.devices.add(deviceName);
-      const gSel = document.getElementById('global-device-select');
-      if (gSel && !gSel.querySelector(`option[value="${CSS.escape(deviceName)}"]`)) {
-        const opt = document.createElement('option');
-        opt.value = deviceName;
-        opt.textContent = deviceName;
-        gSel.appendChild(opt);
-      }
-    }*/
-
     // Optimized device registration to prevent base-select layout thrashing
     function registerDevice(deviceName) {
       if (!deviceName) return;
@@ -612,7 +600,7 @@
         renderScheduled = true;
         requestAnimationFrame(() => {
           renderScheduled = false;
-          renderFilteredLiveLogs();
+          renderLiveLogs();
           renderAnalyticsChart();
         });
       }
@@ -635,7 +623,7 @@
     }
     
     // Render filtered live logs with search, status filters, and event delegation data attributes
-    function renderFilteredLiveLogs() {
+    function renderLiveLogs() {
       const tbody = document.getElementById('live-log-body');
       if (!tbody) return;
     
@@ -809,7 +797,7 @@
     }
 
     // Fetches real-time NextDNS logs and passes them to the central handler
-    async function fetchNextDNSLogs() {
+    /*async function fetchNextDNSLogs() {
      if (STATE.mode !== 'api' || !STATE.isStreaming) return;
       const profile = STATE.config.profile;
       const apiKey = STATE.config.apiKey;
@@ -864,6 +852,49 @@
         console.error('Failed to fetch NextDNS logs:', e);
         STATE.currentLatency = null;
       }
+    }*/
+
+    // Fetches real-time NextDNS logs and passes them to the central handler
+    async function fetchNextDNSLogs() {
+      if (STATE.mode !== 'api' || !STATE.isStreaming) return;
+      const { profile, apiKey, proxy = 'https://api.nextdns.io' } = STATE.config;
+      if (!profile || !apiKey) return;
+
+      const t0 = performance.now();
+      try {
+        const res = await fetch(`${proxy.replace(/\/$/, '')}/profiles/${profile}/logs?limit=50`, {
+          headers: { 'X-Api-Key': apiKey, 'Accept': 'application/json' }
+        });
+
+        if (!res.ok) { STATE.currentLatency = null; throw new Error(`API error: ${res.status}`); }
+        const data = await res.json();
+
+        STATE.currentLatency = Math.max(12, Math.round(performance.now() - t0));
+        const logs = data.data || data.logs || (Array.isArray(data) ? data : []);
+
+        for (const item of logs.reverse()) {
+          const cli = item.client || {};
+          const dev = cli.name || item.deviceName || item.device?.name || (typeof cli === 'string' ? cli : 'Unnamed');
+          const ip = typeof cli === 'string' ? cli : (cli.ip || item.clientIp || '95.229.184.162');
+          const stat = item.status || 'allowed';
+          const t = item.timestamp ? new Date(item.timestamp) : new Date();
+
+          handleIncomingLog({
+            id: item.id || `${t.getTime()}_${item.domain || 'unknown'}_${dev}_${stat}`,
+            time: t,
+            domain: item.domain || 'unknown',
+            device: dev,
+            clientIp: ip,
+            status: stat,
+            reasons: (item.reasons || []).map(r => typeof r === 'string' ? r : r.name),
+            proto: item.protocol || 'DoT',
+            latency: STATE.currentLatency
+          });
+        }
+      } catch (e) {
+        console.error('Failed to fetch NextDNS logs:', e);
+        STATE.currentLatency = null;
+      }
     }
 
     let lastFilterTime = 0;
@@ -876,7 +907,7 @@
       STATE.selectedDevice = dev;
       const gSel = document.getElementById('global-device-select');
       if (gSel) gSel.value = dev;
-      renderFilteredLiveLogs();
+      renderLiveLogs();
       updateAnalyticsKPIs();
       renderHitsTable();
       showToast('Device Filter', `Filtered to ${safeText(dev)}`, 'success');
@@ -922,7 +953,7 @@
 
     
     // Local memory cache to prevent infinite parallel network loops
-    const IP_CACHE = {};
+    /*const IP_CACHE = {};
 
     // Resolves IP via ipapi.co (HTTPS safe for Cloudflare Pages).
     // Stores data locally to ensure UI rendering remains synchronous.
@@ -1041,107 +1072,92 @@
       }
       // Kickstart execution track loop
       processNextQueueItem();
-    }
-
-    /*function updateAnalyticsKPIs() {
-      // Use sessionLogs for lifetime metrics since app start, with device filter
-      const sessionLogs = STATE.sessionLogs || [];
-      const activeLogs = STATE.selectedDevice === 'all'
-        ? sessionLogs
-        : sessionLogs.filter(l => l.device === STATE.selectedDevice);
-
-      // Total queries (global counter for 'all', filtered count for devices)
-      const total = STATE.selectedDevice === 'all' 
-        ? Math.max(STATE.totalQueriesCounter || 0, sessionLogs.length) 
-        : activeLogs.length;
-      const blocked = activeLogs.filter(l => String(l.status).toLowerCase() === 'blocked').length;
-      const allowed = total - blocked;
-      const rate = total > 0 ? Math.round((blocked / total) * 100) : 0;
-      
-      const nowMs = Date.now();
-      const qpmCount = activeLogs.filter(l => {
-       const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
-       return t >= (nowMs - 60000) && t <= nowMs;
-      }).length;
-      
-      const avgLatency = (typeof STATE.currentLatency === 'number' && !isNaN(STATE.currentLatency)) 
-       ? STATE.currentLatency 
-       : '--';
-      
-      // Update DOM KPI elements
-      document.getElementById('kpi-total').textContent = total;
-      document.getElementById('kpi-blocked').textContent = blocked;
-      document.getElementById('kpi-allowed').textContent = allowed;
-      document.getElementById('kpi-rate').textContent = `${rate}% (${STATE.selectedDevice === 'all' ? 'All' : STATE.selectedDevice})`;
-      document.getElementById('kpi-qpm').textContent = `${qpmCount} q/min`;
-      document.getElementById('kpi-latency').textContent = avgLatency === '--' ? '-- ms' : `${avgLatency} ms`;
-          
-      // Aggregate data for breakdowns and top lists
-      const blockedMap = {}, allowedMap = {}, devMap = {}, typeMap = {}, ipMap = {};
-      for (const l of activeLogs) {
-        if (String(l.status).toLowerCase() === 'blocked') blockedMap[l.domain] = (blockedMap[l.domain] || 0) + 1;
-        else allowedMap[l.domain] = (allowedMap[l.domain] || 0) + 1;
-        devMap[l.device] = (devMap[l.device] || 0) + 1;
-        typeMap[l.type || 'A'] = (typeMap[l.type || 'A'] || 0) + 1;
-        ipMap[l.clientIp || '198.51.100.1'] = (ipMap[l.clientIp || '198.51.100.1'] || 0) + 1;
-      }
-
-      const topB = Object.entries(blockedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
-      document.getElementById('analytics-top-blocked').innerHTML = topB.length ? topB.map(([d, c]) => `
-        <div style="display:flex; justify-content:space-between; gap:0.5rem; margin-bottom:4px; font-family:monospace; min-width:0;">
-          <span style="color:#fca5a5; flex:1;" class="truncate">${safeText(d)}</span>
-          <span style="color:var(--muted); white-space:nowrap;">${c}</span>
-        </div>
-      `).join('') : '<div style="color:var(--muted);">No blocked queries.</div>';
-
-      const topA = Object.entries(allowedMap).sort((a,b)=>b[1]-a[1]).slice(0, 5);
-      document.getElementById('analytics-top-allowed').innerHTML = topA.length ? topA.map(([d, c]) => `
-        <div style="display:flex; justify-content:space-between; gap:0.5rem; margin-bottom:4px; font-family:monospace; min-width:0;">
-          <span style="color:#86efac; flex:1;" class="truncate">${safeText(d)}</span>
-          <span style="color:var(--muted); white-space:nowrap;">${c}</span>
-        </div>
-      `).join('') : '<div style="color:var(--muted);">No allowed queries.</div>';
-
-      const devList = Object.entries(devMap).sort((a,b)=>b[1]-a[1]);
-      document.getElementById('analytics-devices').innerHTML = devList.map(([d, c]) => `
-        <div style="margin-bottom:4px; cursor:pointer; min-width:0;" onclick="filterByDevice('${safeText(d)}')">
-          <div style="display:flex; justify-content:space-between; gap:0.5rem; min-width:0;">
-            <span style="color:${d===STATE.selectedDevice?'#38bdf8':'#f1f5f9'}; flex:1;" class="truncate">${safeText(d)}</span>
-            <span style="color:var(--muted); font-family:monospace; white-space:nowrap;">${c}</span>
-          </div>
-          <div class="bar-bg"><div class="bar-fill" style="width:${total > 0 ? Math.min(100, Math.round((c/total)*100)) : 0}%; background:#a855f7;"></div></div>
-        </div>
-      `).join('');    
-
-      const ipList = Object.entries(ipMap).sort((a,b)=>b[1]-a[1]);
-      const ipElem = document.getElementById('analytics-ips');
-      if (ipElem) {
-        ipElem.innerHTML = ipList.length ? ipList.map(([ip, c]) => {
-          const info = getNextDNSIPDetails(ip);
-          return `
-            <div style="margin-bottom:12px; min-width:0;">
-              <div style="display:flex; justify-content:space-between; align-items:flex-start; font-family:monospace; font-size:0.72rem; margin-bottom:4px; gap:0.5rem; min-width:0;">
-                <div style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                  <div style="color:#38bdf8; font-weight:600;">${safeText(ip)}</div>
-                  <div style="color:var(--muted); font-size:0.65rem; margin-top:2px;">${safeText(info.isp)} | ${safeText(info.location)}</div>
-                </div>
-                <div style="color:var(--text); white-space:nowrap; text-align:right; font-size:0.7rem;">
-                  ${c} (${total > 0 ? Math.round((c/total)*100) : 0}%)
-                </div>
-              </div>
-              <div class="bar-bg">
-                <div class="bar-fill" style="width:${total > 0 ? Math.min(100, Math.round((c/total)*100)) : 0}%; background:#38bdf8;"></div>
-              </div>
-            </div>
-          `;
-        }).join('') : '<div style="color:var(--muted);">No IP telemetry.</div>';
-      }
-
-      renderAnalyticsChart();
     }*/
 
+    // Local memory cache
+    const IP_CACHE = {};
+    let ipQueue = [];
+    let isProcessing = false;
+    
+    const getFlagEmoji = (code) => code ? String.fromCodePoint(...code.toUpperCase().split('').map(c => 127397 + c.charCodeAt(0))) : '🌐';
+    
+    const cleanProviderName = (name) => {
+      if (!name) return 'Broadband WAN Gateway';
+      const trimmed = name.trim();
+      const idx = trimmed.indexOf(' ');
+      return idx === -1 ? trimmed : trimmed.substring(0, idx) + '...';
+    };
+    
+    // Resolves IP via ipapi.co (HTTPS safe)
+    function getNextDNSIPDetails(ip) {
+      if (!ip) return { isp: 'ᯤ Unknown IP', location: 'Unknown' };
+      if (IP_CACHE[ip]) return IP_CACHE[ip];
+      if (IP_CACHE[ip] === null) return { isp: 'ᯤ Resolving...', location: '🔍 Fetching...' };
+    
+      IP_CACHE[ip] = null;
+      fetchIPGeodeticData(ip);
+      return { isp: 'ᯤ Resolving...', location: '🔍 Fetching...' };
+    }
+    
+    // Background network request with queue & rate limit handling (429)
+    async function fetchIPGeodeticData(ip) {
+      ipQueue.push(ip);
+      if (isProcessing) return;
+      isProcessing = true;
+    
+      async function processQueue() {
+        if (ipQueue.length === 0) { isProcessing = false; return; }
+    
+        const currIp = ipQueue.shift();
+        try {
+          const res = await fetch(`https://ipapi.co/${encodeURIComponent(currIp.trim())}/json/`);
+          
+          if (res.status === 429) {
+            ipQueue.unshift(currIp);
+            setTimeout(processQueue, 2000);
+            return;
+          }
+    
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          if (data.error) throw new Error(data.reason || 'API error');
+    
+          const rawIsp = data.org || data.asn || 'Broadband WAN Gateway';
+          const ispLower = rawIsp.toLowerCase();
+          
+          let isMobile = ispLower.includes('mobile') || ispLower.includes('cellular');
+          if (!isMobile && typeof EUROPEAN_MOBILE_CARRIERS !== 'undefined') {
+            isMobile = EUROPEAN_MOBILE_CARRIERS.some(c => new RegExp(`\\b${c.trim()}\\b`, 'i').test(ispLower));
+          }
+    
+          const flag = getFlagEmoji(data.country_code);
+          const city = data.city || '';
+          const country = data.country_name || 'Unknown';
+    
+          IP_CACHE[currIp] = {
+            isp: `${isMobile ? '📶' : 'ᯤ'} ${cleanProviderName(rawIsp)}`,
+            location: city ? `${flag} ${city}, ${country}` : `${flag} ${country}`
+          };
+    
+          if (!window._renderIpsScheduled) {
+            window._renderIpsScheduled = true;
+            setTimeout(() => {
+              window._renderIpsScheduled = false;
+              if (typeof updateAnalyticsKPIs === 'function') updateAnalyticsKPIs();
+            }, 150);
+          }
+        } catch (err) {
+          IP_CACHE[currIp] = { isp: '🌐 Network Error', location: 'Unknown (Offline)' };
+        }
+    
+        setTimeout(processQueue, 250);
+      }
+    
+      processQueue();
+    }
+
     // Update analytic KPIs, top domain lists, device breakdowns, and IP telemetry
-    function updateAnalyticsKPIs() {
+    /*function updateAnalyticsKPIs() {
       // Use sessionLogs for lifetime metrics since app start, with device filter
       const sessionLogs = STATE.sessionLogs || [];
       const activeLogs = STATE.selectedDevice === 'all'
@@ -1243,6 +1259,94 @@
               <div class="bar-bg">
                 <div class="bar-fill" style="width:${total > 0 ? Math.min(100, Math.round((c/total)*100)) : 0}%; background:#38bdf8;"></div>
               </div>
+            </div>
+          `;
+        }).join('') : '<div style="color:var(--muted);">No IP telemetry.</div>';
+      }
+    
+      if (typeof renderAnalyticsChart === 'function') renderAnalyticsChart();
+    }*/
+
+    // Update analytics KPIs, lists, breakdowns, and telemetry
+    function updateAnalyticsKPIs() {
+      const logs = STATE.sessionLogs || [];
+      const active = STATE.selectedDevice === 'all' ? logs : logs.filter(l => l.device === STATE.selectedDevice);
+    
+      const tot = STATE.selectedDevice === 'all' ? Math.max(STATE.totalQueriesCounter || 0, logs.length) : active.length;
+      const blk = active.filter(l => String(l.status).toLowerCase() === 'blocked').length;
+      const allw = Math.max(0, tot - blk);
+      const rate = tot > 0 ? Math.round((blk / tot) * 100) : 0;
+      
+      const now = Date.now();
+      const qpm = active.filter(l => {
+        const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
+        return t >= now - 60000 && t <= now;
+      }).length;
+      
+      const lat = typeof STATE.currentLatency === 'number' && !isNaN(STATE.currentLatency) ? STATE.currentLatency : '--';
+    
+      document.getElementById('kpi-total').textContent = tot;
+      document.getElementById('kpi-blocked').textContent = blk;
+      document.getElementById('kpi-allowed').textContent = allw;
+      document.getElementById('kpi-rate').textContent = `${rate}% (${STATE.selectedDevice === 'all' ? 'All' : STATE.selectedDevice})`;
+      document.getElementById('kpi-qpm').textContent = `${qpm} q/min`;
+      document.getElementById('kpi-latency').textContent = lat === '--' ? '-- ms' : `${lat} ms`;
+          
+      const bMap = {}, aMap = {}, dMap = {}, ipMap = {};
+      for (const l of active) {
+        if (String(l.status).toLowerCase() === 'blocked') bMap[l.domain] = (bMap[l.domain] || 0) + 1;
+        else aMap[l.domain] = (aMap[l.domain] || 0) + 1;
+        dMap[l.device] = (dMap[l.device] || 0) + 1;
+        ipMap[l.clientIp || '198.51.100.1'] = (ipMap[l.clientIp || '198.51.100.1'] || 0) + 1;
+      }
+    
+      // Helper to render top domain lists
+      const renderTop = (map, color, elId, emptyMsg) => {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        const top = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 5);
+        el.innerHTML = top.length ? top.map(([d, c]) => `
+          <div style="display:flex; justify-content:space-between; gap:0.5rem; margin-bottom:4px; font-family:monospace; min-width:0;">
+            <span style="color:${color}; flex:1;" class="truncate">${safeText(d)}</span>
+            <span style="color:var(--muted); white-space:nowrap;">${c}</span>
+          </div>
+        `).join('') : `<div style="color:var(--muted);">${emptyMsg}</div>`;
+      };
+    
+      renderTop(bMap, '#fca5a5', 'analytics-top-blocked', 'No blocked queries.');
+      renderTop(aMap, '#86efac', 'analytics-top-allowed', 'No allowed queries.');
+    
+      // Devices Breakdown
+      const devElem = document.getElementById('analytics-devices');
+      if (devElem) {
+        devElem.innerHTML = Object.entries(dMap).sort((a, b) => b[1] - a[1]).map(([d, c]) => `
+          <div style="margin-bottom:4px; cursor:pointer; min-width:0;" data-action="filter-device" data-device="${safeText(d)}">
+            <div style="display:flex; justify-content:space-between; gap:0.5rem; min-width:0;">
+              <span style="color:${d === STATE.selectedDevice ? '#38bdf8' : '#f1f5f9'}; flex:1;" class="truncate">${safeText(d)}</span>
+              <span style="color:var(--muted); font-family:monospace; white-space:nowrap;">${c}</span>
+            </div>
+            <div class="bar-bg"><div class="bar-fill" style="width:${tot > 0 ? Math.min(100, Math.round((c / tot) * 100)) : 0}%; background:#a855f7;"></div></div>
+          </div>
+        `).join('');
+      }
+    
+      // IP Telemetry Breakdown
+      const ipElem = document.getElementById('analytics-ips');
+      if (ipElem) {
+        const ipList = Object.entries(ipMap).sort((a, b) => b[1] - a[1]);
+        ipElem.innerHTML = ipList.length ? ipList.map(([ip, c]) => {
+          const info = typeof getNextDNSIPDetails === 'function' ? getNextDNSIPDetails(ip) : { isp: 'NextDNS', location: 'Global' };
+          const pct = tot > 0 ? Math.min(100, Math.round((c / tot) * 100)) : 0;
+          return `
+            <div style="margin-bottom:12px; min-width:0;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; font-family:monospace; font-size:0.72rem; margin-bottom:4px; gap:0.5rem; min-width:0;">
+                <div style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                  <div style="color:#38bdf8; font-weight:600;">${safeText(ip)}</div>
+                  <div style="color:var(--muted); font-size:0.65rem; margin-top:2px;">${safeText(info.isp)} | ${safeText(info.location)}</div>
+                </div>
+                <div style="color:var(--text); white-space:nowrap; text-align:right; font-size:0.7rem;">${c} (${pct}%)</div>
+              </div>
+              <div class="bar-bg"><div class="bar-fill" style="width:${pct}%; background:#38bdf8;"></div></div>
             </div>
           `;
         }).join('') : '<div style="color:var(--muted);">No IP telemetry.</div>';
@@ -1547,8 +1651,8 @@
         const diffX = touchEndX - touchStartX;
         const diffY = touchEndY - touchStartY;
 
-        // Check if horizontal movement is dominant and exceeds 50px threshold
-        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 120) {
+        // Check if horizontal movement is dominant and exceeds 80px threshold
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 80) {
           const activeBtn = document.querySelector('.nav-tabs button.active');
           const currentTab = activeBtn ? activeBtn.dataset.tab : 'analytics';
           const currentIndex = TABS_ORDER.indexOf(currentTab);
@@ -1620,7 +1724,7 @@
       STATE.manuallyBlocked.add(cleanDomain);
 
       // 3. Instantly re-render UI tables to reflect the new state
-      if (typeof renderFilteredLiveLogs === 'function') renderFilteredLiveLogs();
+      if (typeof renderLiveLogs === 'function') renderLiveLogs();
       if (typeof renderHitsTable === 'function') renderHitsTable();
     };
     
@@ -1667,7 +1771,7 @@
       }
     
       // 3. Instantly re-render UI tables to reflect allowed state
-      if (typeof renderFilteredLiveLogs === 'function') renderFilteredLiveLogs();
+      if (typeof renderLiveLogs === 'function') renderLiveLogs();
       if (typeof renderHitsTable === 'function') renderHitsTable();
     };
 
@@ -1732,7 +1836,7 @@
     // Clear live log stream table and buffer
     function clearLiveLogs() {
       STATE.logs = [];
-      renderFilteredLiveLogs();
+      renderLiveLogs();
       showToast('🧹 Cleared', 'Live log stream has been cleared.', 'info');
     }
     
@@ -1866,7 +1970,7 @@
           showToast('Config Saved', 'Updated successfully', 'success');
         }
         updateAnalyticsKPIs();
-        renderFilteredLiveLogs();
+        renderLiveLogs();
 
         // Re-enable save button after a short cooldown matching toast duration
         setTimeout(() => {
@@ -1883,8 +1987,8 @@
     }
 
     document.getElementById('global-device-select').onchange = (e) => filterByDevice(e.target.value);
-    document.getElementById('live-status-filter').onchange = renderFilteredLiveLogs;
-    document.getElementById('live-search').oninput = renderFilteredLiveLogs;
+    document.getElementById('live-status-filter').onchange = renderLiveLogs;
+    document.getElementById('live-search').oninput = renderLiveLogs;
     
     document.addEventListener('DOMContentLoaded', () => {
       const canvas = document.getElementById('analytics-canvas');
