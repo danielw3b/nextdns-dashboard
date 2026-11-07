@@ -1370,7 +1370,8 @@
       if (!STATE.manuallyBlocked) STATE.manuallyBlocked = new Set();
       STATE.manuallyBlocked.add(clean);
       if (STATE.manuallyUnblocked) {
-      STATE.manuallyUnblocked.delete(clean);
+        STATE.manuallyUnblocked.delete(clean);
+      }
       refreshTables();
     };
     
