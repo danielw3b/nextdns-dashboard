@@ -689,13 +689,13 @@
         }
     
         // Reason column text: explicitly 'Denylist' for denylist blocks
-        const reasonText = isSys ? 'System Domain' : (isDenylistBlocked ? 'Denylist' : safeText((log.reasons || []).join(', ') || '—'));
+        const reasonText = isSys ? 'System Domain' : (isManuallyBlocked ? 'Denylist' : safeText((log.reasons || []).join(', ') || '—'));
     
         tr.innerHTML = `
           <td style="white-space: nowrap; font-size: 0.75rem; color: var(--muted);">
             ${log.time instanceof Date ? log.time.toLocaleTimeString() : new Date(log.time).toLocaleTimeString()}
           </td>
-          <td class="domain-cell" style="color: ${isDenylistBlocked ? '#fde047' : (isBlocked ? '#fca5a5' : '#f1f5f9')};" title="${safeText(log.domain)}">
+          <td class="domain-cell" style="color: ${isManuallyBlocked ? '#fde047' : (isBlocked ? '#fca5a5' : '#f1f5f9')};" title="${safeText(log.domain)}">
             ${safeText(log.domain)}
           </td>
           <td style="font-size: 0.75rem;">
@@ -703,7 +703,7 @@
               ${safeText(log.device)}
             </span>
           </td>
-          <td style="font-size: 0.75rem; color: ${isSys ? '#38bdf8' : (isDenylistBlocked ? '#fde047' : 'var(--muted);')};" title="${reasonText}">
+          <td style="font-size: 0.75rem; color: ${isSys ? '#38bdf8' : (isManuallyBlocked ? '#fde047' : 'var(--muted);')};" title="${reasonText}">
             ${reasonText}
           </td>
           <td>
