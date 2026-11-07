@@ -50,11 +50,11 @@
       padding: 0.65rem 1.2rem; font-size: 13px; appearance: base-select; -webkit-appearance: base-select;
       color: var(--text); background-color: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: border-color 0.15s ease; min-width: 130px;
     }
-    #global-device-select::picker-icon { display: none !important; content: none !important; }
-    #global-device-select::picker(select) { appearance: base-select; background-color: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); }
-    #global-device-select option { background-color: var(--surface-2); color: var(--text); padding: 0.5rem 0.8rem; border-radius: 6px; cursor: pointer; }
-    #global-device-select option:hover, #global-device-select option:checked { background-color: var(--accent); color: #000; }
-    #global-device-select:hover, #global-device-select:focus { outline: none; border-color: var(--accent); }
+    #global-device-select::picker-icon, #live-status-filter::picker-icon { display: none !important; content: none !important; }
+    #global-device-select::picker(select), #live-status-filter::picker(select) { appearance: base-select; background-color: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); }
+    #global-device-select option, #live-status-filter option { background-color: var(--surface-2); color: var(--text); padding: 0.5rem 0.8rem; border-radius: 6px; cursor: pointer; }
+    #global-device-select option:hover, #global-device-select option:checked, #live-status-filter option:hover, #live-status-filter option:checked { background-color: var(--accent); color: #000; }
+    #global-device-select:hover, #live-status-filter:hover, #live-status-filter:focus, #global-device-select:focus { outline: none; border-color: var(--accent); }
 
     .nav-tabs {
       background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 1rem;
