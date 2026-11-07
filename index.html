@@ -671,7 +671,7 @@
       for (const log of filtered.slice(0, 200)) {
         const tr = document.createElement('tr');
         
-        const cleanDomain = log.domain.toLowerCase();
+        /*const cleanDomain = log.domain.toLowerCase();
         const isSys = protectSystemEnabled && (typeof isProtected === 'function' ? isProtected(cleanDomain) : false);
         
         const lStatusLower = String(log.status || 'allowed').toLowerCase();
@@ -679,7 +679,25 @@
         
         const isDenylistBlocked = reasons.includes('denylist') || (STATE.manuallyBlocked && STATE.manuallyBlocked.has(cleanDomain));
         const isApiBlocked = (lStatusLower === 'blocked' || lStatusLower === 'security' || lStatusLower === 'parental') && !isDenylistBlocked;
-        const isBlocked = isApiBlocked || isDenylistBlocked;
+        const isBlocked = isApiBlocked || isDenylistBlocked;*/
+
+        const cleanDomain = log.domain.toLowerCase();
+        const reasons = (log.reasons || []).map(r => r.toLowerCase());
+    
+        // Automatically sync denylist reasons into manual block state
+        if (reasons.includes('denylist')) {
+          if (!STATE.manuallyBlocked) STATE.manuallyBlocked = new Set();
+          STATE.manuallyBlocked.add(cleanDomain);
+        }
+        
+        // Respect STATE.config.protectSystem setting
+        const isSys = protectSystemEnabled && (typeof isProtected === 'function' ? isProtected(cleanDomain) : false);
+        
+        const lStatusLower = String(log.status || 'allowed').toLowerCase();
+        const isApiBlocked = lStatusLower === 'blocked' || lStatusLower === 'security' || lStatusLower === 'parental';
+        const isManuallyBlocked = STATE.manuallyBlocked && STATE.manuallyBlocked.has(cleanDomain);
+        const isBlocked = isApiBlocked || isManuallyBlocked;
+        
     
         let badgeHTML = '';
         if (isSys) {
