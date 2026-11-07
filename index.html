@@ -46,10 +46,11 @@
 
       .header-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 
-    #global-device-select {
-      padding: 0.65rem 1.2rem; font-size: 13px; appearance: base-select; -webkit-appearance: base-select;
-      color: var(--text); background-color: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: border-color 0.15s ease; min-width: 130px;
-    }
+
+    #live-status-filter,
+    #global-device-select { appearance: base-select; -webkit-appearance: base-select;
+      color: var(--text); background-color: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); 
+      cursor: pointer; transition: border-color 0.15s ease; min-width: 130px;}
     #global-device-select::picker-icon, #live-status-filter::picker-icon { display: none !important; content: none !important; }
     #global-device-select::picker(select), #live-status-filter::picker(select) { appearance: base-select; background-color: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); }
     #global-device-select option, #live-status-filter option { background-color: var(--surface-2); color: var(--text); padding: 0.5rem 0.8rem; border-radius: 6px; cursor: pointer; }
@@ -129,12 +130,13 @@
     #tab-live th:nth-child(2), #tab-live td:nth-child(2) { max-width: 400px; overflow: hidden; text-overflow: ellipsis; }
 
     #tab-autoblock th:nth-child(1), #tab-autoblock td:nth-child(1) { max-width: 400px; overflow: hidden; text-overflow: ellipsis; }
-    #tab-autoblock td:nth-child(2), #tab-autoblock th:nth-child(2) { text-align: right; max-width: 25px; }
-    #tab-autoblock td:nth-child(5), #tab-autoblock th:nth-child(5) { text-align: right; max-width: 60px; }
+    #tab-autoblock td:nth-child(2), #tab-autoblock th:nth-child(2) { text-align: right; width: 25px; }
+    #tab-autoblock td:nth-child(4), #tab-autoblock th:nth-child(4) { text-align: right; max-width: 80px; }
+    #tab-autoblock td:nth-child(5), #tab-autoblock th:nth-child(5) { text-align: right; width: 60px; }
 
     .domain-cell { font-family: monospace; /*font-weight: 600;*/ overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     
-    .status-pill { display: inline-block; padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.68rem; font-weight: 600; }
+    .status-pill { display: inline-block; padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.68rem; font-weight: 600; width: 40px;}
     .status-blocked { background: var(--blocked-bg); color: #fca5a5; }
     .status-allowed { background: var(--allowed-bg); color: #86efac; }
 
@@ -159,6 +161,8 @@
     .btn-primary:hover { background: var(--accent-hover); }
     .btn-danger { background: var(--blocked-bg); color: #fca5a5; border-color: rgba(239, 68, 68, 0.3); }
     .btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
+
+    .small {padding: 0.15rem 0.4rem; font-size: 0.65rem; width: 40px; text-align: center; }
 
     input[type="text"], input[type="password"], input[type="number"], select {
       background: #060911; border: 1px solid var(--border); color: var(--text);
@@ -207,7 +211,7 @@
     </div>
 
     <div class="header-actions">
-      <select id="global-device-select" title="Filter all logs and analytics by device">
+      <select id="global-device-select" style="padding: 0.65rem 1.2rem; font-size: 13px;" title="Filter all logs and analytics by device">
         <option value="all">All Devices</option>
       </select>
       <div class="badge live" id="btn-toggle-stream" title="Click to Pause / Resume" style="cursor: pointer; user-select: none;">Live</div>
@@ -678,7 +682,7 @@
           <td style="white-space: nowrap; font-size: 0.75rem; color: var(--muted);">
             ${log.time instanceof Date ? log.time.toLocaleTimeString() : new Date(log.time).toLocaleTimeString()}
           </td>
-          <td class="domain-cell" style="font-weight: 600; font-family: monospace; color: ${s.isManual ? '#fde047' : (s.isBlocked ? '#fca5a5' : '#f1f5f9')};">
+          <td class="domain-cell" style="color: ${s.isManual ? '#fde047' : (s.isBlocked ? '#fca5a5' : '#f1f5f9')};">
             ${safeText(log.domain)}
           </td>
           <td style="font-size: 0.75rem;">
@@ -739,15 +743,15 @@
         let statTxt = 'Monitoring', bStyle = 'color: var(--muted);', btnHtml = '';
         if (s.isSys) {
           statTxt = 'Protected'; bStyle = 'color: var(--info, #38bdf8); font-weight: 600;';
-          btnHtml = `<button class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; opacity: 0.5; cursor: not-allowed;" disabled title="Protected System Domain">Protected</button>`;
+          btnHtml = `<button class="btn-danger small" style="opacity: 0.5; cursor: not-allowed;" disabled title="Protected System Domain">Protected</button>`;
         } else if (s.isManual) {
           statTxt = 'Denylist'; bStyle = 'color: var(--warn, #f59e0b); font-weight: 600;';
-          btnHtml = `<button data-action="remove-deny" data-domain="${safeText(i.domain)}" class="btn" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; background: rgba(245, 158, 11, 0.2); color: #fde047; border-color: rgba(245, 158, 11, 0.4);" title="Click to Unblock">Unblock</button>`;
+          btnHtml = `<button data-action="remove-deny" data-domain="${safeText(i.domain)}" class="btn small" style="background: rgba(245, 158, 11, 0.2); color: #fde047; border-color: rgba(245, 158, 11, 0.4);" title="Click to Unblock">Unblock</button>`;
         } else if (s.isApi) {
           statTxt = 'Blocked'; bStyle = 'color: var(--blocked, #ef4444); font-weight: 600;';
-          btnHtml = `<button class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem; opacity: 0.5; cursor: not-allowed;" disabled title="Blocked by NextDNS Security/Parental">Blocked</button>`;
+          btnHtml = `<button class="btn-danger small" style="opacity: 0.5; cursor: not-allowed;" disabled title="Blocked by NextDNS Security/Parental">Blocked</button>`;
         } else {
-          btnHtml = `<button data-action="add-deny" data-domain="${safeText(i.domain)}" class="btn-danger" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;" title="Click to Deny">Deny</button>`;
+          btnHtml = `<button data-action="add-deny" data-domain="${safeText(i.domain)}" class="btn-danger small" title="Click to Deny">Deny</button>`;
         }
     
         return `
