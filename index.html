@@ -1537,7 +1537,7 @@
       saveBtn.onclick = () => {
         if (saveBtn.disabled) return;
         saveBtn.disabled = true;
-        saveBtn.style.cssText = 'opacity:0.6; cursor:not-allowed;';
+        //saveBtn.style.cssText = 'opacity:0.6; cursor:not-allowed;';
     
         const cfg = STATE.config;
         cfg.profile = document.getElementById('cfg-profile').value.trim();
@@ -1558,8 +1558,8 @@
 
         setTimeout(() => {
           saveBtn.disabled = false;
-          saveBtn.style.opacity = '';
-          saveBtn.style.cursor = '';
+          //saveBtn.style.opacity = '';
+          //saveBtn.style.cursor = '';
         }, 4000);
       };
     }
