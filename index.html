@@ -130,13 +130,13 @@
     #tab-live th:nth-child(2), #tab-live td:nth-child(2) { max-width: 400px; overflow: hidden; text-overflow: ellipsis; }
 
     #tab-autoblock th:nth-child(1), #tab-autoblock td:nth-child(1) { max-width: 400px; overflow: hidden; text-overflow: ellipsis; }
-    #tab-autoblock td:nth-child(2), #tab-autoblock th:nth-child(2) { text-align: right; width: 25px; }
-    #tab-autoblock td:nth-child(4), #tab-autoblock th:nth-child(4) { text-align: right; max-width: 80px; }
-    #tab-autoblock td:nth-child(5), #tab-autoblock th:nth-child(5) { text-align: right; width: 60px; }
+    #tab-autoblock td:nth-child(2), #tab-autoblock th:nth-child(2) { text-align: right; min-width: 20px; }
+    #tab-autoblock td:nth-child(4), #tab-autoblock th:nth-child(4) { max-width: 60px; }
+    #tab-autoblock td:nth-child(5), #tab-autoblock th:nth-child(5) { text-align: right; }
 
     .domain-cell { font-family: monospace; /*font-weight: 600;*/ overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     
-    .status-pill { display: inline-block; padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.68rem; font-weight: 600; width: 40px;}
+    .status-pill { display: inline-block; padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.68rem; font-weight: 600; width: 60px;}
     .status-blocked { background: var(--blocked-bg); color: #fca5a5; }
     .status-allowed { background: var(--allowed-bg); color: #86efac; }
 
@@ -162,7 +162,7 @@
     .btn-danger { background: var(--blocked-bg); color: #fca5a5; border-color: rgba(239, 68, 68, 0.3); }
     .btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
 
-    .small {padding: 0.15rem 0.4rem; font-size: 0.65rem; width: 40px; text-align: center; }
+    .small {padding: 0.15rem 0.4rem; font-size: 0.65rem; width: 60px; justify-content: center; }
 
     input[type="text"], input[type="password"], input[type="number"], select {
       background: #060911; border: 1px solid var(--border); color: var(--text);
@@ -751,7 +751,7 @@
           statTxt = 'Blocked'; bStyle = 'color: var(--blocked, #ef4444); font-weight: 600;';
           btnHtml = `<button class="btn-danger small" style="opacity: 0.5; cursor: not-allowed;" disabled title="Blocked by NextDNS Security/Parental">Blocked</button>`;
         } else {
-          btnHtml = `<button data-action="add-deny" data-domain="${safeText(i.domain)}" class="btn-danger small" title="Click to Deny">Deny</button>`;
+          btnHtml = `<button data-action="add-deny" data-domain="${safeText(i.domain)}" class="status-allowed small" title="Click to Deny">Deny</button>`;
         }
     
         return `
