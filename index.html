@@ -456,18 +456,19 @@
       return PROTECTED_DOMAINS.some(p => clean === p || clean.endsWith('.' + p));
     }
 
+    // Global Application State
     const STATE = {
       isStreaming: true,
       mode: 'sim',
       selectedDevice: 'all',
-      logs: [],          // Max 500 entries for live DOM table
-      sessionLogs: [],   // Infinite RAM array for lifetime KPIs and filters
-      chartLogs: [],     // 60-minute rolling RAM buffer for canvas chart
+      logs: [],          // Max 500: live DOM table
+      sessionLogs: [],   // Infinite RAM array for lifetime KPIs
+      chartLogs: [],     // 60-minute rolling buffer for canvas chart
       totalQueriesCounter: 0,
       devices: new Set(),
       hits: {},
       manuallyBlocked: new Set(),
-      reportedThresholdDomains: new Set(), // renderHitsTable -> Report/Notification
+      reportedThresholdDomains: new Set(),
       config: {
         profile: '',
         apiKey: '',
@@ -478,45 +479,51 @@
         protectSystem: true
       }
     };
-
+    
     // Load configuration from localStorage
     try {
-      const savedCfg = localStorage.getItem('nextdns-single-cfg');
-      if (savedCfg) {
-        const parsed = JSON.parse(savedCfg);
-        STATE.config.profile = parsed.profile || parsed.profileId || '';
-        STATE.config.apiKey = parsed.apiKey || '';
-        STATE.config.proxy = parsed.proxy || parsed.proxyUrl || '';
-        STATE.config.threshold = parsed.threshold || parsed.autoBlockThreshold || 200;
-        STATE.config.telegramBotToken = parsed.telegramBotToken || '';
-        STATE.config.telegramChatId = parsed.telegramChatId || '';
-        STATE.config.protectSystem = parsed.protectSystem ?? true;
-      }
-    } catch(e) {}
-
-    function updateThresholdBadge() {
+      const saved = JSON.parse(localStorage.getItem('nextdns-single-cfg') || '{}');
+      Object.assign(STATE.config, {
+        profile: saved.profile || saved.profileId || '',
+        apiKey: saved.apiKey || '',
+        proxy: saved.proxy || saved.proxyUrl || '',
+        threshold: saved.threshold || saved.autoBlockThreshold || 200,
+        telegramBotToken: saved.telegramBotToken || '',
+        telegramChatId: saved.telegramChatId || '',
+        protectSystem: saved.protectSystem ?? true
+      });
+    } catch (e) {}
+    
+    // Update threshold badge text
+    const updateThresholdBadge = () => {
       const badge = document.getElementById('threshold-badge');
       if (badge) badge.textContent = `Threshold: ${STATE.config.threshold} Hits`;
-    }
-
+    };
+    
+    // Load configuration into UI elements
     function loadConfigToUI() {
       try {
-        if (document.getElementById('cfg-profile')) document.getElementById('cfg-profile').value = STATE.config.profile || '';
-        if (document.getElementById('cfg-apikey')) document.getElementById('cfg-apikey').value = STATE.config.apiKey || '';
-        if (document.getElementById('cfg-proxy')) document.getElementById('cfg-proxy').value = STATE.config.proxy || '';
-        if (document.getElementById('cfg-threshold')) document.getElementById('cfg-threshold').value = STATE.config.threshold || 200;
-        // Notification-> TelegramBotToken
-        if (document.getElementById('cfg-telegramBotToken')) document.getElementById('cfg-telegramBotToken').value = STATE.config.telegramBotToken || '';
-        if (document.getElementById('cfg-telegramChatId')) document.getElementById('cfg-telegramChatId').value = STATE.config.telegramChatId || '';
-        if (document.getElementById('cfg-protect')) document.getElementById('cfg-protect').checked = !!STATE.config.protectSystem;
+        const cfg = STATE.config;
+        const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+        const setCheck = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
+    
+        setVal('cfg-profile', cfg.profile);
+        setVal('cfg-apikey', cfg.apiKey);
+        setVal('cfg-proxy', cfg.proxy);
+        setVal('cfg-threshold', cfg.threshold);
+        setVal('cfg-telegramBotToken', cfg.telegramBotToken);
+        setVal('cfg-telegramChatId', cfg.telegramChatId);
+        setCheck('cfg-protect', cfg.protectSystem);
+    
         updateThresholdBadge();
-      } catch(e) {}
+      } catch (e) {}
     }
-
+    
+    // Save configuration to localStorage
     function saveState() {
       try {
         localStorage.setItem('nextdns-single-cfg', JSON.stringify(STATE.config));
-      } catch(e) {}
+      } catch (e) {}
     }
 
     let lastToastTime = 0;
@@ -556,46 +563,34 @@
       }
     }
 
-    // Central ingestion function for both simulation and API logs
+    // Central ingestion function for simulation and API logs
     function handleIncomingLog(log) {
-      // Strict check: Has this exact log ID already been processed in this session?
-      const exists = STATE.sessionLogs.some(l => l.id === log.id);
-      if (exists) return; // Skip duplicates completely
+      if (!log || STATE.sessionLogs.some(l => l.id === log.id)) return;
     
-      // 1. Add to infinite session history for lifetime stats & filters
       STATE.sessionLogs.push(log);
-    
-      // 2. Add to 60-min rolling chart buffer
       STATE.chartLogs.push(log);
-    
-      // 3. Add to live DOM table ring buffer (max 500 entries)
+      
       STATE.logs.unshift(log);
       if (STATE.logs.length > 500) STATE.logs.pop();
     
-      // Global counter & device registration
       STATE.totalQueriesCounter++;
       if (log.device) registerDevice(log.device);
     
-     // Frequency hits tracking
       const d = (log.domain || 'unknown').toLowerCase();
-      if (!STATE.hits[d]) STATE.hits[d] = { count: 0, lastSeen: Date.now() };
-      STATE.hits[d].count++;
-      STATE.hits[d].lastSeen = Date.now();
-  
-      // Fallback client IP if missing
-      if (!log.clientIp) {
-        log.clientIp = '203.0.113.1';
-      }
+      const hit = STATE.hits[d] || (STATE.hits[d] = { count: 0, lastSeen: 0 });
+      hit.count++;
+      hit.lastSeen = Date.now();
     
-      // Prune chartLogs strictly to the last 60 minutes window
+      if (!log.clientIp) log.clientIp = '203.0.113.1';
+    
+      // Prune chartLogs to the last 60 minutes
       const now = Date.now();
-      const oneHourMs = 60 * 60 * 1000;
       STATE.chartLogs = STATE.chartLogs.filter(l => {
         const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
-        return !isNaN(t) && (now - t) <= oneHourMs;
+        return !isNaN(t) && (now - t) <= 3600000;
       });
     
-      // Schedule UI renders
+      // Batch UI updates using requestAnimationFrame
       if (!renderScheduled) {
         renderScheduled = true;
         requestAnimationFrame(() => {
@@ -604,6 +599,7 @@
           renderAnalyticsChart();
         });
       }
+      
       updateAnalyticsKPIs();
       renderHitsTable();
     }
