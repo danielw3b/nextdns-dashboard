@@ -132,6 +132,7 @@
 
     #tab-autoblock th:nth-child(1), #tab-autoblock td:nth-child(1) { max-width: 400px; overflow: hidden; text-overflow: ellipsis; }
     #tab-autoblock td:nth-child(2), #tab-autoblock th:nth-child(2) { text-align: right; min-width: 20px; }
+    #tab-autoblock td:nth-child(3), #tab-autoblock th:nth-child(3) { max-width: 80px; }
     #tab-autoblock td:nth-child(4), #tab-autoblock th:nth-child(4) { max-width: 60px; }
     #tab-autoblock td:nth-child(5), #tab-autoblock th:nth-child(5),  #tab-live th:nth-child(5), #tab-live td:nth-child(5) { text-align: right; width: 45px;}
 
@@ -758,7 +759,7 @@
           <tr>
             <td class="domain-cell" title="${safeText(i.domain)}">${safeText(i.domain)}</td>
             <td style="color: var(--warn); font-weight: bold; font-family: monospace;">${i.count}</td>
-            <td style="width: 100px;">
+            <td style="width: 80px;">
               <div class="bar-bg"><div class="bar-fill" style="width:${pct}%; background:${s.isBlocked ? (s.isManual ? 'var(--warn, #f59e0b)' : 'var(--blocked)') : 'var(--warn)'}"></div></div>
             </td>
             <td><span style="${bStyle} font-size: 0.7rem;">${statTxt}</span></td>
