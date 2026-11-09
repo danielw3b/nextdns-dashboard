@@ -1067,7 +1067,7 @@
     }
 
     // Render analytics telemetry chart on canvas
-    function renderAnalyticsChart() {
+    /*function renderAnalyticsChart() {
       const canvas = document.getElementById('analytics-canvas');
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
@@ -1211,7 +1211,7 @@
           }
         }
       }
-    }
+    }*/
 
     let currentChartBuckets = [];
     let currentChartMetrics = {};
@@ -1219,6 +1219,184 @@
     let lastMouseX = 0;
     let lastMouseY = 0;
     let lastContainerWidth = 400;
+    
+    // Window: 20 minutes with 120 data points (10-second polling interval).
+    function renderAnalyticsChart() {
+      const canvas = document.getElementById('analytics-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      
+      const parentW = canvas.parentElement?.clientWidth || canvas.parentElement?.getBoundingClientRect().width || 0;
+      const width = parentW > 0 ? parentW : (canvas.clientWidth || 800);
+      const height = 180;
+      
+      const tW = Math.round(width * dpr);
+      const tH = Math.round(height * dpr);
+      if (canvas.width !== tW || canvas.height !== tH) {
+        canvas.width = tW;
+        canvas.height = tH;
+      }
+      
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+      
+      // Filter logs based on selected device filter
+      let logs = STATE.chartLogs || STATE.logs || [];
+      if (STATE.selectedDevice !== 'all') {
+        logs = logs.filter(l => l.device === STATE.selectedDevice);
+      }
+      
+      // 20-minute sliding window split into 120 buckets (10s intervals)
+      const pointsCount = 120;
+      const now = Date.now();
+      const windowMs = 20 * 60 * 1000;
+      const stepMs = windowMs / pointsCount;
+      const startT = now - windowMs;
+      
+      const buckets = Array.from({ length: pointsCount }, (_, idx) => ({
+        index: idx,
+        startTime: startT + (idx * stepMs),
+        allowed: 0,
+        blocked: 0,
+        total: 0,
+        ratio: 0
+      }));
+      
+      // Distribute log entries into appropriate time buckets
+      for (const l of logs) {
+        const t = l.time instanceof Date ? l.time.getTime() : new Date(l.time).getTime();
+        if (isNaN(t) || t < startT || t > now) continue;
+        const idx = Math.min(pointsCount - 1, Math.max(0, Math.floor((t - startT) / stepMs)));
+        if (String(l.status || 'allowed').toLowerCase() === 'blocked') {
+          buckets[idx].blocked++;
+        } else {
+          buckets[idx].allowed++;
+        }
+        buckets[idx].total++;
+      }
+      
+      // Calculate block ratio percentage per bucket
+      buckets.forEach(b => {
+        b.ratio = b.total > 0 ? (b.blocked / b.total) * 100 : 0;
+      });
+      
+      currentChartBuckets = buckets;
+      
+      const maxVal = Math.max(5, ...buckets.map(b => Math.max(b.allowed, b.blocked, b.total)));
+      const pad = { top: 15, right: 35, bottom: 25, left: 35 };
+      const cW = width - pad.left - pad.right;
+      const cH = height - pad.top - pad.bottom;
+      
+      currentChartMetrics = { padding: pad, chartWidth: cW, chartHeight: cH, maxVal, bucketsCount: pointsCount };
+      
+      // Draw grid lines and dual Y-axes in a unified loop
+      for (let i = 0; i <= 4; i++) {
+        const y = pad.top + (cH / 4) * i;
+        const ratio = 1 - i / 4;
+        
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(pad.left, y);
+        ctx.lineTo(width - pad.right, y);
+        ctx.stroke();
+        
+        // Left Y-axis: Query count (Allowed / Blocked)
+        ctx.font = '9px monospace';
+        ctx.fillStyle = '#4ade80';
+        ctx.textAlign = 'right';
+        ctx.fillText(Math.round(maxVal * ratio), pad.left - 6, y + 3);
+        
+        // Right Y-axis: Block ratio percentage (0% - 100%)
+        ctx.fillStyle = '#38bdf8';
+        ctx.textAlign = 'left';
+        ctx.fillText(Math.round(100 * ratio) + '%', width - pad.right + 6, y + 3);
+      }
+      
+      const getX = (i) => pad.left + (i / (pointsCount - 1)) * cW;
+      const getY = (val, max) => pad.top + cH - (val / max) * cH;
+      
+      // Soft area gradient fill under allowed curve
+      const gradAllowed = ctx.createLinearGradient(0, pad.top, 0, pad.top + cH);
+      gradAllowed.addColorStop(0, 'rgba(74, 222, 128, 0.10)');
+      gradAllowed.addColorStop(1, 'transparent');
+      
+      ctx.beginPath();
+      buckets.forEach((b, i) => {
+        const x = getX(i);
+        const y = getY(b.allowed, maxVal);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.lineTo(getX(pointsCount - 1), pad.top + cH);
+      ctx.lineTo(getX(0), pad.top + cH);
+      ctx.closePath();
+      ctx.fillStyle = gradAllowed;
+      ctx.fill();
+      
+      // 1. Draw Green Line: Allowed queries
+      ctx.strokeStyle = '#4ade80';
+      ctx.lineWidth = 1.5;
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      buckets.forEach((b, i) => {
+        const x = getX(i);
+        const y = getY(b.allowed, maxVal);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      
+      // 2. Draw Red Line: Blocked queries
+      ctx.strokeStyle = '#f87171';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      buckets.forEach((b, i) => {
+        const x = getX(i);
+        const y = getY(b.blocked, maxVal);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      
+      // 3. Draw Dashed Blue Line: Block Ratio percentage (0-100%)
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      buckets.forEach((b, i) => {
+        const x = getX(i);
+        const y = getY(b.ratio, 100);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      ctx.setLineDash([]); // Reset line dash
+      
+      // Draw X-axis time labels (-20m, -15m, -10m, -5m, Now)
+      ctx.fillStyle = '#64748b';
+      ctx.font = '9px monospace';
+      ctx.textAlign = 'center';
+      [0, 30, 60, 90, 119].forEach(i => {
+        const minAgo = Math.round((pointsCount - 1 - i) * (20 / pointsCount));
+        const label = minAgo === 0 ? 'Now' : `-${minAgo}m`;
+        ctx.fillText(label, getX(i), height - 8);
+      });
+      
+      // Live update active tooltip position/content during polling refresh
+      if (activeTooltipIndex !== null) {
+        const tip = document.getElementById('chart-tooltip');
+        if (tip && tip.style.display === 'block' && cW > 0 && lastMouseX >= pad.left && lastMouseX <= pad.left + cW) {
+          const slotWidth = cW / pointsCount;
+          const idx = Math.floor((lastMouseX - pad.left) / slotWidth);
+          if (idx >= 0 && idx < pointsCount && currentChartBuckets[idx]) {
+            activeTooltipIndex = idx;
+            // Re-trigger content update via mousemove simulation or direct call if needed
+          }
+        }
+      }
+    }
 
     // Render tooltip content
     function updateTooltipContent(idx, x, y, maxW) {
