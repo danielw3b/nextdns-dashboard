@@ -758,7 +758,7 @@
           btnHtml = `<button class="btn-danger small" style="opacity: 0.5; cursor: not-allowed;" disabled title="Blocked by NextDNS Security/Parental">Blocked</button>`;
         } else if (isThreshold) {
           statTxt = 'Report'; bStyle = 'color: var(--warn, #fbbf24); font-weight: 600;';
-          btnHtml = `<button data-action="add-deny" data-domain="${safeText(i.domain)}" class="btn-danger small" title="Threshold reached - Click to Deny">Deny</button>`;
+          btnHtml = `<button data-action="add-deny" data-domain="${safeText(i.domain)}" class="status-allowed small" title="Threshold reached - Click to Deny">Deny</button>`;
         } else {
           btnHtml = `<button data-action="add-deny" data-domain="${safeText(i.domain)}" class="status-allowed small" title="Click to Deny">Deny</button>`;
         }
