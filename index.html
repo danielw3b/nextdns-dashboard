@@ -736,9 +736,14 @@
         const s = getDomainStatus(i.domain, lat?.status, lat?.reasons, cfg);
     
         const isThreshold = i.count >= limit && !s.isSys && !s.isBlocked;
-        if (isThreshold && STATE.reportedThresholdDomains && !STATE.reportedThresholdDomains.has(s.clean)) {
+        
+        if (!STATE.reportedThresholdDomains) { STATE.reportedThresholdDomains = new Set(); }
+    
+        if (isThreshold && !STATE.reportedThresholdDomains.has(s.clean)) {
           STATE.reportedThresholdDomains.add(s.clean);
-          if (typeof sendTelegramNotification === 'function') sendTelegramNotification(i.domain, i.count);
+          if (typeof sendTelegramNotification === 'function') {
+            sendTelegramNotification(i.domain, i.count);
+          }
         }
     
         let statTxt = 'Monitoring', bStyle = 'color: var(--muted);', btnHtml = '';
@@ -751,6 +756,9 @@
         } else if (s.isApi) {
           statTxt = 'Blocked'; bStyle = 'color: var(--blocked, #ef4444); font-weight: 600;';
           btnHtml = `<button class="btn-danger small" style="opacity: 0.5; cursor: not-allowed;" disabled title="Blocked by NextDNS Security/Parental">Blocked</button>`;
+        } else if (isThreshold) {
+          statTxt = 'Report'; bStyle = 'color: var(--warn, #fbbf24); font-weight: 600;';
+          btnHtml = `<button data-action="add-deny" data-domain="${safeText(i.domain)}" class="btn-danger small" title="Threshold reached - Click to Deny">Deny</button>`;
         } else {
           btnHtml = `<button data-action="add-deny" data-domain="${safeText(i.domain)}" class="status-allowed small" title="Click to Deny">Deny</button>`;
         }
