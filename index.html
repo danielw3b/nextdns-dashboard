@@ -10,7 +10,6 @@
   <link rel="icon" href="icon.svg" type="image/svg+xml">
 
 <style>
-  /* --- GLOBAL & ROOT --- */
   :root {
     --bg: #090d16; --surface: #0f172a; --surface-2: #1e293b; --border: #334155;
     --text: #f1f5f9; --muted: #94a3b8; --accent: #38bdf8; --accent-hover: #0ea5e9;
@@ -27,7 +26,6 @@
     min-height: 100vh; display: flex; flex-direction: column;
   }
 
-    /* --- HEADER & NAVIGATION --- */
     header {
       background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.75rem 1rem;
       position: sticky; top: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;
@@ -45,7 +43,6 @@
       .badge.sim { background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.4); color: #fde047; }
 
       .header-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
-
 
     #live-status-filter,
     #global-device-select { appearance: base-select; -webkit-appearance: base-select;
@@ -68,8 +65,6 @@
       .nav-tabs button:hover { color: var(--text); }
       .nav-tabs button.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
 
-
-    /* --- MAIN CONTENT & CARDS --- */
     main { width: 100%; /*max-width: 1100px;*/ margin: 1.25rem auto; padding: 0 1rem; flex: 1; touch-action: pan-y; }
 
       .tab-content { display: none; }
@@ -116,8 +111,6 @@
       .filter-bar { display: flex; gap: 0.5rem; /*margin-bottom: 0.75rem;*/ flex-wrap: wrap; }
       .truncate { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
-
-    /* --- TABLES & DATA VIEWS --- */
     .table-container { overflow: auto; border: 1px solid var(--border); border-radius: 8px; background: #060911; height: calc(100vh - 280px); min-height: 260px; }
     .table-container table, #tab-live, #tab-autoblock { width: 100%; border-collapse: collapse; }
 
@@ -152,7 +145,6 @@
       #tab-live td, #tab-autoblock td { padding: 0.35rem 0.4rem; }
     }
 
-    /* --- CONTROLS & BUTTONS --- */
     button, .btn {
       font-family: inherit; font-size: 0.75rem; font-weight: 600; padding: 0.4rem 0.75rem;
       border-radius: 4px; border: 1px solid transparent; cursor: pointer; display: inline-flex;
@@ -172,7 +164,6 @@
     }
     input[type="text"]:focus, select:focus { outline: none; border-color: var(--accent); }
 
-    /* --- TOAST NOTIFICATIONS --- */
     .toast-container {
       position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 100; max-width: 360px; display: flex; flex-direction: column; gap: 0.5rem;
     }
@@ -186,7 +177,6 @@
 
     @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-    /* --- FOOTER --- */
     footer {
       background: var(--surface); border-top: 1px solid var(--border); padding: 0.75rem 1rem; text-align: right; font-size: 0.75rem;
     }
@@ -323,7 +313,7 @@
       </div>
     </section>
     
-    <!-- TAB: GUARDRAILS & RULES -->
+    <!-- TAB: MONITORING -->
     <section id="tab-blocking" class="tab-content">
       <div class="card" style="padding: 0.75rem 1rem;">
         <div class="card-title" style="margin-bottom:0;">
@@ -348,7 +338,7 @@
       </div>
     </section>
 
-    <!-- TAB: CONFIGURATION -->
+    <!-- TAB: SETTINGS -->
     <section id="tab-config" class="tab-content">
       <div class="card">
         <div class="card-title">
@@ -405,8 +395,7 @@
             <label class="btn" style="flex: 1; background: var(--surface-2); cursor: pointer; margin: 0; display: inline-flex; align-items: center; justify-content: center; text-align: center;">
               Import JSON <input type="file" id="cfg-import-file" accept=".json" style="display: none;" onchange="importConfigJSON(event)">
             </label>
-          </div>
-        
+          </div>      
           <div class="form-group" style="display: flex;">
             <button class="btn-primary" id="btn-save-cfg" style="width: 100%; justify-content: center;">Save Configuration</button>
           </div>
@@ -431,20 +420,15 @@
     
     const PROTECTED_DOMAINS = [
       // Apple
-      'apple.com','icloud.com','captive.apple.com','time.apple.com','ocsp.apple.com','mzstatic.com',
-      
+      'apple.com','icloud.com','captive.apple.com','time.apple.com','ocsp.apple.com','mzstatic.com',      
       // Google
       'google.com','googleapis.com','gstatic.com','googleusercontent.com','connectivitycheck.gstatic.com','clients3.google.com',
-      
       // Microsoft
       'microsoft.com','windowsupdate.com','live.com','msftconnecttest.com','time.windows.com',
-      
       // Network Time
       'pool.ntp.org','time.nist.gov','ntp.org',
-      
       // Cloudflare & DNS Core
       'cloudflare.com','cloudflare.net','nextdns.io',
-      
       // Certificate Authorities & OCSP (Essential for HTTPS/TLS certificate validation)
       'ocsp.sectigo.com','ocsp.digicert.com','ocsp.godaddy.com','ocsp.entrust.net',
       'local','lan'
@@ -469,6 +453,7 @@
       devices: new Set(),
       hits: {},
       manuallyBlocked: new Set(),
+      manuallyUnBlocked: new Set(),
       reportedThresholdDomains: new Set(),
       config: {
         profile: '',
@@ -614,7 +599,6 @@
       // Respect explicit user unblocks to override historical log denylist reasons
       const isExplicitUnblocked = STATE.manuallyUnblocked && STATE.manuallyUnblocked.has(clean);  
       const isManual = (!isExplicitUnblocked && rList.includes('denylist')) || (STATE.manuallyBlocked && STATE.manuallyBlocked.has(clean));
-      //const isManual = rList.includes('denylist') || (STATE.manuallyBlocked && STATE.manuallyBlocked.has(clean));
       const isApi = lStat === 'blocked' || lStat === 'security' || lStat === 'parental';
       const isBlocked = isApi || isManual;
     
@@ -661,7 +645,6 @@
         if (log.reasons && log.reasons.map(r => r.toLowerCase()).includes('denylist')) {
           const isExplicitlyUnblocked = STATE.manuallyUnblocked && STATE.manuallyUnblocked.has(s.clean);
           if (!isExplicitlyUnblocked) {
-            if (!STATE.manuallyBlocked) STATE.manuallyBlocked = new Set();
             STATE.manuallyBlocked.add(s.clean);
           }
         }
@@ -1363,7 +1346,6 @@
         showToast('Info', `Blocked simulation domain ${safeText(clean)}`, 'danger');
       }
     
-      if (!STATE.manuallyBlocked) STATE.manuallyBlocked = new Set();
       STATE.manuallyBlocked.add(clean);
       if (STATE.manuallyUnblocked) {
         STATE.manuallyUnblocked.delete(clean);
@@ -1394,7 +1376,6 @@
       }
     
       STATE.manuallyBlocked?.delete(clean);
-      if (!STATE.manuallyUnblocked) STATE.manuallyUnblocked = new Set();
       STATE.manuallyUnblocked.add(clean);
       refreshTables();
     };
@@ -1546,7 +1527,6 @@
       saveBtn.onclick = () => {
         if (saveBtn.disabled) return;
         saveBtn.disabled = true;
-        //saveBtn.style.cssText = 'opacity:0.6; cursor:not-allowed;';
     
         const cfg = STATE.config;
         cfg.profile = document.getElementById('cfg-profile').value.trim();
@@ -1568,8 +1548,6 @@
         
         setTimeout(() => {
           saveBtn.disabled = false;
-          //saveBtn.style.opacity = '';
-          //saveBtn.style.cursor = '';
         }, 4000);
       };
     }
