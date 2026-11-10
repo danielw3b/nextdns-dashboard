@@ -286,14 +286,14 @@
     <section id="tab-live" class="tab-content">
       <div class="card" style="padding: 0.75rem 1rem;">
         <div class="filter-bar">
-          <input type="text" id="live-search" placeholder="Search domain, device, or reason..." style="flex: 1; min-width: 180px;">
+          <input type="text" id="live-search" placeholder="Search domain, device, or reason..." style="flex: 1; min-width: 160px;">
           <select id="live-status-filter" style="min-width: 90px;">
             <option value="all">All Traffic</option>
             <option value="blocked">Blocked Only</option>
             <option value="allowed">Allowed Only</option>
           </select>
           <button id="btn-export-live">Export CSV</button>
-          <button id="btn-clear-logs" class="btn-danger">Clear</button>
+          <!--<button id="btn-clear-logs" class="btn-danger">Clear</button>-->
         </div>
       </div>
 
@@ -453,7 +453,7 @@
       devices: new Set(),
       hits: {},
       manuallyBlocked: new Set(),
-      manuallyUnBlocked: new Set(),
+      manuallyUnblocked: new Set(),
       reportedThresholdDomains: new Set(),
       config: {
         profile: '',
