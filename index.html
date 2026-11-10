@@ -737,7 +737,7 @@
     
         const isThreshold = i.count >= limit && !s.isSys && !s.isBlocked;
         
-        if (!STATE.reportedThresholdDomains) { STATE.reportedThresholdDomains = new Set(); }
+        //if (!STATE.reportedThresholdDomains) { STATE.reportedThresholdDomains = new Set(); }
     
         if (isThreshold && !STATE.reportedThresholdDomains.has(s.clean)) {
           STATE.reportedThresholdDomains.add(s.clean);
