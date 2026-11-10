@@ -67,7 +67,7 @@
   .nav-tabs button:hover { color: var(--text); }
   .nav-tabs button.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
 
-  main { width: 100%; margin: 1.25rem auto; padding: 0 1rem; flex: 1; touch-action: pan-y; }
+  main { width: 100%; /*max-width: 1100px;*/ margin: 1.25rem auto; padding: 0 1rem; flex: 1; touch-action: pan-y; }
 
   .tab-content { display: none; }
   .tab-content.active { display: block; }
@@ -173,7 +173,7 @@
   }
   .toast-warn { border-color: rgba(245, 158, 11, 0.5); }
   .toast-danger { border-color: rgba(239, 68, 68, 0.5); }
-  .toast-success { border-color: var(--accent); }
+  .toast-success { border-color: rgba(56, 189, 248, 0.5); }
 
   @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
