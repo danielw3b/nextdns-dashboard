@@ -664,11 +664,11 @@
         if (s.isSys) {
           badge = `<button class="btn-danger small" style="opacity: 0.5; cursor: not-allowed;" disabled title="Protected System Domain">Protected</button>`;
         } else if (s.isManual) {
-          badge = `<button class="btn-warn small" data-action="remove-deny" data-domain="${safeText(i.domain)}" title="Click to Unblock">Unblock</button>`;
+          badge = `<button class="btn-warn small" data-action="remove-deny" data-domain="${safeText(l.domain)}" title="Click to Unblock">Unblock</button>`;
         } else if (s.isApi) {
           badge = `<button class="btn-danger small" style="opacity: 0.5; cursor: not-allowed;" disabled title="Blocked by NextDNS Security/Parental">Blocked</button>`;
         } else {
-          badge = `<button class="status-allowed small" data-action="add-deny" data-domain="${safeText(i.domain)}" title="Click to Deny">Allowed</button>`;
+          badge = `<button class="status-allowed small" data-action="add-deny" data-domain="${safeText(l.domain)}" title="Click to Deny">Allowed</button>`;
         }
     
         const rText = s.isSys ? 'System Domain' : (s.isManual ? 'Denylist' : safeText((l.reasons || []).join(', ') || '—'));
