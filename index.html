@@ -113,21 +113,21 @@
   .truncate { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
   .table-container { overflow: auto; border: 1px solid var(--border); border-radius: 8px; background: #060911; height: calc(100vh - 280px); min-height: 260px; }
-  .table-container table, #tab-live, #tab-autoblock { width: 100%; border-collapse: collapse; }
+  .table-container table, #tab-live, #tab-mon { width: 100%; border-collapse: collapse; }
 
   th { background: var(--surface); color: var(--muted); font-weight: 600; position: sticky; top: 0; z-index: 10; text-transform: uppercase; font-size: 0.64rem; letter-spacing: 0.03em; }
 
-  #tab-live th, #tab-live td, #tab-autoblock th, #tab-autoblock td { padding: 0.5rem 0.75rem; text-align: left; white-space: nowrap; }
+  #tab-live th, #tab-live td, #tab-mon th, #tab-mon td { padding: 0.5rem 0.75rem; text-align: left; white-space: nowrap; }
   tr:hover td { background: rgba(30, 41, 59, 0.4); }
 
   #tab-live th:nth-child(2), #tab-live td:nth-child(2) { max-width: 400px; overflow: hidden; text-overflow: ellipsis; }
   #tab-live th:nth-child(4), #tab-live td:nth-child(4) { max-width: 70px; overflow: hidden; text-overflow: ellipsis; }
 
-  #tab-autoblock th:nth-child(1), #tab-autoblock td:nth-child(1) { max-width: 400px; overflow: hidden; text-overflow: ellipsis; }
-  #tab-autoblock td:nth-child(2), #tab-autoblock th:nth-child(2) { text-align: right; min-width: 20px; }
-  #tab-autoblock td:nth-child(3), #tab-autoblock th:nth-child(3) { max-width: 80px; }
-  #tab-autoblock td:nth-child(4), #tab-autoblock th:nth-child(4) { max-width: 60px; }
-  #tab-autoblock td:nth-child(5), #tab-autoblock th:nth-child(5), #tab-live th:nth-child(5), #tab-live td:nth-child(5) { text-align: right; width: 45px; }
+  #tab-mon th:nth-child(1), #tab-mon td:nth-child(1) { max-width: 400px; overflow: hidden; text-overflow: ellipsis; }
+  #tab-mon td:nth-child(2), #tab-mon th:nth-child(2) { text-align: right; min-width: 20px; }
+  #tab-mon td:nth-child(3), #tab-mon th:nth-child(3) { max-width: 80px; }
+  #tab-mon td:nth-child(4), #tab-mon th:nth-child(4) { max-width: 60px; }
+  #tab-mon td:nth-child(5), #tab-mon th:nth-child(5), #tab-live th:nth-child(5), #tab-live td:nth-child(5) { text-align: right; width: 45px; }
 
   .domain-cell { font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -140,9 +140,9 @@
 
   @media (max-width: 800px) {
     .table-container { overflow-x: auto; }
-    #tab-live th:nth-child(2), #tab-live td:nth-child(2), #tab-autoblock th:nth-child(1), #tab-autoblock td:nth-child(1) { max-width: 200px; }
-    #tab-live th, #tab-live td, #tab-live .domain-cell, #tab-autoblock th, #tab-autoblock td { overflow-wrap: anywhere; font-size: 0.7rem; }
-    #tab-live td, #tab-autoblock td { padding: 0.35rem 0.4rem; }
+    #tab-live th:nth-child(2), #tab-live td:nth-child(2), #tab-mon th:nth-child(1), #tab-mon td:nth-child(1) { max-width: 200px; }
+    #tab-live th, #tab-live td, .domain-cell, #tab-mon th, #tab-mon td { overflow-wrap: anywhere; font-size: 0.7rem; }
+    #tab-live td, #tab-mon td { padding: 0.35rem 0.4rem; }
   }
 
   button, .btn {
@@ -155,6 +155,7 @@
   .btn-primary:hover { background: var(--accent-hover); }
   .btn-danger { background: var(--blocked-bg); color: #fca5a5; border-color: rgba(239, 68, 68, 0.3); }
   .btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
+  .btn-warn { background: rgba(245, 158, 11, 0.2); color: #fde047; border-color: rgba(245, 158, 11, 0.4); }
 
   .small { padding: 0.15rem 0.4rem; font-size: 0.65rem; width: 60px; justify-content: center; }
 
@@ -323,7 +324,7 @@
       </div>
            
       <div class="table-container">
-        <table id="tab-autoblock">
+        <table id="tab-mon">
           <thead>
             <tr>
               <th>Domain</th>
@@ -333,7 +334,7 @@
               <th style="text-align: right;">Action</th>
             </tr>
           </thead>
-          <tbody id="autoblock-hits-body"></tbody>
+          <tbody id="hits-body"></tbody>
         </table>
       </div>
     </section>
@@ -637,7 +638,7 @@
       });
     
       const fragment = document.createDocumentFragment();
-      for (const log of filtered.slice(0, 100)) {
+      for (const log of filtered.slice(0, 200)) {
         const tr = document.createElement('tr');
         const s = getDomainStatus(log.domain, log.status, log.reasons, cfg);
     
@@ -650,7 +651,7 @@
         }
     
         let badge = '';
-        if (s.isSys) {
+        /*if (s.isSys) {
           badge = `<span class="status-pill" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; cursor: not-allowed; opacity: 0.8;" title="Protected System Domain">Protected</span>`;
         } else if (s.isManual) {
           badge = `<span class="status-pill" data-action="remove-deny" data-domain="${safeText(log.domain)}" style="background: rgba(245, 158, 11, 0.2); color: #fde047; border: 1px solid rgba(245, 158, 11, 0.4); cursor: pointer;" title="Denylist - Click to Unblock">Unblock</span>`;
@@ -658,23 +659,33 @@
           badge = `<span class="status-pill status-blocked" title="Blocked by NextDNS Security/Parental">Blocked</span>`;
         } else {
           badge = `<span class="status-pill status-allowed" data-action="add-deny" data-domain="${safeText(log.domain)}" style="cursor: pointer;" title="Allowed - Click to Deny">Allowed</span>`;
+        }*/
+
+        if (s.isSys) {
+          badge = `<button class="btn-danger small" style="opacity: 0.5; cursor: not-allowed;" disabled title="Protected System Domain">Protected</button>`;
+        } else if (s.isManual) {
+          badge = `<button class="btn-warn small" data-action="remove-deny" data-domain="${safeText(i.domain)}" title="Click to Unblock">Unblock</button>`;
+        } else if (s.isApi) {
+          badge = `<button class="btn-danger small" style="opacity: 0.5; cursor: not-allowed;" disabled title="Blocked by NextDNS Security/Parental">Blocked</button>`;
+        } else {
+          badge = `<button class="status-allowed small" data-action="add-deny" data-domain="${safeText(i.domain)}" title="Click to Deny">Allowed</button>`;
         }
     
         const rText = s.isSys ? 'System Domain' : (s.isManual ? 'Denylist' : safeText((log.reasons || []).join(', ') || '—'));
     
         tr.innerHTML = `
-          <td style="white-space: nowrap; font-size: 0.75rem; color: var(--muted);">
+          <td style="white-space: nowrap; color: var(--muted);">
             ${log.time instanceof Date ? log.time.toLocaleTimeString() : new Date(log.time).toLocaleTimeString()}
           </td>
           <td class="domain-cell" style="color: ${s.isManual ? '#fde047' : (s.isBlocked ? '#fca5a5' : '#f1f5f9')};">
             ${safeText(log.domain)}
           </td>
-          <td style="font-size: 0.75rem;">
+          <td>
             <span data-action="filter-device" data-device="${safeText(log.device)}" style="color: #38bdf8; cursor: pointer; text-decoration: underline;">
               ${safeText(log.device)}
             </span>
           </td>
-          <td style="font-size: 0.75rem; color: ${s.isSys ? '#38bdf8' : (s.isManual ? '#fde047' : 'var(--muted);')};">
+          <td style="color: ${s.isSys ? '#38bdf8' : (s.isManual ? '#fde047' : 'var(--muted);')};">
             ${rText}
           </td>
           <td>${badge}</td>
@@ -687,7 +698,7 @@
     
     // Render DNS hits monitoring table with clean boolean flags and data attributes for Event Delegation
     function renderHitsTable() {
-      const tbody = document.getElementById('autoblock-hits-body');
+      const tbody = document.getElementById('hits-body');
       if (!tbody) return;
     
       const limit = Number(STATE.config.threshold) || 200;
@@ -731,16 +742,16 @@
     
         let statTxt = 'Monitoring', bStyle = 'color: var(--muted);', btnHtml = '';
         if (s.isSys) {
-          statTxt = 'Protected'; bStyle = 'color: var(--info, #38bdf8); font-weight: 600;';
+          statTxt = 'Protected'; bStyle = 'color: var(--info, #38bdf8);';
           btnHtml = `<button class="btn-danger small" style="opacity: 0.5; cursor: not-allowed;" disabled title="Protected System Domain">Protected</button>`;
         } else if (s.isManual) {
-          statTxt = 'Denylist'; bStyle = 'color: var(--warn, #f59e0b); font-weight: 600;';
+          statTxt = 'Denylist'; bStyle = 'color: var(--warn, #f59e0b);';
           btnHtml = `<button data-action="remove-deny" data-domain="${safeText(i.domain)}" class="btn small" style="background: rgba(245, 158, 11, 0.2); color: #fde047; border-color: rgba(245, 158, 11, 0.4);" title="Click to Unblock">Unblock</button>`;
         } else if (s.isApi) {
-          statTxt = 'Blocked'; bStyle = 'color: var(--blocked, #ef4444); font-weight: 600;';
+          statTxt = 'Blocked'; bStyle = 'color: var(--blocked, #ef4444);';
           btnHtml = `<button class="btn-danger small" style="opacity: 0.5; cursor: not-allowed;" disabled title="Blocked by NextDNS Security/Parental">Blocked</button>`;
         } else if (isThreshold) {
-          statTxt = 'Report'; bStyle = 'color: var(--warn, #fbbf24); font-weight: 600;';
+          statTxt = 'Report'; bStyle = 'color: var(--warn, #fbbf24);';
           btnHtml = `<button data-action="add-deny" data-domain="${safeText(i.domain)}" class="status-allowed small" title="Threshold reached - Click to Deny">Deny</button>`;
         } else {
           btnHtml = `<button data-action="add-deny" data-domain="${safeText(i.domain)}" class="status-allowed small" title="Click to Deny">Deny</button>`;
@@ -753,7 +764,7 @@
             <td style="width: 80px;">
               <div class="bar-bg"><div class="bar-fill" style="width:${pct}%; background:${s.isBlocked ? (s.isManual ? 'var(--warn, #f59e0b)' : 'var(--blocked)') : 'var(--warn)'}"></div></div>
             </td>
-            <td><span style="${bStyle} font-size: 0.7rem;">${statTxt}</span></td>
+            <td><span style="${bStyle}">${statTxt}</span></td>
             <td style="text-align: right;">${btnHtml}</td>
           </tr>
         `;
@@ -1636,7 +1647,7 @@
     
       // Central Event Delegation for Tables and Breakdown Actions
       const setupTableEventDelegation = () => {
-        ['autoblock-hits-body', 'live-log-body', 'analytics-devices'].forEach(id => {
+        ['hits-body', 'live-log-body', 'analytics-devices'].forEach(id => {
           const container = document.getElementById(id);
           if (!container || container.dataset.delegated) return;
           container.dataset.delegated = 'true';
