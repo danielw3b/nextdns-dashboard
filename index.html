@@ -131,7 +131,6 @@
 
   .domain-cell { font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-  /*.status-pill { display: inline-block; padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.68rem; font-weight: 600; width: 60px; text-align: center; }*/
   .status-blocked { background: var(--blocked-bg); color: #fca5a5; }
   .status-allowed { background: var(--allowed-bg); color: #86efac; }
 
@@ -651,16 +650,6 @@
         }
     
         let badge = '';
-        /*if (s.isSys) {
-          badge = `<span class="status-pill" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; cursor: not-allowed; opacity: 0.8;" title="Protected System Domain">Protected</span>`;
-        } else if (s.isManual) {
-          badge = `<span class="status-pill" data-action="remove-deny" data-domain="${safeText(l.domain)}" style="background: rgba(245, 158, 11, 0.2); color: #fde047; border: 1px solid rgba(245, 158, 11, 0.4); cursor: pointer;" title="Denylist - Click to Unblock">Unblock</span>`;
-        } else if (s.isApi) {
-          badge = `<span class="status-pill status-blocked" title="Blocked by NextDNS Security/Parental">Blocked</span>`;
-        } else {
-          badge = `<span class="status-pill status-allowed" data-action="add-deny" data-domain="${safeText(l.domain)}" style="cursor: pointer;" title="Allowed - Click to Deny">Allowed</span>`;
-        }*/
-
         if (s.isSys) {
           badge = `<button class="btn-danger small" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; cursor: not-allowed; opacity: 0.8;" disabled title="Protected System Domain">Protected</button>`;
         } else if (s.isManual) {
