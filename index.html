@@ -157,7 +157,7 @@
   .btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
   .btn-warn { background: rgba(245, 158, 11, 0.2); color: #fde047; border-color: rgba(245, 158, 11, 0.4); }
 
-  .small { padding: 0.15rem 0.4rem; font-size: 0.65rem; width: 60px; justify-content: center; }
+  .small { padding: 0.15rem 0.45rem; font-size: 0.65rem; width: 60px; justify-content: center; }
 
   input[type="text"], input[type="password"], input[type="number"], select {
     background: #060911; border: 1px solid var(--border); color: var(--text);
@@ -662,7 +662,7 @@
         }*/
 
         if (s.isSys) {
-          badge = `<button class="btn-danger small" style="opacity: 0.5; cursor: not-allowed;" disabled title="Protected System Domain">Protected</button>`;
+          badge = `<button class="btn-danger small" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; cursor: not-allowed; opacity: 0.8;" disabled title="Protected System Domain">Protected</button>`;
         } else if (s.isManual) {
           badge = `<button class="btn-warn small" data-action="remove-deny" data-domain="${safeText(l.domain)}" title="Click to Unblock">Unblock</button>`;
         } else if (s.isApi) {
@@ -677,7 +677,7 @@
           <td style="white-space: nowrap; color: var(--muted);">
             ${l.time instanceof Date ? l.time.toLocaleTimeString() : new Date(l.time).toLocaleTimeString()}
           </td>
-          <td class="domain-cell" style="color: ${s.isManual ? '#fde047' : (s.isBlocked ? '#fca5a5' : '#f1f5f9')};">
+          <td class="domain-cell" style="color: ${s.isManual ? '#fde047' : (s.isBlocked ? '#fca5a5' : '#f1f5f9')};" title="${safeText(l.domain)}">
             ${safeText(l.domain)}
           </td>
           <td>
@@ -685,7 +685,7 @@
               ${safeText(l.device)}
             </span>
           </td>
-          <td style="color: ${s.isSys ? '#38bdf8' : (s.isManual ? '#fde047' : 'var(--muted);')};">
+          <td style="color: ${s.isSys ? '#38bdf8' : (s.isManual ? '#fde047' : 'var(--muted);')};" title="${rText}">
             ${rText}
           </td>
           <td>${badge}</td>
@@ -743,10 +743,10 @@
         let statTxt = 'Monitoring', bStyle = 'color: var(--muted);', btnHtml = '';
         if (s.isSys) {
           statTxt = 'Protected'; bStyle = 'color: var(--info, #38bdf8);';
-          btnHtml = `<button class="btn-danger small" style="opacity: 0.5; cursor: not-allowed;" disabled title="Protected System Domain">Protected</button>`;
+          btnHtml = `<button class="btn-danger small" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; cursor: not-allowed; opacity: 0.8;" disabled title="Protected System Domain">Protected</button>`;
         } else if (s.isManual) {
           statTxt = 'Denylist'; bStyle = 'color: var(--warn, #f59e0b);';
-          btnHtml = `<button data-action="remove-deny" data-domain="${safeText(i.domain)}" class="btn small" style="background: rgba(245, 158, 11, 0.2); color: #fde047; border-color: rgba(245, 158, 11, 0.4);" title="Click to Unblock">Unblock</button>`;
+          btnHtml = `<button data-action="remove-deny" data-domain="${safeText(i.domain)}" class="btn-warn small" title="Click to Unblock">Unblock</button>`;
         } else if (s.isApi) {
           statTxt = 'Blocked'; bStyle = 'color: var(--blocked, #ef4444);';
           btnHtml = `<button class="btn-danger small" style="opacity: 0.5; cursor: not-allowed;" disabled title="Blocked by NextDNS Security/Parental">Blocked</button>`;
@@ -764,7 +764,7 @@
             <td style="width: 80px;">
               <div class="bar-bg"><div class="bar-fill" style="width:${pct}%; background:${s.isBlocked ? (s.isManual ? 'var(--warn, #f59e0b)' : 'var(--blocked)') : 'var(--warn)'}"></div></div>
             </td>
-            <td><span style="${bStyle}">${statTxt}</span></td>
+            <td><span style="${bStyle}" title="${statTxt}">${statTxt}</span></td>
             <td style="text-align: right;">${btnHtml}</td>
           </tr>
         `;
