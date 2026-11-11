@@ -638,12 +638,12 @@
       });
     
       const fragment = document.createDocumentFragment();
-      for (const log of filtered.slice(0, 200)) {
+      for (const l of filtered.slice(0, 200)) {
         const tr = document.createElement('tr');
-        const s = getDomainStatus(log.domain, log.status, log.reasons, cfg);
+        const s = getDomainStatus(l.domain, l.status, l.reasons, cfg);
     
         // Automatically sync denylist reasons into manual block state
-        if (log.reasons && log.reasons.map(r => r.toLowerCase()).includes('denylist')) {
+        if (l.reasons && l.reasons.map(r => r.toLowerCase()).includes('denylist')) {
           const isExplicitlyUnblocked = STATE.manuallyUnblocked && STATE.manuallyUnblocked.has(s.clean);
           if (!isExplicitlyUnblocked) {
             STATE.manuallyBlocked.add(s.clean);
@@ -654,11 +654,11 @@
         /*if (s.isSys) {
           badge = `<span class="status-pill" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; cursor: not-allowed; opacity: 0.8;" title="Protected System Domain">Protected</span>`;
         } else if (s.isManual) {
-          badge = `<span class="status-pill" data-action="remove-deny" data-domain="${safeText(log.domain)}" style="background: rgba(245, 158, 11, 0.2); color: #fde047; border: 1px solid rgba(245, 158, 11, 0.4); cursor: pointer;" title="Denylist - Click to Unblock">Unblock</span>`;
+          badge = `<span class="status-pill" data-action="remove-deny" data-domain="${safeText(l.domain)}" style="background: rgba(245, 158, 11, 0.2); color: #fde047; border: 1px solid rgba(245, 158, 11, 0.4); cursor: pointer;" title="Denylist - Click to Unblock">Unblock</span>`;
         } else if (s.isApi) {
           badge = `<span class="status-pill status-blocked" title="Blocked by NextDNS Security/Parental">Blocked</span>`;
         } else {
-          badge = `<span class="status-pill status-allowed" data-action="add-deny" data-domain="${safeText(log.domain)}" style="cursor: pointer;" title="Allowed - Click to Deny">Allowed</span>`;
+          badge = `<span class="status-pill status-allowed" data-action="add-deny" data-domain="${safeText(l.domain)}" style="cursor: pointer;" title="Allowed - Click to Deny">Allowed</span>`;
         }*/
 
         if (s.isSys) {
@@ -671,18 +671,18 @@
           badge = `<button class="status-allowed small" data-action="add-deny" data-domain="${safeText(i.domain)}" title="Click to Deny">Allowed</button>`;
         }
     
-        const rText = s.isSys ? 'System Domain' : (s.isManual ? 'Denylist' : safeText((log.reasons || []).join(', ') || '—'));
+        const rText = s.isSys ? 'System Domain' : (s.isManual ? 'Denylist' : safeText((l.reasons || []).join(', ') || '—'));
     
         tr.innerHTML = `
           <td style="white-space: nowrap; color: var(--muted);">
-            ${log.time instanceof Date ? log.time.toLocaleTimeString() : new Date(log.time).toLocaleTimeString()}
+            ${l.time instanceof Date ? l.time.toLocaleTimeString() : new Date(l.time).toLocaleTimeString()}
           </td>
           <td class="domain-cell" style="color: ${s.isManual ? '#fde047' : (s.isBlocked ? '#fca5a5' : '#f1f5f9')};">
-            ${safeText(log.domain)}
+            ${safeText(l.domain)}
           </td>
           <td>
-            <span data-action="filter-device" data-device="${safeText(log.device)}" style="color: #38bdf8; cursor: pointer; text-decoration: underline;">
-              ${safeText(log.device)}
+            <span data-action="filter-device" data-device="${safeText(l.device)}" style="color: #38bdf8; cursor: pointer; text-decoration: underline;">
+              ${safeText(l.device)}
             </span>
           </td>
           <td style="color: ${s.isSys ? '#38bdf8' : (s.isManual ? '#fde047' : 'var(--muted);')};">
