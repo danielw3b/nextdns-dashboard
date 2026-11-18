@@ -631,7 +631,8 @@
           let rCopy = [...s.rList];
           if (s.isSys) rCopy.push('protected system domain', 'protected', 'system');
           else if (s.isManual) rCopy.push('denylist');
-          else if (rCopy.length === 0) rCopy.push('—');
+          else if (!s.isBlocked) rCopy.push('allowed');
+          if (rCopy.length === 0) rCopy.push('—');
     
           if (!matchDom && !matchDev && !rCopy.some(r => r.includes(search))) return false;
         }
