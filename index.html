@@ -158,12 +158,20 @@
 
   .small { padding: 0.15rem 0.45rem; font-size: 0.65rem; width: 60px; justify-content: center; }
 
-  live-search-input, input[type="text"], input[type="password"], input[type="number"], select {
+  /*.live-search-input, input[type="text"], input[type="password"], input[type="number"], select {
     background: #060911; border: 1px solid var(--border); color: var(--text);
     padding: 0.45rem 0.65rem; border-radius: 6px; font-size: 0.75rem; font-family: inherit;
   }
-  live-search-input:focusfocus-within, input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus, select:focus { outline: none; border-color: var(--accent); }
-
+  .live-search-input:focus-within, input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus, select:focus { outline: none; border-color: var(--accent); }*/
+  
+  .live-search-input, input[type="text"], input[type="password"], input[type="number"], select {
+    background: #060911; border: 1px solid var(--border); color: var(--text);
+    padding: 0.45rem 0.65rem; border-radius: 6px; font-size: 0.75rem; font-family: inherit;
+  }
+  .live-search-input:focus-within, :is(input[type="text"], input[type="password"], input[type="number"], select):focus { outline: none; border-color: var(--accent); }
+  
+  #btn-clear-search { background: none; border: 1px solid var(--muted, #94a3b8); border-radius: 50%; color: var(--muted, #94a3b8); cursor: pointer; padding: 0 0.4rem; font-weight: bold; }
+  
   .toast-container {
     position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 100; max-width: 360px; display: flex; flex-direction: column; gap: 0.5rem;
   }
@@ -286,9 +294,9 @@
     <section id="tab-live" class="tab-content">
       <div class="card" style="padding: 0.75rem 1rem;">
         <div class="filter-bar">
-          <div class="live-search-input" id="live-search-wrapper" style="flex: 1; min-width: 140px;">
-            <input type="text" id="live-search" placeholder="Search domain, device, or reason..." style="flex: 1; min-width: 140px; border: 0; outline: none; background: transparent; color: inherit;">
-            <button id="btn-clear-search" type="button" style="background: none; border: 0; color: var(--muted, #94a3b8); cursor: pointer; padding: 0 0.4rem; font-weight: bold;">×</button>
+          <div class="live-search-input" id="live-search-wrapper" style="flex: 1; min-width: 160px;">
+            <input type="text" id="live-search" placeholder="Search domain, device, or reason..." style="flex: 1; border: 0; outline: none; background: transparent; color: inherit;">
+            <button id="btn-clear-search" type="button">X</button>
           </div>
           <select id="live-status-filter" style="min-width: 90px;">
           <option value="all">All Traffic</option>
