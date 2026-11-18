@@ -124,10 +124,10 @@
   #tab-live th:nth-child(4), #tab-live td:nth-child(4) { max-width: 70px; overflow: hidden; text-overflow: ellipsis; }
 
   #tab-mon th:nth-child(1), #tab-mon td:nth-child(1) { max-width: 400px; overflow: hidden; text-overflow: ellipsis; }
-  #tab-mon td:nth-child(2), #tab-mon th:nth-child(2) { text-align: right; min-width: 20px; }
-  #tab-mon td:nth-child(3), #tab-mon th:nth-child(3) { max-width: 80px; }
+  #tab-mon td:nth-child(2), #tab-mon th:nth-child(2) { min-width: 45px; }
+  #tab-mon td:nth-child(3), #tab-mon th:nth-child(3) { text-align: right; max-width: 20px; }
   #tab-mon td:nth-child(4), #tab-mon th:nth-child(4) { max-width: 60px; }
-  #tab-mon td:nth-child(5), #tab-mon th:nth-child(5), #tab-live th:nth-child(5), #tab-live td:nth-child(5) { /*text-align: right;*/ width: 45px; }
+  #tab-mon td:nth-child(5), #tab-mon th:nth-child(5), #tab-live th:nth-child(5), #tab-live td:nth-child(5) { width: 45px; }
 
   .domain-cell { font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -303,9 +303,9 @@
             <tr>
               <th>Time</th>
               <th>Domain</th>
-              <th>Device</th>
-              <th>Reason</th>
               <th>Status</th>
+              <th>Reason</th>
+              <th>Device</th>
             </tr>
           </thead>
           <tbody id="live-log-body"></tbody>
@@ -327,10 +327,10 @@
           <thead>
             <tr>
               <th>Domain</th>
+              <th>Action</th>th>
               <th>Hits</th>
               <th>Progress</th>
-              <th>Status</th>
-              <th style="text-align: right;">Action</th>
+              <th style="text-align: right;">Status</th>
             </tr>
           </thead>
           <tbody id="hits-body"></tbody>
@@ -671,15 +671,15 @@
           <td class="domain-cell" style="color: ${s.isManual ? '#fde047' : (s.isBlocked ? '#fca5a5' : '#f1f5f9')};" title="${safeText(l.domain)}">
             ${safeText(l.domain)}
           </td>
+          <td>${badge}</td>
+          <td style="color: ${s.isSys ? '#38bdf8' : (s.isManual ? '#fde047' : 'var(--muted);')};" title="${rText}">
+            ${rText}
+          </td>
           <td>
             <span data-action="filter-device" data-device="${safeText(l.device)}" style="color: #38bdf8; cursor: pointer; text-decoration: underline;">
               ${safeText(l.device)}
             </span>
           </td>
-          <td style="color: ${s.isSys ? '#38bdf8' : (s.isManual ? '#fde047' : 'var(--muted);')};" title="${rText}">
-            ${rText}
-          </td>
-          <td>${badge}</td>
         `;
         fragment.appendChild(tr);
       }
@@ -751,12 +751,12 @@
         return `
           <tr>
             <td class="domain-cell" title="${safeText(i.domain)}">${safeText(i.domain)}</td>
+            <td style="text-align: right;">${btnHtml}</td>
             <td style="color: var(--warn); font-weight: bold; font-family: monospace;">${i.count}</td>
             <td style="width: 80px;">
               <div class="bar-bg"><div class="bar-fill" style="width:${pct}%; background:${s.isBlocked ? (s.isManual ? 'var(--warn, #f59e0b)' : 'var(--blocked)') : 'var(--warn)'}"></div></div>
             </td>
             <td><span style="${bStyle}" title="${statTxt}">${statTxt}</span></td>
-            <td style="text-align: right;">${btnHtml}</td>
           </tr>
         `;
       }).join('') : `<tr><td colspan="5" style="text-align:center; color:var(--muted);">No frequency data for this selection.</td></tr>`;
