@@ -57,7 +57,7 @@
   #global-device-select:hover, #live-status-filter:hover, #live-status-filter:focus, #global-device-select:focus { outline: none; border-color: var(--accent); }
 
   .nav-tabs {
-    background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 1rem;
+    /*background: var(--surface);*/ border-bottom: 1px solid var(--border); padding: 0 1rem;
     display: flex; gap: 0.25rem; overflow-x: auto; scrollbar-width: none; position: sticky; top: 72px; z-index: 40;
   }
   .nav-tabs button {
@@ -124,8 +124,8 @@
   #tab-live th:nth-child(4), #tab-live td:nth-child(4) { max-width: 70px; overflow: hidden; text-overflow: ellipsis; }
 
   #tab-mon th:nth-child(1), #tab-mon td:nth-child(1) { max-width: 400px; overflow: hidden; text-overflow: ellipsis; }
-  #tab-mon td:nth-child(2), #tab-mon th:nth-child(2) { /*text-align: right;*/ min-width: 60px; }
-  #tab-mon td:nth-child(3), #tab-mon th:nth-child(3) { text-align: right; max-width: 40px; }
+  #tab-mon td:nth-child(2), #tab-mon th:nth-child(2) { /*text-align: right;*/ min-width: 50px; }
+  #tab-mon td:nth-child(3), #tab-mon th:nth-child(3) { text-align: right; max-width: 30px; }
   #tab-mon td:nth-child(4), #tab-mon th:nth-child(4) { max-width: 80px; }
   #tab-mon td:nth-child(5), #tab-mon th:nth-child(5), #tab-live th:nth-child(5), #tab-live td:nth-child(5) { width: 60px; }
 
@@ -291,7 +291,7 @@
         <div class="filter-bar">
           <div class="live-search-input" id="live-search-wrapper">
             <input type="text" id="live-search" placeholder="Search domain, device, or reason..." style="flex: 1; border: 0; outline: none; background: transparent; color: inherit;">
-            <button id="btn-clear-search" type="button">X</button>
+            <button id="btn-clear-search" type="button">x</button>
           </div>
           <select id="live-status-filter" style="min-width: 90px;">
           <option value="all">All Traffic</option>
@@ -333,10 +333,10 @@
           <thead>
             <tr>
               <th>Domain</th>
-              <th>Action</th>
+              <th>Status</th>
               <th>Hits</th>
               <th>Progress</th>
-              <th>Status</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody id="hits-body"></tbody>
@@ -755,9 +755,9 @@
           btnHtml = `<button class="btn-danger small" style="opacity: 0.5; cursor: not-allowed;" disabled title="Blocked by NextDNS Security/Parental">Blocked</button>`;
         } else if (isThreshold) {
           statTxt = 'Report'; bStyle = 'color: var(--warn, #fbbf24);';
-          btnHtml = `<button data-action="add-deny" data-domain="${safeText(i.domain)}" class="status-allowed small" title="Threshold reached - Click to Deny">Deny</button>`;
+          btnHtml = `<button data-action="add-deny" data-domain="${safeText(i.domain)}" class="status-allowed small" title="Threshold reached - Click to Deny">Allowed</button>`;
         } else {
-          btnHtml = `<button data-action="add-deny" data-domain="${safeText(i.domain)}" class="status-allowed small" title="Click to Deny">Deny</button>`;
+          btnHtml = `<button data-action="add-deny" data-domain="${safeText(i.domain)}" class="status-allowed small" title="Click to Deny">Allowed</button>`;
         }
     
         return `
@@ -823,7 +823,7 @@
 
         for (const item of logs.reverse()) {
           const cli = item.client || {};
-          const dev = cli.name || item.deviceName || item.device?.name || (typeof cli === 'string' ? cli : 'Unnamed');
+          const dev = cli.name || item.deviceName || item.device?.name || (typeof cli === 'string' ? cli : 'Noname');
           const ip = typeof cli === 'string' ? cli : (cli.ip || item.clientIp || '95.229.184.162');
           const stat = item.status || 'allowed';
           const t = item.timestamp ? new Date(item.timestamp) : new Date();
