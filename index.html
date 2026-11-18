@@ -124,8 +124,8 @@
   #tab-live th:nth-child(4), #tab-live td:nth-child(4) { max-width: 70px; overflow: hidden; text-overflow: ellipsis; }
 
   #tab-mon th:nth-child(1), #tab-mon td:nth-child(1) { max-width: 400px; overflow: hidden; text-overflow: ellipsis; }
-  #tab-mon td:nth-child(2), #tab-mon th:nth-child(2) { text-align: right; min-width: 50px; }
-  #tab-mon td:nth-child(3), #tab-mon th:nth-child(3) { text-align: right; max-width: 20px; }
+  #tab-mon td:nth-child(2), #tab-mon th:nth-child(2) { /*text-align: right;*/ min-width: 60px; }
+  #tab-mon td:nth-child(3), #tab-mon th:nth-child(3) { text-align: right; max-width: 40px; }
   #tab-mon td:nth-child(4), #tab-mon th:nth-child(4) { max-width: 80px; }
   #tab-mon td:nth-child(5), #tab-mon th:nth-child(5), #tab-live th:nth-child(5), #tab-live td:nth-child(5) { width: 60px; }
 
@@ -763,9 +763,9 @@
         return `
           <tr>
             <td class="domain-cell" title="${safeText(i.domain)}">${safeText(i.domain)}</td>
-            <td style="text-align: right;">${btnHtml}</td>
+            <td>${btnHtml}</td>
             <td style="color: var(--warn); font-weight: bold; font-family: monospace;">${i.count}</td>
-            <td style="width: 80px;">
+            <td>
               <div class="bar-bg"><div class="bar-fill" style="width:${pct}%; background:${s.isBlocked ? (s.isManual ? 'var(--warn, #f59e0b)' : 'var(--blocked)') : 'var(--warn)'}"></div></div>
             </td>
             <td><span style="${bStyle}" title="${statTxt}">${statTxt}</span></td>
