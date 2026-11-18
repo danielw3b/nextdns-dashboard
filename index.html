@@ -158,11 +158,11 @@
 
   .small { padding: 0.15rem 0.45rem; font-size: 0.65rem; width: 60px; justify-content: center; }
 
-  input[type="text"], input[type="password"], input[type="number"], select {
+  live-search-input, input[type="text"], input[type="password"], input[type="number"], select {
     background: #060911; border: 1px solid var(--border); color: var(--text);
     padding: 0.45rem 0.65rem; border-radius: 6px; font-size: 0.75rem; font-family: inherit;
   }
-  input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus, select:focus { outline: none; border-color: var(--accent); }
+  live-search-input:focusfocus-within, input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus, select:focus { outline: none; border-color: var(--accent); }
 
   .toast-container {
     position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 100; max-width: 360px; display: flex; flex-direction: column; gap: 0.5rem;
@@ -286,12 +286,15 @@
     <section id="tab-live" class="tab-content">
       <div class="card" style="padding: 0.75rem 1rem;">
         <div class="filter-bar">
-          <input type="text" id="live-search" placeholder="Search domain, device, or reason..." style="flex: 1; min-width: 160px;">
+          <div class="live-search-input" id="live-search-wrapper">
+            <input type="text" id="live-search" placeholder="Search domain, device, or reason..." style="flex: 1; min-width: 160px; border: 0; outline: none; background: transparent; color: inherit;">
+            <button id="btn-clear-search" type="button" style="display: none; background: none; border: 0; color: var(--muted, #94a3b8); cursor: pointer; padding: 0 0.4rem; font-weight: bold;">×</button>
+          </div>
           <select id="live-status-filter" style="min-width: 90px;">
-            <option value="all">All Traffic</option>
-            <option value="blocked">Blocked Only</option>
-            <option value="allowed">Allowed Only</option>
-          </select>
+          <option value="all">All Traffic</option>
+          <option value="blocked">Blocked Only</option>
+          <option value="allowed">Allowed Only</option>
+        </select>
           <button id="btn-export-live">Export CSV</button>
           <!--<button id="btn-clear-logs" class="btn-danger">Clear</button>-->
         </div>
@@ -630,8 +633,10 @@
           
           let rCopy = [...s.rList];
           if (s.isSys) rCopy.push('protected system domain', 'protected', 'system');
-          else if (s.isManual) rCopy.push('denylist');
-          else if (!s.isBlocked) rCopy.push('allowed');
+
+          if (s.isBlocked) rCopy.push('blocked');
+          if (s.isManual) rCopy.push('denylist');
+          if (!s.isBlocked) rCopy.push('allowed');
           if (rCopy.length === 0) rCopy.push('—');
     
           if (!matchDom && !matchDev && !rCopy.some(r => r.includes(search))) return false;
@@ -1657,6 +1662,25 @@
       };
     
       setupTableEventDelegation();
+
+      const searchInput = document.getElementById('live-search');
+      const clearBtn = document.getElementById('btn-clear-search');
+      
+      if (searchInput && clearBtn) {
+        const toggleClear = () => {
+          clearBtn.style.visibility = searchInput.value.length >= 3 ? 'visible' : 'hidden';
+        };
+        searchInput.addEventListener('input', toggleClear);
+      
+        clearBtn.addEventListener('click', () => {
+          searchInput.value = '';
+          toggleClear();
+        });
+      
+        // Initial state check on load
+        toggleClear();
+      }
+    
     });
 
     // Wake Lock & Visibility Management
