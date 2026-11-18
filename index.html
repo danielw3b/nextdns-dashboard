@@ -590,7 +590,7 @@
     }
 
     // Helper to evaluate domain security & block states
-    function getDomainStatus(domain, status, reasons, cfg) {
+    /*function getDomainStatus(domain, status, reasons, cfg) {
       const clean = (domain || '').toLowerCase().trim();
       const lStat = String(status || 'allowed').toLowerCase();
       const rList = (reasons || []).map(r => r.toLowerCase());
@@ -601,6 +601,24 @@
       const isManual = (!isExplicitUnblocked && rList.includes('denylist')) || (STATE.manuallyBlocked && STATE.manuallyBlocked.has(clean));
       const isApi = lStat === 'blocked' || lStat === 'security' || lStat === 'parental';
       const isBlocked = isApi || isManual;
+    
+      return { clean, isSys, isManual, isApi, isBlocked, rList };
+    }*/
+
+    // Helper to evaluate domain security & block states centrally
+    function getDomainStatus(domain, status, reasons, cfg) {
+      const clean = (domain || '').toLowerCase().trim();
+      const lStat = String(status || 'allowed').toLowerCase();
+      const rList = (reasons || []).map(r => r.toLowerCase());
+      
+      // 1. Check block states first (Source of Truth)
+      const isExplicitUnblocked = STATE.manuallyUnblocked && STATE.manuallyUnblocked.has(clean);  
+      const isManual = (!isExplicitUnblocked && rList.includes('denylist')) || (STATE.manuallyBlocked && STATE.manuallyBlocked.has(clean));
+      const isApi = lStat === 'blocked' || lStat === 'security' || lStat === 'parental';
+      const isBlocked = isApi || isManual;
+    
+      // 2. System protection ONLY applies if the domain is NOT already blocked
+      const isSys = (cfg?.protectSystem ?? true) && !isBlocked && (typeof isProtected === 'function' ? isProtected(clean) : false);
     
       return { clean, isSys, isManual, isApi, isBlocked, rList };
     }
