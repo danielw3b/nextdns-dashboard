@@ -589,22 +589,6 @@
       }
     }
 
-    // Helper to evaluate domain security & block states
-    /*function getDomainStatus(domain, status, reasons, cfg) {
-      const clean = (domain || '').toLowerCase().trim();
-      const lStat = String(status || 'allowed').toLowerCase();
-      const rList = (reasons || []).map(r => r.toLowerCase());
-      
-      const isSys = (cfg?.protectSystem ?? true) && (typeof isProtected === 'function' ? isProtected(clean) : false);
-      // Respect explicit user unblocks to override historical log denylist reasons
-      const isExplicitUnblocked = STATE.manuallyUnblocked && STATE.manuallyUnblocked.has(clean);  
-      const isManual = (!isExplicitUnblocked && rList.includes('denylist')) || (STATE.manuallyBlocked && STATE.manuallyBlocked.has(clean));
-      const isApi = lStat === 'blocked' || lStat === 'security' || lStat === 'parental';
-      const isBlocked = isApi || isManual;
-    
-      return { clean, isSys, isManual, isApi, isBlocked, rList };
-    }*/
-
     // Helper to evaluate domain security & block states centrally
     function getDomainStatus(domain, status, reasons, cfg) {
       const clean = (domain || '').toLowerCase().trim();
@@ -846,7 +830,7 @@
         }
       } catch (e) {
         console.error('Failed to fetch NextDNS logs:', e);
-        showToast('⚠️ API Error', `'Failed to fetch: ${e.message}`, 'warn');
+        showToast('⚠️ API Error', `'Failed to fetch: ${e.message}`, 'danger');
         STATE.currentLatency = null;
       }
     }
