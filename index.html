@@ -165,7 +165,7 @@
   .live-search-input:focus-within, :is(input[type="text"], input[type="password"], input[type="number"], select):focus { outline: none; border-color: var(--accent); }
 
   .live-search-input { display: flex; flex: 1; /*min-width: 160px;*/ align-items: center; gap: 0.25rem; padding:0;}
-  #btn-clear-search { background: none; border: 1px solid var(--muted, #94a3b8); border-radius: 50%; color: var(--muted, #94a3b8); cursor: pointer; padding: 0.2rem; font-weight: bold; margin-right: 0.2rem; }
+  #btn-clear-search { border: 1px solid var(--muted, #94a3b8); color: var(--muted, #94a3b8); cursor: pointer; padding: 0.2rem; margin-right: 0.2rem; }
   
   .toast-container {
     position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 100; max-width: 360px; display: flex; flex-direction: column; gap: 0.5rem;
@@ -291,7 +291,7 @@
         <div class="filter-bar">
           <div class="live-search-input" id="live-search-wrapper">
             <input type="text" id="live-search" placeholder="Search domain, device, or reason..." style="flex: 1; border: 0; outline: none; background: transparent; color: inherit;">
-            <button id="btn-clear-search" type="button">x</button>
+            <button id="btn-clear-search" type="button">X</button>
           </div>
           <select id="live-status-filter" style="min-width: 90px;">
           <option value="all">All Traffic</option>
@@ -1682,6 +1682,7 @@
           searchInput.value = '';
           toggleClear();
           renderLiveLogs();
+          searchInput.focus();
         });
       
         // Initial state check on load
