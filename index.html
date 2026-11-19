@@ -120,14 +120,11 @@
   #tab-live th, #tab-live td, #tab-mon th, #tab-mon td { padding: 0.5rem 0.75rem; text-align: left; white-space: nowrap; }
   tr:hover td { background: rgba(30, 41, 59, 0.4); }
 
-  #tab-live th:nth-child(2), #tab-live td:nth-child(2) { max-width: 400px; overflow: hidden; text-overflow: ellipsis; }
+  #tab-live th:nth-child(2), #tab-live td:nth-child(2),  #tab-mon th:nth-child(1), #tab-mon td:nth-child(1) { max-width: 400px; overflow: hidden; text-overflow: ellipsis; }
   #tab-live th:nth-child(4), #tab-live td:nth-child(4) { max-width: 70px; overflow: hidden; text-overflow: ellipsis; }
 
-  #tab-mon th:nth-child(1), #tab-mon td:nth-child(1) { max-width: 400px; overflow: hidden; text-overflow: ellipsis; }
-  #tab-mon td:nth-child(2), #tab-mon th:nth-child(2) { /*text-align: right; min-width: 50px;*/ }
   #tab-mon td:nth-child(3), #tab-mon th:nth-child(3) { text-align: right; max-width: 40px; }
-  #tab-mon td:nth-child(4), #tab-mon th:nth-child(4) { /*max-width: 60px; */}
-  #tab-mon td:nth-child(5), #tab-mon th:nth-child(5), #tab-live th:nth-child(5), #tab-live td:nth-child(5) { /*width: 60px; */}
+  #tab-mon td:nth-child(4), #tab-mon th:nth-child(4) { max-width: 60px;}
 
   .domain-cell { font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -291,7 +288,7 @@
         <div class="filter-bar">
           <div class="live-search-input" id="live-search-wrapper">
             <input type="text" id="live-search" placeholder="Search domain, device, or reason..." style="flex: 1; border: 0; outline: none; background: transparent; color: inherit;">
-            <button id="btn-clear-search" type="button">X</button>
+            <button id="btn-clear-search" type="button">x</button>
           </div>
           <select id="live-status-filter" style="min-width: 90px;">
           <option value="all">All Traffic</option>
