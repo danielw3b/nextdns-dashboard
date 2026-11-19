@@ -65,7 +65,7 @@
     padding: 0.6rem 0.85rem; color: var(--muted); font-size: 0.8rem; white-space: nowrap; cursor: pointer;
   }
   .nav-tabs button:hover { color: var(--text); }
-  .nav-tabs button.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; background: var(--surface-2);}
+  .nav-tabs button.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; background: transparent; }
 
   main { width: 100%; /*max-width: 1100px;*/ margin: 1.25rem auto; padding: 0 1rem; flex: 1; touch-action: pan-y; }
 
@@ -154,6 +154,7 @@
   .btn-warn { background: rgba(245, 158, 11, 0.2); color: #fde047; border-color: rgba(245, 158, 11, 0.4); }
 
   .small { padding: 0.15rem 0.45rem; font-size: 0.65rem; width: 60px; justify-content: center; }
+  .config { flex: 1; background: var(--surface-2); text-align: center;display: inline-flex; align-items: center; justify-content: center; cursor: pointer; margin: 0; }
 
   .live-search-input, input[type="text"], input[type="password"], input[type="number"], select {
     background: #060911; border: 1px solid var(--border); color: var(--text);
@@ -162,7 +163,7 @@
   .live-search-input:focus-within, :is(input[type="text"], input[type="password"], input[type="number"], select):focus { outline: none; border-color: var(--accent); }
 
   .live-search-input { display: flex; flex: 1; /*min-width: 160px;*/ align-items: center; gap: 0.25rem; padding:0;}
-  #btn-clear-search { border: 1px solid var(--muted, #94a3b8); color: var(--muted, #94a3b8); cursor: pointer; padding: 0.2rem; margin-right: 0.2rem; }
+  #btn-clear-search { color: var(--muted, #94a3b8); cursor: pointer; padding: 0.2rem; margin-right: 0.2rem; }
   
   .toast-container {
     position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 100; max-width: 360px; display: flex; flex-direction: column; gap: 0.5rem;
@@ -394,8 +395,8 @@
 
         <div class="form-grid-2col">
           <div class="form-group" style="display: flex; gap: 0.5rem;">
-            <button class="btn" id="btn-backup-json" style="flex: 1; background: var(--surface-2); text-align: center;display: inline-flex; align-items: center; justify-content: center;">Backup JSON</button>
-            <label class="btn" style="flex: 1; background: var(--surface-2); cursor: pointer; margin: 0; display: inline-flex; align-items: center; justify-content: center; text-align: center;">
+            <button class="btn config" id="btn-backup-json">Backup JSON</button>
+            <label class="btn config">
               Import JSON <input type="file" id="cfg-import-file" accept=".json" style="display: none;" onchange="importConfigJSON(event)">
             </label>
           </div>      
