@@ -65,7 +65,7 @@
     padding: 0.6rem 0.85rem; color: var(--muted); font-size: 0.8rem; white-space: nowrap; cursor: pointer;
   }
   .nav-tabs button:hover { color: var(--text); }
-  .nav-tabs button.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .nav-tabs button.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; background: var(--surface-2);}
 
   main { width: 100%; /*max-width: 1100px;*/ margin: 1.25rem auto; padding: 0 1rem; flex: 1; touch-action: pan-y; }
 
@@ -124,10 +124,10 @@
   #tab-live th:nth-child(4), #tab-live td:nth-child(4) { max-width: 70px; overflow: hidden; text-overflow: ellipsis; }
 
   #tab-mon th:nth-child(1), #tab-mon td:nth-child(1) { max-width: 400px; overflow: hidden; text-overflow: ellipsis; }
-  #tab-mon td:nth-child(2), #tab-mon th:nth-child(2) { /*text-align: right;*/ min-width: 50px; }
-  #tab-mon td:nth-child(3), #tab-mon th:nth-child(3) { text-align: right; max-width: 30px; }
-  #tab-mon td:nth-child(4), #tab-mon th:nth-child(4) { max-width: 60px; }
-  #tab-mon td:nth-child(5), #tab-mon th:nth-child(5), #tab-live th:nth-child(5), #tab-live td:nth-child(5) { width: 60px; }
+  #tab-mon td:nth-child(2), #tab-mon th:nth-child(2) { /*text-align: right; min-width: 50px;*/ }
+  #tab-mon td:nth-child(3), #tab-mon th:nth-child(3) { text-align: right; max-width: 40px; }
+  #tab-mon td:nth-child(4), #tab-mon th:nth-child(4) { /*max-width: 60px; */}
+  #tab-mon td:nth-child(5), #tab-mon th:nth-child(5), #tab-live th:nth-child(5), #tab-live td:nth-child(5) { /*width: 60px; */}
 
   .domain-cell { font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
