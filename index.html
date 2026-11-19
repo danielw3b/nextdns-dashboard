@@ -842,7 +842,7 @@
         }
       } catch (e) {
         console.error('Failed to fetch NextDNS logs:', e);
-        showToast('⚠️ API Error', `'${e.message}`, 'danger');
+        showToast('⚠️ API Error', `${e.message}`, 'danger');
         STATE.currentLatency = null;
       }
     }
