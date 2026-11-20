@@ -1377,11 +1377,17 @@
             method: 'DELETE',
             headers: { 'X-Api-Key': apiKey, 'Accept': 'application/json' }
           });
-          if (!res.ok && res.status !== 404) throw new Error(`HTTP ${res.status}`);
+          
+          if (res.status === 404) {
+            showToast('ℹ️ Blocked by Parent Domain (404)', `Cannot directly remove ${safeText(clean)}`, 'warn');
+            return;
+          }
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
           showToast('✅ NextDNS Unblocked', `Successfully removed ${safeText(clean)} from denylist`, 'success');
         } catch (e) {
           console.error('Failed to remove from denylist:', e);
           showToast('⚠️ API Error', `Could not remove: ${e.message}`, 'warn');
+          return;
         }
       } else {
         showToast('Info', `Removed simulation domain ${safeText(clean)} from local denylist`, 'success');
