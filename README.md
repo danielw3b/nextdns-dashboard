@@ -11,8 +11,6 @@
 
 🌐 **Live Demo:** [nextdns-live.pages.dev](https://nextdns-live.pages.dev/)
 ---
-[![Live Demo](https://shields.io)](https://nextdns-live.pages.dev/)
-
 
 ## Architecture
 
