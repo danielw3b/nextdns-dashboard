@@ -2,15 +2,14 @@
 
 > A lightning-fast, stateless, and privacy-first real-time telemetry viewer and analytics dashboard for NextDNS.
 
-[![Cloudflare Pages](https://img.shields.io/badge/Cloudflare-Pages-F38020?style=flat-square&logo=cloudflare&logoColor=white)](https://nextdns-dashboard-e3q.pages.dev/)
+[![Cloudflare Pages](https://img.shields.io/badge/Cloudflare-Pages-F38020?style=flat-square&logo=cloudflare&logoColor=white)](https://nextdns-live.pages.dev/)
 [![Status](https://img.shields.io/badge/Status-Active-success?style=flat-square)]()
 
 ## Overview
 
 **NextDNS Live** is a lightweight, single-file Progressive Web App (PWA) designed to provide instant, real-time insights and quick-action controls for your NextDNS traffic. Built with a pure RAM-first telemetry architecture, NextDNS remains the absolute **Single Source of Truth**, ensuring that historical logs remain true while allowing seamless runtime management.
 
-🌐 **Live Demo:** [nextdns-dashboard-e3q.pages.dev](https://nextdns-dashboard-e3q.pages.dev/)
-
+🌐 **Live Demo:** [nextdns-live.pages.dev](https://nextdns-live.pages.dev/)
 ---
 
 ## Architecture
