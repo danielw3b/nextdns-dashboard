@@ -160,7 +160,7 @@
     background: #060911; border: 1px solid var(--border); color: var(--text);
     padding: 0.45rem 0.65rem; border-radius: 6px; font-size: 0.75rem; font-family: inherit;
   }
-  /*.live-search-input:focus-within,*/ :is(input[type="text"], is(input[type="search"],input[type="password"], input[type="number"], select):focus { outline: none; border-color: var(--accent); }
+  .live-search-input:focus-within, :is(input[type="text"], is(input[type="search"],input[type="password"], input[type="number"], select):focus { outline: none; border-color: var(--accent); }
 
   /*.live-search-input { display: flex; flex: 1; align-items: center; gap: 0.25rem; padding:0;}
   #btn-clear-search { color: var(--muted, #94a3b8); cursor: pointer; padding: 0.2rem; margin-right: 0.2rem; }*/
@@ -288,7 +288,7 @@
       <div class="card" style="padding: 0.75rem 1rem;">
         <div class="filter-bar">
           <!--<div class="live-search-input" id="live-search-wrapper">-->
-            <input type="search" id="live-search" autocomplete="one-time-code" data-lpignore="true" data-1p-ignore placeholder="Search domain, device, or reason..." style="flex: 1; border: 0; outline: none; background: transparent; color: inherit;">
+            <input type="search" id="live-search" autocomplete="one-time-code" data-lpignore="true" data-1p-ignore placeholder="Search domain, device, or reason..." style="flex: 1; ">
             <!--<input type="text" id="live-search" autocomplete="off" placeholder="Search domain, device, or reason..." style="flex: 1; border: 0; outline: none; background: transparent; color: inherit;">
             <button id="btn-clear-search" type="button">x</button>
           </div>-->
