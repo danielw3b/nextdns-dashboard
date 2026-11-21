@@ -351,7 +351,7 @@
           <a href="https://nextdns.io/?from=4ja3vp44" target="_blank" rel="noopener noreferrer" style="font-size: 0.75rem; color: #38bdf8; text-decoration: none; font-weight: 600;">Get NextDNS ↗</a>
         </div>
         
-        <div class="form-grid-2col">
+        <!--<div class="form-grid-2col">
           <div class="form-group">
             <label>Profile ID</label>
             <input type="text" id="cfg-profile" placeholder="e.g. 2ab1c3" style="width: 100%;">
@@ -385,6 +385,27 @@
             <label>Bot-Token</label>
             <input type="password" id="cfg-telegramBotToken" placeholder="e.g. 1234567890:ABCdefG..." style="width: 100%;">
           </div>
+        </div>-->
+
+        <div class="form-grid-2col">
+        <div class="form-group">
+          <label>Profile ID</label>
+          <input type="text" id="cfg-profile" autocomplete="one-time-code" placeholder="e.g. 2ab1c3" style="width: 100%;">
+        </div>
+        <div class="form-group">
+          <label>NextDNS API Key</label>
+          <input type="text" id="cfg-apikey" autocomplete="one-time-code" placeholder="sk_..." style="width: 100%; -webkit-text-security: disc;">
+        </div>
+      </div>
+      
+      <div class="form-grid-2col">
+        <div class="form-group">
+          <label>Cloudflare Pages Proxy</label>
+          <input type="text" id="cfg-proxy" autocomplete="one-time-code" placeholder="/api/nextdns" value="/api/nextdns" style="width: 100%;">
+        </div>
+        <div class="form-group">
+          <label>Threshold Hits</label>
+          <input type="number" id="cfg-threshold" autocomplete="off" value="200" style="width: 100%;">
         </div>
         
         <div class="form-group" style="margin-bottom: 1.25rem;">
